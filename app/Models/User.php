@@ -6,28 +6,34 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Permission\Traits\HasRoles;
+use Spatie\Permission\Traits\HasPermissions;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasRoles, HasPermissions;
 
     /**
      * The attributes that are mass assignable.
      *
-     * @var list<string>
+     * @var array<int, string>
      */
     protected $fillable = [
         'name',
         'email',
         'password',
         'language',
+        'team_id',
+        'joined_team_at',
     ];
 
     /**
      * The attributes that should be hidden for serialization.
      *
-     * @var list<string>
+     * @var array<int, string>
      */
     protected $hidden = [
         'password',
@@ -43,7 +49,143 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'joined_team_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Get the team that the user belongs to.
+     */
+    public function team(): BelongsTo
+    {
+        return $this->belongsTo(Team::class);
+    }
+
+    /**
+     * Get all teams owned by this user.
+     */
+    public function ownedTeams(): HasMany
+    {
+        return $this->hasMany(Team::class, 'owner_id');
+    }
+
+    /**
+     * Check if user owns the given team.
+     */
+    public function ownsTeam(Team $team): bool
+    {
+        return $this->id === $team->owner_id;
+    }
+
+    /**
+     * Check if user belongs to the given team.
+     */
+    public function belongsToTeam(Team $team): bool
+    {
+        return $this->team_id === $team->id;
+    }
+
+    /**
+     * Check if user has permission in their current team context.
+     */
+    public function hasTeamPermission(string $permission): bool
+    {
+        if (!$this->team_id) {
+            return false;
+        }
+
+        return $this->hasPermissionTo($permission, 'web', $this->team_id);
+    }
+
+    /**
+     * Check if user has role in their current team context.
+     */
+    public function hasTeamRole(string $role): bool
+    {
+        if (!$this->team_id) {
+            return false;
+        }
+
+        return $this->hasRole($role . '-' . $this->team_id, 'web');
+    }
+
+    /**
+     * Assign role to user in their current team context.
+     */
+    public function assignTeamRole(string $role): void
+    {
+        if ($this->team_id) {
+            $this->assignRole($role . '-' . $this->team_id, 'web');
+        }
+    }
+
+    /**
+     * Give permission to user in their current team context.
+     */
+    public function giveTeamPermission(string $permission): void
+    {
+        if ($this->team_id) {
+            $this->givePermissionTo($permission, 'web', $this->team_id);
+        }
+    }
+
+    /**
+     * Get user's roles for their current team.
+     */
+    public function getTeamRoles()
+    {
+        if (!$this->team_id) {
+            return collect();
+        }
+
+        return $this->roles()->where('team_id', $this->team_id)->get();
+    }
+
+    /**
+     * Get user's team role name (without team suffix)
+     */
+    public function getTeamRoleName(): ?string
+    {
+        $teamRole = $this->getTeamRoles()->first();
+        if (!$teamRole) {
+            return null;
+        }
+        
+        // Remove the team ID suffix from role name
+        return str_replace('-' . $this->team_id, '', $teamRole->name);
+    }
+
+    /**
+     * Get user's permissions for their current team.
+     */
+    public function getTeamPermissions()
+    {
+        if (!$this->team_id) {
+            return collect();
+        }
+
+        return $this->getAllPermissions($this->team_id);
+    }
+
+    /**
+     * Switch user to a different team.
+     */
+    public function switchToTeam(Team $team): void
+    {
+        if ($team->hasMember($this) || $team->isOwner($this)) {
+            $this->update([
+                'team_id' => $team->id,
+                'joined_team_at' => now(),
+            ]);
+        }
+    }
+
+    /**
+     * Get the team ID for Spatie Permission context.
+     */
+    public function getPermissionTeamId()
+    {
+        return $this->team_id;
     }
 }
