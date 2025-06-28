@@ -19,6 +19,7 @@
         "prettier": "^3.4.2",
         "prettier-plugin-organize-imports": "^4.1.0",
         "prettier-plugin-tailwindcss": "^0.6.11",
+        "tailwindcss-rtl": "^0.9.0",
         "typescript-eslint": "^8.23.0",
         "vue-tsc": "^2.2.4"
     },
@@ -39,6 +40,7 @@
         "typescript": "^5.2.2",
         "vite": "^6.2.0",
         "vue": "^3.5.13",
+        "vue-i18n": "^11.1.7",
         "ziggy-js": "^2.4.2"
     },
     "optionalDependencies": {

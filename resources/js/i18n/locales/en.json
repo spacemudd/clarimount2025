@@ -1,0 +1,27 @@
+{
+  "profile": {
+    "title": "Profile settings",
+    "information": "Profile information",
+    "description": "Update your name, email address, and language preferences",
+    "name": "Name",
+    "namePlaceholder": "Full name",
+    "email": "Email address",
+    "emailPlaceholder": "Email address",
+    "language": "Language",
+    "languageDescription": "Select your preferred language",
+    "save": "Save",
+    "saved": "Saved.",
+    "emailUnverified": "Your email address is unverified.",
+    "resendVerification": "Click here to resend the verification email.",
+    "verificationSent": "A new verification link has been sent to your email address."
+  },
+  "languages": {
+    "en": "English",
+    "ar": "العربية"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "success": "Success"
+  }
+} 

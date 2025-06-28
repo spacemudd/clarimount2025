@@ -82,6 +82,37 @@
         --font-sans:
             'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
     }
+
+    /* RTL Support Utilities */
+    .rtl-transform-flip-x {
+        transform: scaleX(-1);
+    }
+    
+    /* Direction-aware spacing utilities */
+    .ms-auto {
+        margin-inline-start: auto;
+    }
+    
+    .me-auto {
+        margin-inline-end: auto;
+    }
+    
+    .ps-4 {
+        padding-inline-start: 1rem;
+    }
+    
+    .pe-4 {
+        padding-inline-end: 1rem;
+    }
+    
+    /* Text alignment for RTL */
+    .text-start {
+        text-align: start;
+    }
+    
+    .text-end {
+        text-align: end;
+    }
 }
 
 :root {
@@ -119,6 +150,16 @@
     --sidebar-border: hsl(0 0% 91%);
     --sidebar-ring: hsl(217.2 91.2% 59.8%);
     --sidebar: hsl(0 0% 98%);
+}
+
+/* RTL styles */
+[dir="rtl"] {
+    /* Font for Arabic text */
+    font-family: 'Segoe UI', Tahoma, Arial, Helvetica, sans-serif;
+}
+
+[dir="rtl"] .font-sans {
+    font-family: 'Segoe UI', Tahoma, Arial, Helvetica, sans-serif;
 }
 
 .dark {
