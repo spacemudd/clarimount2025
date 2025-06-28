@@ -2,18 +2,22 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
+import { useI18n } from 'vue-i18n';
+import { computed } from 'vue';
 import PlaceholderPattern from '../components/PlaceholderPattern.vue';
 
-const breadcrumbs: BreadcrumbItem[] = [
+const { t } = useI18n();
+
+const breadcrumbs = computed((): BreadcrumbItem[] => [
     {
-        title: 'Dashboard',
+        title: t('nav.dashboard'),
         href: '/dashboard',
     },
-];
+]);
 </script>
 
 <template>
-    <Head title="Dashboard" />
+    <Head :title="t('nav.dashboard')" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">

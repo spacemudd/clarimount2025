@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import { watch } from 'vue';
+import { Head, Link, useForm, usePage, router } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import DeleteUser from '@/components/DeleteUser.vue';
@@ -21,7 +21,7 @@ interface Props {
 
 defineProps<Props>();
 
-const { t, locale } = useI18n();
+const { t } = useI18n();
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -39,23 +39,20 @@ const form = useForm({
     language: user.language || 'en',
 });
 
-// Function to set document direction
-function setDirection(lang: string) {
-    const rtlLocales = ['ar', 'he', 'fa', 'ur'];
-    const dir = rtlLocales.includes(lang) ? 'rtl' : 'ltr';
-    document.documentElement.setAttribute('dir', dir);
-    document.documentElement.setAttribute('lang', lang);
-}
-
-// Watch for language changes
-watch(() => form.language, (newLanguage) => {
-    locale.value = newLanguage;
-    setDirection(newLanguage);
-});
+// Track the original language to detect changes
+const originalLanguage = ref(user.language || 'en');
 
 const submit = () => {
+    const languageChanged = form.language !== originalLanguage.value;
+    
     form.patch(route('profile.update'), {
         preserveScroll: true,
+        onSuccess: () => {
+            // If language was changed, do a hard refresh to load new translations
+            if (languageChanged) {
+                window.location.reload();
+            }
+        },
     });
 };
 </script>

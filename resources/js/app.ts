@@ -6,7 +6,7 @@ import type { DefineComponent } from 'vue';
 import { createApp, h } from 'vue';
 import { ZiggyVue } from 'ziggy-js';
 import { initializeTheme } from './composables/useAppearance';
-import i18n from './i18n';
+import { updateI18nMessages } from './i18n';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -22,15 +22,20 @@ createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
     resolve: (name) => resolvePageComponent(`./pages/${name}.vue`, import.meta.glob<DefineComponent>('./pages/**/*.vue')),
     setup({ el, App, props, plugin }) {
+        // Get locale and translations from Laravel
+        const userLanguage = (props.initialPage.props as any).locale || 'en';
+        const translations = (props.initialPage.props as any).translations || {};
+        
+        // Create i18n instance with Laravel translations
+        const i18n = updateI18nMessages(userLanguage, translations);
+        
+        // Set initial direction
+        setDirection(userLanguage);
+
         const app = createApp({ render: () => h(App, props) })
             .use(plugin)
             .use(ZiggyVue)
             .use(i18n);
-
-        // Set initial direction based on user's language preference
-        const userLanguage = (props.initialPage.props as any).auth?.user?.language || 'en';
-        i18n.global.locale.value = userLanguage;
-        setDirection(userLanguage);
 
         app.mount(el);
     },
