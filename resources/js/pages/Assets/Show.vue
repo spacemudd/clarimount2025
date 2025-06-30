@@ -663,20 +663,24 @@ const printBarcode = () => {
       cmds += "^PW406"  // Print width 406 dots (2 inches * 203 DPI)
       cmds += "^LL203"  // Label length 203 dots (1 inch * 203 DPI)
       
-      // Asset tag at top (larger font)
-      cmds += `^FO10,10^A0N,28,28^FD${props.asset.asset_tag}^FS`
+      // Set print density for darker printing
+      cmds += "^MD30"   // Media darkness (0-30, higher = darker)
+      cmds += "^SD15"   // Set darkness (0-30, higher = darker)
       
-      // Serial number or asset tag as barcode (Code 128)
-      cmds += "^FO10,50^BY2,2,40"
+      // Asset tag at top (larger font) - with padding
+      cmds += `^FO25,20^A0N,28,28^FD${props.asset.asset_tag}^FS`
+      
+      // Serial number or asset tag as barcode (Code 128) - with padding and darker
+      cmds += "^FO25,60^BY3,3,40"  // Increased bar width ratio for darker print
       cmds += "^BCN,40,Y,N,N"
       cmds += `^FD${props.asset.serial_number || props.asset.asset_tag}^FS`
       
-      // QR Code on the right side (smaller)
-      cmds += "^FO300,10^BQN,2,3"
+      // QR Code on the right side - with padding
+      cmds += "^FO310,20^BQN,2,4"  // Increased model for darker QR code
       cmds += `^FDMM,${props.asset.asset_tag}^FS`
       
-      // Date at bottom (smaller font)
-      cmds += `^FO10,170^A0N,20,20^FD${new Date().toISOString().split('T')[0]}^FS`
+      // Date at bottom (smaller font) - with padding
+      cmds += `^FO25,175^A0N,20,20^FD${new Date().toISOString().split('T')[0]}^FS`
       
       cmds += "^XZ"
       
