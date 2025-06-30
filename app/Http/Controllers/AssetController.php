@@ -172,8 +172,7 @@ class AssetController extends Controller
             'status' => 'available',
         ];
 
-        // Generate unique asset tag
-        $assetData['asset_tag'] = $this->generateAssetTag($company);
+        // Asset tag will be generated automatically by the Asset model
 
         $asset = Asset::create($assetData);
 
@@ -184,26 +183,7 @@ class AssetController extends Controller
             ->with('success', 'Asset created successfully.');
     }
 
-    /**
-     * Generate a unique asset tag for the company.
-     */
-    private function generateAssetTag($company): string
-    {
-        $prefix = strtoupper(substr($company->name_en, 0, 3));
-        $lastAsset = Asset::where('company_id', $company->id)
-            ->where('asset_tag', 'like', $prefix . '%')
-            ->orderBy('asset_tag', 'desc')
-            ->first();
 
-        if ($lastAsset) {
-            $lastNumber = (int) substr($lastAsset->asset_tag, strlen($prefix));
-            $nextNumber = $lastNumber + 1;
-        } else {
-            $nextNumber = 1;
-        }
-
-        return $prefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
-    }
 
     /**
      * Display the specified asset.

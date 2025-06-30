@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Asset extends Model
 {
-    use HasFactory;
+    use HasFactory, HasUuids;
 
     protected $fillable = [
         'asset_tag',
@@ -47,21 +48,23 @@ class Asset extends Model
     }
 
     /**
-     * Generate a unique asset tag for the company starting from 1000.
+     * Generate a unique sequential asset tag for the company.
      */
     protected static function generateUniqueAssetTag($companyId): string
     {
+        // Get the highest asset tag number for this company
         $lastAsset = static::where('company_id', $companyId)
-                          ->orderBy('asset_tag', 'desc')
-                          ->first();
+            ->whereRaw('asset_tag REGEXP "^[0-9]+$"') // Only numeric asset tags
+            ->orderByRaw('CAST(asset_tag AS UNSIGNED) DESC')
+            ->first();
         
         if ($lastAsset && is_numeric($lastAsset->asset_tag)) {
             $nextNumber = intval($lastAsset->asset_tag) + 1;
         } else {
-            $nextNumber = 1000; // Starting number
+            $nextNumber = 1; // Start from 1 for each company
         }
         
-        // Ensure uniqueness
+        // Ensure uniqueness within the company
         while (static::where('company_id', $companyId)->where('asset_tag', (string)$nextNumber)->exists()) {
             $nextNumber++;
         }
