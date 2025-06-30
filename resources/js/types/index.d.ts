@@ -166,11 +166,14 @@ export interface Asset {
     model_number?: string;
     status: 'available' | 'assigned' | 'maintenance' | 'retired';
     notes?: string;
+    image_path?: string;
+    asset_template_id?: number;
     created_at: string;
     updated_at: string;
     category?: AssetCategory;
     location?: Location;
     company?: Company;
+    assetTemplate?: AssetTemplate;
     assignments?: AssetAssignment[];
     tickets?: Ticket[];
 }
