@@ -14,7 +14,6 @@ return new class extends Migration
         Schema::create('assets', function (Blueprint $table) {
             $table->id();
             $table->string('asset_tag')->unique(); // Asset tag like 'IT-001'
-            $table->string('name');
             $table->text('description')->nullable();
             $table->foreignId('asset_category_id')->constrained()->onDelete('cascade');
             $table->foreignId('location_id')->constrained()->onDelete('cascade');
