@@ -6,6 +6,7 @@ use App\Models\Company;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Illuminate\Http\JsonResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -130,5 +131,37 @@ class CompanyController extends Controller
 
         return redirect()->route('companies.index')
             ->with('success', 'Company deleted successfully.');
+    }
+
+    /**
+     * Search companies for async selection.
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        $query = $request->get('q', '');
+        
+        $companies = Company::where('owner_id', $user->id)
+            ->when($query, function ($q) use ($query) {
+                return $q->where(function ($subQuery) use ($query) {
+                    $subQuery->where('name_en', 'like', "%{$query}%")
+                        ->orWhere('name_ar', 'like', "%{$query}%")
+                        ->orWhere('company_email', 'like', "%{$query}%");
+                });
+            })
+            ->orderBy('name_en')
+            ->limit(20)
+            ->get()
+            ->map(function ($company) {
+                return [
+                    'id' => $company->id,
+                    'name_en' => $company->name_en,
+                    'name_ar' => $company->name_ar,
+                    'company_email' => $company->company_email,
+                    'display_name' => $company->name_en . ($company->name_ar ? " ({$company->name_ar})" : ''),
+                ];
+            });
+
+        return response()->json($companies);
     }
 }

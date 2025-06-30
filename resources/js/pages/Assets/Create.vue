@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +41,13 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const page = usePage();
+
+// Function to get CSRF token
+const getCsrfToken = (): string => {
+    const metaToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    return metaToken || '';
+};
 
 const currentStep = ref(1);
 const totalSteps = 3;
@@ -71,6 +78,50 @@ const isTemplateSearching = ref(false);
 const showTemplateSearchResults = ref(false);
 const selectedTemplate = ref<AssetTemplate | null>(null);
 
+// Company search state
+const companySearchQuery = ref('');
+const companySearchResults = ref<Array<{
+    id: number;
+    name_en: string;
+    name_ar: string;
+    company_email: string;
+    display_name: string;
+}>>([]);
+const isCompanySearching = ref(false);
+const showCompanySearchResults = ref(false);
+const selectedCompany = ref<typeof companySearchResults.value[0] | null>(null);
+
+// Department search state
+const departmentSearchQuery = ref('');
+const departmentSearchResults = ref<Array<{
+    id: string;
+    name: string;
+    code: string;
+    description?: string;
+    company_name: string;
+    display_name: string;
+}>>([]);
+const isDepartmentSearching = ref(false);
+const showDepartmentSearchResults = ref(false);
+const selectedDepartment = ref<typeof departmentSearchResults.value[0] | null>(null);
+
+// Employee search state
+const employeeSearchQuery = ref('');
+const employeeSearchResults = ref<Array<{
+    id: number;
+    employee_id?: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    job_title?: string;
+    department?: string;
+    company_name: string;
+    display_name: string;
+}>>([]);
+const isEmployeeSearching = ref(false);
+const showEmployeeSearchResults = ref(false);
+const selectedEmployee = ref<typeof employeeSearchResults.value[0] | null>(null);
+
 // File upload state
 const selectedFile = ref<File | null>(null);
 const filePreview = ref<string | null>(null);
@@ -79,6 +130,9 @@ const fileError = ref<string | null>(null);
 const form = useForm({
     location_id: '',
     asset_template_id: '',
+    company_id: props.currentCompany?.id || '',
+    department_id: '',
+    assigned_to: '',
     serial_number: '',
     image: null as File | null,
 });
@@ -223,6 +277,174 @@ const hideTemplateSearchResults = () => {
     }, 200);
 };
 
+// Company search functions
+let companySearchTimeout: number;
+const searchCompanies = async () => {
+    if (companySearchQuery.value.length < 2) {
+        companySearchResults.value = [];
+        showCompanySearchResults.value = false;
+        return;
+    }
+
+    isCompanySearching.value = true;
+    
+    try {
+        const response = await fetch(`/api/companies/search?q=${encodeURIComponent(companySearchQuery.value)}`);
+        const companies = await response.json();
+        companySearchResults.value = companies;
+        showCompanySearchResults.value = true;
+    } catch (error) {
+        console.error('Company search failed:', error);
+        companySearchResults.value = [];
+    } finally {
+        isCompanySearching.value = false;
+    }
+};
+
+const handleCompanySearchInput = () => {
+    clearTimeout(companySearchTimeout);
+    companySearchTimeout = window.setTimeout(searchCompanies, 300);
+};
+
+const selectCompany = (company: typeof companySearchResults.value[0]) => {
+    selectedCompany.value = company;
+    form.company_id = company.id.toString();
+    companySearchQuery.value = company.display_name;
+    showCompanySearchResults.value = false;
+    
+    // Clear dependent selections when company changes
+    clearDepartmentSelection();
+    clearEmployeeSelection();
+};
+
+const clearCompanySelection = () => {
+    selectedCompany.value = null;
+    form.company_id = props.currentCompany?.id || '';
+    companySearchQuery.value = '';
+    companySearchResults.value = [];
+    showCompanySearchResults.value = false;
+    
+    // Clear dependent selections
+    clearDepartmentSelection();
+    clearEmployeeSelection();
+};
+
+const hideCompanySearchResults = () => {
+    setTimeout(() => {
+        showCompanySearchResults.value = false;
+    }, 200);
+};
+
+// Department search functions
+let departmentSearchTimeout: number;
+const searchDepartments = async () => {
+    if (departmentSearchQuery.value.length < 2) {
+        departmentSearchResults.value = [];
+        showDepartmentSearchResults.value = false;
+        return;
+    }
+
+    isDepartmentSearching.value = true;
+    
+    try {
+        const companyId = selectedCompany.value?.id || props.currentCompany?.id;
+        const response = await fetch(`/api/departments/search?q=${encodeURIComponent(departmentSearchQuery.value)}&company_id=${companyId}`);
+        const departments = await response.json();
+        departmentSearchResults.value = departments;
+        showDepartmentSearchResults.value = true;
+    } catch (error) {
+        console.error('Department search failed:', error);
+        departmentSearchResults.value = [];
+    } finally {
+        isDepartmentSearching.value = false;
+    }
+};
+
+const handleDepartmentSearchInput = () => {
+    clearTimeout(departmentSearchTimeout);
+    departmentSearchTimeout = window.setTimeout(searchDepartments, 300);
+};
+
+const selectDepartment = (department: typeof departmentSearchResults.value[0]) => {
+    selectedDepartment.value = department;
+    form.department_id = department.id;
+    departmentSearchQuery.value = department.display_name;
+    showDepartmentSearchResults.value = false;
+    
+    // Clear employee selection when department changes
+    clearEmployeeSelection();
+};
+
+const clearDepartmentSelection = () => {
+    selectedDepartment.value = null;
+    form.department_id = '';
+    departmentSearchQuery.value = '';
+    departmentSearchResults.value = [];
+    showDepartmentSearchResults.value = false;
+    
+    // Clear employee selection
+    clearEmployeeSelection();
+};
+
+const hideDepartmentSearchResults = () => {
+    setTimeout(() => {
+        showDepartmentSearchResults.value = false;
+    }, 200);
+};
+
+// Employee search functions
+let employeeSearchTimeout: number;
+const searchEmployees = async () => {
+    if (employeeSearchQuery.value.length < 2) {
+        employeeSearchResults.value = [];
+        showEmployeeSearchResults.value = false;
+        return;
+    }
+
+    isEmployeeSearching.value = true;
+    
+    try {
+        const companyId = selectedCompany.value?.id || props.currentCompany?.id;
+        const url = `/api/employees/search?q=${encodeURIComponent(employeeSearchQuery.value)}&company_id=${companyId}`;
+        
+        const response = await fetch(url);
+        const employees = await response.json();
+        employeeSearchResults.value = employees;
+        showEmployeeSearchResults.value = true;
+    } catch (error) {
+        console.error('Employee search failed:', error);
+        employeeSearchResults.value = [];
+    } finally {
+        isEmployeeSearching.value = false;
+    }
+};
+
+const handleEmployeeSearchInput = () => {
+    clearTimeout(employeeSearchTimeout);
+    employeeSearchTimeout = window.setTimeout(searchEmployees, 300);
+};
+
+const selectEmployee = (employee: typeof employeeSearchResults.value[0]) => {
+    selectedEmployee.value = employee;
+    form.assigned_to = employee.id.toString();
+    employeeSearchQuery.value = employee.display_name;
+    showEmployeeSearchResults.value = false;
+};
+
+const clearEmployeeSelection = () => {
+    selectedEmployee.value = null;
+    form.assigned_to = '';
+    employeeSearchQuery.value = '';
+    employeeSearchResults.value = [];
+    showEmployeeSearchResults.value = false;
+};
+
+const hideEmployeeSearchResults = () => {
+    setTimeout(() => {
+        showEmployeeSearchResults.value = false;
+    }, 200);
+};
+
 // File upload functions
 const handleFileSelect = (event: Event) => {
     const target = event.target as HTMLInputElement;
@@ -284,30 +506,77 @@ const prevStep = () => {
     }
 };
 
-const createLocation = () => {
-    locationForm.post('/locations', {
-        preserveState: true,
-        onSuccess: (page) => {
-            // If successful, close dialog and trigger a new search to refresh results
+const createLocation = async () => {
+    locationForm.processing = true;
+    locationForm.clearErrors();
+
+    try {
+        const response = await fetch('/locations', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify({
+                company_id: locationForm.company_id,
+                name: locationForm.name,
+                building: locationForm.building,
+                office_number: locationForm.office_number,
+                address: locationForm.address,
+                city: locationForm.city,
+                state: locationForm.state,
+                postal_code: locationForm.postal_code,
+                country: locationForm.country,
+                _from_modal: true, // Flag to indicate this is from modal
+            }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            // Successfully created location
             isLocationDialogOpen.value = false;
             locationForm.reset();
             
-            // Clear current search and trigger refresh
-            searchQuery.value = '';
-            searchResults.value = [];
+            // Create the location object for selection
+            const newLocation = {
+                id: data.location.id,
+                name: data.location.name,
+                code: data.location.code,
+                building: data.location.building,
+                office_number: data.location.office_number,
+                address: data.location.address,
+                city: data.location.city,
+                company_name: data.location.company.name_en,
+                display_name: `${data.location.code}: ${data.location.name}` + 
+                    (data.location.building ? ` - Building ${data.location.building}` : '') +
+                    (data.location.office_number ? ` - Office ${data.location.office_number}` : ''),
+                full_address: [data.location.address, data.location.city].filter(Boolean).join(', ')
+            };
             
-            // If there was a search query, re-run the search to get updated results
-            if (searchQuery.value.length >= 2) {
-                searchLocations();
+            // Auto-select the newly created location
+            selectLocation(newLocation);
+        } else {
+            // Handle validation errors
+            if (data.errors) {
+                const validFields = ['company_id', 'name', 'building', 'office_number', 'address', 'city', 'state', 'postal_code', 'country'] as const;
+                Object.keys(data.errors).forEach(key => {
+                    if (validFields.includes(key as typeof validFields[number])) {
+                        locationForm.setError(key as typeof validFields[number], data.errors[key][0]);
+                    }
+                });
+            } else {
+                console.error('Failed to create location:', data);
             }
-        },
-        onError: () => {
-            // Form errors will be handled by the locationForm
-        },
-        headers: {
-            'Accept': 'application/json',
         }
-    });
+    } catch (error) {
+        console.error('Error creating location:', error);
+        locationForm.setError('name', 'An error occurred while creating the location.');
+    } finally {
+        locationForm.processing = false;
+    }
 };
 
 const submit = () => {
@@ -675,6 +944,196 @@ const getStepConnectorClass = (step: number) => {
                             <p class="text-sm text-muted-foreground">{{ t('assets.serial_number_optional') }}</p>
                             <div v-if="form.errors.serial_number" class="text-sm text-red-600 dark:text-red-400">
                                 {{ form.errors.serial_number }}
+                            </div>
+                        </div>
+
+                        <!-- Asset Assignment Details -->
+                        <div class="space-y-6 border-t pt-6">
+                            <h4 class="font-medium text-gray-900 dark:text-gray-100">
+                                {{ t('assets.assignment_details') }}
+                            </h4>
+
+                            <!-- Company Selection -->
+                            <div class="space-y-2">
+                                <Label for="company_search">{{ t('assets.company') }}</Label>
+                                <div class="relative">
+                                    <div class="relative">
+                                        <Input
+                                            id="company_search"
+                                            v-model="companySearchQuery"
+                                            type="text"
+                                            :placeholder="selectedCompany ? selectedCompany.display_name : t('assets.search_company_placeholder')"
+                                            @input="handleCompanySearchInput"
+                                            @focus="companySearchQuery.length >= 2 && (showCompanySearchResults = true)"
+                                            @blur="hideCompanySearchResults"
+                                            :class="{ 'border-red-500': form.errors.company_id }"
+                                            :disabled="selectedCompany !== null"
+                                        />
+                                        
+                                        <!-- Clear button when company is selected -->
+                                        <button
+                                            v-if="selectedCompany"
+                                            type="button"
+                                            @click="clearCompanySelection"
+                                            class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                        >
+                                            <Icon name="X" class="h-4 w-4" />
+                                        </button>
+                                        
+                                        <!-- Loading spinner -->
+                                        <div
+                                            v-if="isCompanySearching"
+                                            class="absolute right-2 top-1/2 transform -translate-y-1/2"
+                                        >
+                                            <Icon name="Loader2" class="h-4 w-4 animate-spin text-gray-400" />
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Search Results Dropdown -->
+                                    <div
+                                        v-if="showCompanySearchResults && companySearchResults.length > 0"
+                                        class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-y-auto"
+                                    >
+                                        <div
+                                            v-for="company in companySearchResults"
+                                            :key="company.id"
+                                            @click="selectCompany(company)"
+                                            class="px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                                        >
+                                            <div class="font-medium text-sm">{{ company.display_name }}</div>
+                                            <div class="text-xs text-gray-500 dark:text-gray-400">
+                                                {{ company.company_email }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="text-sm text-muted-foreground">{{ t('assets.company_optional') }}</p>
+                                <div v-if="form.errors.company_id" class="text-sm text-red-600 dark:text-red-400">
+                                    {{ form.errors.company_id }}
+                                </div>
+                            </div>
+
+                            <!-- Department Selection -->
+                            <div class="space-y-2">
+                                <Label for="department_search">{{ t('assets.department') }}</Label>
+                                <div class="relative">
+                                    <div class="relative">
+                                        <Input
+                                            id="department_search"
+                                            v-model="departmentSearchQuery"
+                                            type="text"
+                                            :placeholder="selectedDepartment ? selectedDepartment.display_name : t('assets.search_department_placeholder')"
+                                            @input="handleDepartmentSearchInput"
+                                            @focus="departmentSearchQuery.length >= 2 && (showDepartmentSearchResults = true)"
+                                            @blur="hideDepartmentSearchResults"
+                                            :class="{ 'border-red-500': form.errors.department_id }"
+                                            :disabled="selectedDepartment !== null"
+                                        />
+                                        
+                                        <!-- Clear button when department is selected -->
+                                        <button
+                                            v-if="selectedDepartment"
+                                            type="button"
+                                            @click="clearDepartmentSelection"
+                                            class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                        >
+                                            <Icon name="X" class="h-4 w-4" />
+                                        </button>
+                                        
+                                        <!-- Loading spinner -->
+                                        <div
+                                            v-if="isDepartmentSearching"
+                                            class="absolute right-2 top-1/2 transform -translate-y-1/2"
+                                        >
+                                            <Icon name="Loader2" class="h-4 w-4 animate-spin text-gray-400" />
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Search Results Dropdown -->
+                                    <div
+                                        v-if="showDepartmentSearchResults && departmentSearchResults.length > 0"
+                                        class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-y-auto"
+                                    >
+                                        <div
+                                            v-for="department in departmentSearchResults"
+                                            :key="department.id"
+                                            @click="selectDepartment(department)"
+                                            class="px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                                        >
+                                            <div class="font-medium text-sm">{{ department.display_name }}</div>
+                                            <div class="text-xs text-gray-500 dark:text-gray-400">
+                                                {{ department.company_name }}
+                                                <span v-if="department.description"> • {{ department.description }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="text-sm text-muted-foreground">{{ t('assets.department_optional') }}</p>
+                                <div v-if="form.errors.department_id" class="text-sm text-red-600 dark:text-red-400">
+                                    {{ form.errors.department_id }}
+                                </div>
+                            </div>
+
+                            <!-- Employee Assignment -->
+                            <div class="space-y-2">
+                                <Label for="employee_search">{{ t('assets.assign_to_employee') }}</Label>
+                                <div class="relative">
+                                    <div class="relative">
+                                        <Input
+                                            id="employee_search"
+                                            v-model="employeeSearchQuery"
+                                            type="text"
+                                            :placeholder="selectedEmployee ? selectedEmployee.display_name : t('assets.search_employee_placeholder')"
+                                            @input="handleEmployeeSearchInput"
+                                            @focus="employeeSearchQuery.length >= 2 && (showEmployeeSearchResults = true)"
+                                            @blur="hideEmployeeSearchResults"
+                                            :class="{ 'border-red-500': form.errors.assigned_to }"
+                                            :disabled="selectedEmployee !== null"
+                                        />
+                                        
+                                        <!-- Clear button when employee is selected -->
+                                        <button
+                                            v-if="selectedEmployee"
+                                            type="button"
+                                            @click="clearEmployeeSelection"
+                                            class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                        >
+                                            <Icon name="X" class="h-4 w-4" />
+                                        </button>
+                                        
+                                        <!-- Loading spinner -->
+                                        <div
+                                            v-if="isEmployeeSearching"
+                                            class="absolute right-2 top-1/2 transform -translate-y-1/2"
+                                        >
+                                            <Icon name="Loader2" class="h-4 w-4 animate-spin text-gray-400" />
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Search Results Dropdown -->
+                                    <div
+                                        v-if="showEmployeeSearchResults && employeeSearchResults.length > 0"
+                                        class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-y-auto"
+                                    >
+                                        <div
+                                            v-for="employee in employeeSearchResults"
+                                            :key="employee.id"
+                                            @click="selectEmployee(employee)"
+                                            class="px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                                        >
+                                            <div class="font-medium text-sm">{{ employee.display_name }}</div>
+                                            <div class="text-xs text-gray-500 dark:text-gray-400">
+                                                {{ employee.email }}
+                                                <span v-if="employee.department"> • {{ employee.department }}</span>
+                                                <span v-if="employee.company_name"> • {{ employee.company_name }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="text-sm text-muted-foreground">{{ t('assets.assign_to_employee_optional') }}</p>
+                                <div v-if="form.errors.assigned_to" class="text-sm text-red-600 dark:text-red-400">
+                                    {{ form.errors.assigned_to }}
+                                </div>
                             </div>
                         </div>
 

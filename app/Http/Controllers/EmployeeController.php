@@ -6,6 +6,7 @@ use App\Models\Employee;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -106,11 +107,22 @@ class EmployeeController extends Controller
             'phone' => 'nullable|string|max:20',
             'mobile' => 'nullable|string|max:20',
             'department' => 'nullable|string|max:255',
+            'department_id' => 'nullable|exists:departments,id',
             'job_title' => 'nullable|string|max:255',
             'manager' => 'nullable|string|max:255',
             'hire_date' => 'nullable|date',
             'notes' => 'nullable|string',
         ]);
+
+        // Validate department belongs to a company owned by the user
+        if (!empty($validated['department_id'])) {
+            $department = \App\Models\Department::find($validated['department_id']);
+            $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
+            
+            if (!$department || !$ownedCompanyIds->contains($department->company_id)) {
+                return back()->withErrors(['department_id' => 'Department must belong to one of your companies.']);
+            }
+        }
 
         $validated['company_id'] = $company->id;
 
@@ -203,6 +215,7 @@ class EmployeeController extends Controller
             'phone' => 'nullable|string|max:20',
             'mobile' => 'nullable|string|max:20',
             'department' => 'nullable|string|max:255',
+            'department_id' => 'nullable|exists:departments,id',
             'job_title' => 'nullable|string|max:255',
             'manager' => 'nullable|string|max:255',
             'hire_date' => 'nullable|date',
@@ -210,6 +223,16 @@ class EmployeeController extends Controller
             'employment_status' => 'required|in:active,inactive,terminated',
             'notes' => 'nullable|string',
         ]);
+
+        // Validate department belongs to a company owned by the user
+        if (!empty($validated['department_id'])) {
+            $department = \App\Models\Department::find($validated['department_id']);
+            $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
+            
+            if (!$department || !$ownedCompanyIds->contains($department->company_id)) {
+                return back()->withErrors(['department_id' => 'Department must belong to one of your companies.']);
+            }
+        }
 
         $employee->update($validated);
 
@@ -252,5 +275,59 @@ class EmployeeController extends Controller
 
         return redirect()->route('employees.index')
             ->with('success', 'Employee deleted successfully.');
+    }
+
+    /**
+     * Search employees for async selection.
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        $companies = $user->ownedCompanies()->pluck('id');
+        
+        $query = $request->get('q', '');
+        $companyId = $request->get('company_id');
+        $departmentId = $request->get('department_id');
+        
+        $employees = Employee::query()
+            ->whereIn('company_id', $companies)
+            ->when($companyId, function ($q) use ($companyId) {
+                return $q->where('company_id', $companyId);
+            })
+            ->when($departmentId, function ($q) use ($departmentId) {
+                return $q->where('department', $departmentId);
+            })
+            ->when($query, function ($q) use ($query) {
+                return $q->where(function ($subQuery) use ($query) {
+                    $subQuery->where('first_name', 'like', "%{$query}%")
+                        ->orWhere('last_name', 'like', "%{$query}%")
+                        ->orWhere('employee_id', 'like', "%{$query}%")
+                        ->orWhere('email', 'like', "%{$query}%")
+                        ->orWhere('job_title', 'like', "%{$query}%");
+                });
+            })
+            ->where('employment_status', 'active') // Only active employees
+            ->with('company')
+            ->orderBy('first_name')
+            ->orderBy('last_name')
+            ->limit(20)
+            ->get()
+            ->map(function ($employee) {
+                return [
+                    'id' => $employee->id,
+                    'employee_id' => $employee->employee_id,
+                    'first_name' => $employee->first_name,
+                    'last_name' => $employee->last_name,
+                    'email' => $employee->email,
+                    'job_title' => $employee->job_title,
+                    'department' => $employee->department,
+                    'company_name' => $employee->company->name_en,
+                    'display_name' => ($employee->employee_id ? "{$employee->employee_id}: " : '') . 
+                        "{$employee->first_name} {$employee->last_name}" .
+                        ($employee->job_title ? " - {$employee->job_title}" : ''),
+                ];
+            });
+
+        return response()->json($employees);
     }
 }

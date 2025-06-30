@@ -31,6 +31,11 @@ class AssetTemplate extends Model
         'usage_count' => 'integer',
     ];
 
+    protected $attributes = [
+        'is_global' => true,
+        'usage_count' => 0,
+    ];
+
     protected $appends = [
         'display_name',
         'formatted_specifications',

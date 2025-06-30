@@ -19,6 +19,7 @@ class Employee extends Model
         'phone',
         'mobile',
         'department',
+        'department_id',
         'job_title',
         'manager',
         'hire_date',
@@ -46,6 +47,14 @@ class Employee extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    /**
+     * Get the department this employee belongs to.
+     */
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class);
     }
 
     /**

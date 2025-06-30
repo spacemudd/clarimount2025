@@ -3,10 +3,10 @@
         <div class="container mx-auto py-8">
             <div class="space-y-6">
                 <div class="space-y-2">
-                    <Breadcrumbs :items="breadcrumbs" />
+                    <Breadcrumbs :breadcrumbs="breadcrumbs" />
                     <div class="flex items-center justify-between">
                         <div class="space-y-1">
-                            <Heading>{{ employee.full_name }}</Heading>
+                            <Heading :title="employee.full_name" />
                             <div class="flex items-center gap-2">
                                 <Badge :class="getStatusBadgeClass(employee.employment_status)">
                                     {{ t(`employees.status_${employee.employment_status}`) }}

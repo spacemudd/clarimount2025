@@ -125,6 +125,9 @@ class AssetController extends Controller
         $validated = $request->validate([
             'asset_template_id' => 'required|exists:asset_templates,id',
             'location_id' => 'required|exists:locations,id',
+            'company_id' => 'nullable|exists:companies,id',
+            'department_id' => 'nullable|exists:departments,id',
+            'assigned_to' => 'nullable|exists:employees,id',
             'serial_number' => 'nullable|string|max:255',
             'image' => 'nullable|image|max:5120', // 5MB max
         ]);
@@ -145,10 +148,35 @@ class AssetController extends Controller
             return back()->withErrors(['asset_template_id' => 'Selected template does not have a category assigned. Please update the template first.']);
         }
         
-        // Validate location belongs to the company
+        // Determine the company to use (from form or current company)
+        $targetCompanyId = $validated['company_id'] ?? $company->id;
+        
+        // Verify user owns the target company
+        $targetCompany = $user->ownedCompanies()->find($targetCompanyId);
+        if (!$targetCompany) {
+            return back()->withErrors(['company_id' => 'Invalid company selection.']);
+        }
+        
+        // Validate location belongs to the target company
         $location = Location::find($validated['location_id']);
-        if (!$location || $location->company_id !== $company->id) {
-            return back()->withErrors(['location_id' => 'Invalid location.']);
+        if (!$location || $location->company_id !== $targetCompanyId) {
+            return back()->withErrors(['location_id' => 'Location must belong to the selected company.']);
+        }
+        
+        // Validate department belongs to the target company (if provided)
+        if (!empty($validated['department_id'])) {
+            $department = \App\Models\Department::find($validated['department_id']);
+            if (!$department || $department->company_id !== $targetCompanyId) {
+                return back()->withErrors(['department_id' => 'Department must belong to the selected company.']);
+            }
+        }
+        
+        // Validate employee belongs to the target company (if provided)
+        if (!empty($validated['assigned_to'])) {
+            $employee = \App\Models\Employee::find($validated['assigned_to']);
+            if (!$employee || $employee->company_id !== $targetCompanyId) {
+                return back()->withErrors(['assigned_to' => 'Employee must belong to the selected company.']);
+            }
         }
 
         // Handle image upload
@@ -159,9 +187,10 @@ class AssetController extends Controller
 
         // Create asset with data from template
         $assetData = [
-            'company_id' => $company->id,
+            'company_id' => $targetCompanyId,
             'asset_category_id' => $template->asset_category_id,
             'location_id' => $validated['location_id'],
+            'assigned_to' => $validated['assigned_to'],
             'serial_number' => $validated['serial_number'],
             'model_name' => $template->model_name,
             'model_number' => $template->model_number,
@@ -169,7 +198,8 @@ class AssetController extends Controller
             'notes' => $template->default_notes,
             'image_path' => $imagePath,
             'asset_template_id' => $template->id,
-            'status' => 'available',
+            'status' => !empty($validated['assigned_to']) ? 'assigned' : 'available',
+            'assigned_date' => !empty($validated['assigned_to']) ? now() : null,
         ];
 
         // Asset tag will be generated automatically by the Asset model

@@ -181,11 +181,6 @@ class AssetTemplateController extends Controller
             $user->ownedCompanies()->findOrFail($validated['company_id']);
         }
 
-        // Only super admins can create global templates
-        if ($validated['is_global'] && !$user->hasRole('super-admin')) {
-            $validated['is_global'] = false;
-        }
-
         $validated['created_by_user_id'] = $user->id;
 
         $template = AssetTemplate::create($validated);
@@ -275,11 +270,6 @@ class AssetTemplateController extends Controller
         // Verify user owns the selected company (if not global)
         if (!$validated['is_global'] && $validated['company_id']) {
             $user->ownedCompanies()->findOrFail($validated['company_id']);
-        }
-
-        // Only super admins can make templates global
-        if ($validated['is_global'] && !$user->hasRole('super-admin')) {
-            $validated['is_global'] = false;
         }
 
         $assetTemplate->update($validated);

@@ -3,8 +3,8 @@
         <div class="container max-w-2xl mx-auto py-8">
             <div class="space-y-6">
                 <div class="space-y-2">
-                    <Breadcrumbs :items="breadcrumbs" />
-                    <Heading>{{ t('locations.edit_location') }}</Heading>
+                    <Breadcrumbs :breadcrumbs="breadcrumbs" />
+                    <Heading :title="t('locations.edit_location')" />
                 </div>
 
                 <Card>

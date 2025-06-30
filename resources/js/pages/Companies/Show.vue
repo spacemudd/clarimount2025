@@ -50,7 +50,7 @@ const getCompanyDescription = (company: Company) => {
         <div class="space-y-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <Heading>{{ getCompanyName(company) }}</Heading>
+                                            <Heading :title="getCompanyName(company)" />
                     <p v-if="getCompanyDescription(company)" class="text-sm text-gray-600 dark:text-gray-400 mt-1">
                         {{ getCompanyDescription(company) }}
                     </p>

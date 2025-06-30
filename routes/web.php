@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\AssetCategoryController;
@@ -69,6 +70,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('companies', CompanyController::class);
 });
 
+// Department management routes
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::resource('departments', DepartmentController::class);
+});
+
 // IT Asset Management & Ticketing System routes
 Route::middleware(['auth', 'verified'])->group(function () {
     // Locations management
@@ -89,6 +95,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // API endpoints for async searches
     Route::get('api/locations/search', [LocationController::class, 'search'])->name('api.locations.search');
     Route::get('api/asset-templates/search', [AssetTemplateController::class, 'search'])->name('api.asset-templates.search');
+    Route::get('api/companies/search', [CompanyController::class, 'search'])->name('api.companies.search');
+    Route::get('api/departments/search', [DepartmentController::class, 'search'])->name('api.departments.search');
+    Route::get('api/employees/search', [EmployeeController::class, 'search'])->name('api.employees.search');
 });
 
 require __DIR__.'/auth.php';

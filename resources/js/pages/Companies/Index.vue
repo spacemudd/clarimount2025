@@ -57,7 +57,7 @@ const getCompanyDescription = (company: Company) => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="space-y-6">
             <div class="flex items-center justify-between">
-                <Heading>{{ t('companies.my_companies') }}</Heading>
+                                        <Heading :title="t('companies.my_companies')" />
                 <Button as-child>
                     <Link :href="route('companies.create')">
                         <Plus class="mr-2 h-4 w-4" />

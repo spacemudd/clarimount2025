@@ -119,6 +119,20 @@
               />
               <InputError v-if="errors.default_notes" :message="errors.default_notes" class="mt-1" />
             </div>
+
+            <!-- Global Template -->
+            <div class="flex items-center space-x-2">
+              <input
+                id="is_global"
+                v-model="form.is_global"
+                type="checkbox"
+                class="rounded border-gray-300 text-blue-600 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+              />
+              <Label for="is_global" class="text-sm font-medium">
+                Make this template available to all companies (Global)
+              </Label>
+              <InputError v-if="errors.is_global" :message="errors.is_global" class="mt-1" />
+            </div>
           </CardContent>
         </Card>
 
@@ -175,7 +189,7 @@ const form = useForm({
   company_id: props.currentCompany?.id || '',
   specifications: {},
   default_notes: '',
-  is_global: false,
+  is_global: true,
 })
 
 const processing = ref(false)

@@ -81,6 +81,14 @@ class Company extends Model
     }
 
     /**
+     * Get all departments for this company.
+     */
+    public function departments(): HasMany
+    {
+        return $this->hasMany(Department::class);
+    }
+
+    /**
      * Get all assets for this company.
      */
     public function assets(): HasMany

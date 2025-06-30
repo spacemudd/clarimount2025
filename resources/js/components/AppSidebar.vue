@@ -5,7 +5,7 @@ import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, Building, MapPin, Users, Package, HardDrive, FileText } from 'lucide-vue-next';
+import { BookOpen, Folder, LayoutGrid, Building, MapPin, Users, Package, HardDrive, FileText, Building2 } from 'lucide-vue-next';
 import { useI18n } from 'vue-i18n';
 import { computed } from 'vue';
 import AppLogo from './AppLogo.vue';
@@ -22,6 +22,11 @@ const mainNavItems = computed((): NavItem[] => [
         title: t('nav.companies'),
         href: '/companies',
         icon: Building,
+    },
+    {
+        title: 'Departments',
+        href: '/departments',
+        icon: Building2,
     },
     {
         title: t('nav.locations'),

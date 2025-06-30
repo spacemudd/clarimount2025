@@ -61,7 +61,7 @@ const submit = () => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="max-w-2xl">
-            <Heading>{{ t('companies.edit_company') }}</Heading>
+                                    <Heading :title="t('companies.edit_company')" />
             <p class="text-sm text-gray-600 dark:text-gray-400 mt-1 mb-6">
                 {{ getCompanyName(company) }}
             </p>

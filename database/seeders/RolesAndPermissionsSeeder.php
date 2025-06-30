@@ -47,6 +47,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'view analytics',
             'export data',
             
+            // Department management
+            'view departments',
+            'create departments',
+            'edit departments',
+            'delete departments',
+            
             // Profile management (per user)
             'edit own profile',
             'view own profile',
@@ -68,6 +74,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'invite users', 'view users', 'edit users', 'remove users', 'assign roles',
             'create content', 'view content', 'edit content', 'delete content', 'publish content',
             'view admin panel', 'manage billing', 'view analytics', 'export data',
+            'view departments', 'create departments', 'edit departments', 'delete departments',
             'edit own profile', 'view own profile',
         ];
 
@@ -76,6 +83,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'invite users', 'view users', 'edit users', 'assign roles',
             'create content', 'view content', 'edit content', 'delete content', 'publish content',
             'view admin panel', 'view analytics', 'export data',
+            'view departments', 'create departments', 'edit departments', 'delete departments',
             'edit own profile', 'view own profile',
         ];
 
@@ -83,6 +91,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view team',
             'view users',
             'create content', 'view content', 'edit content',
+            'view departments',
             'edit own profile', 'view own profile',
         ];
 
