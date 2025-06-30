@@ -32,7 +32,7 @@ class AssetController extends Controller
         $ownedCompanyIds = $ownedCompanies->pluck('id');
 
         // Only show assets from companies the user owns
-        $query = Asset::with(['category', 'location', 'assignments', 'company'])
+        $query = Asset::with(['category', 'location', 'assignments', 'company', 'assetTemplate'])
             ->whereIn('company_id', $ownedCompanyIds);
 
         // Handle search
