@@ -165,6 +165,7 @@ export interface Asset {
     model_name?: string;
     model_number?: string;
     status: 'available' | 'assigned' | 'maintenance' | 'retired';
+    condition: 'good' | 'damaged';
     notes?: string;
     image_path?: string;
     asset_template_id?: number;

@@ -134,6 +134,7 @@ const form = useForm({
     department_id: '',
     assigned_to: '',
     serial_number: '',
+    condition: 'good',
     image: null as File | null,
 });
 
@@ -947,6 +948,24 @@ const getStepConnectorClass = (step: number) => {
                             </div>
                         </div>
 
+                        <!-- Condition -->
+                        <div class="space-y-2">
+                            <Label for="condition">{{ t('assets.condition') }} *</Label>
+                            <select
+                                id="condition"
+                                v-model="form.condition"
+                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                :class="{ 'border-red-500': form.errors.condition }"
+                                required
+                            >
+                                <option value="good">{{ t('assets.condition_good') }}</option>
+                                <option value="damaged">{{ t('assets.condition_damaged') }}</option>
+                            </select>
+                            <div v-if="form.errors.condition" class="text-sm text-red-600 dark:text-red-400">
+                                {{ form.errors.condition }}
+                            </div>
+                        </div>
+
                         <!-- Asset Assignment Details -->
                         <div class="space-y-6 border-t pt-6">
                             <h4 class="font-medium text-gray-900 dark:text-gray-100">
@@ -1226,6 +1245,10 @@ const getStepConnectorClass = (step: number) => {
                                 <div>
                                     <strong>{{ t('assets.serial_number') }}:</strong>
                                     {{ form.serial_number || t('assets.not_provided') }}
+                                </div>
+                                <div>
+                                    <strong>{{ t('assets.condition') }}:</strong>
+                                    {{ form.condition === 'good' ? t('assets.condition_good') : t('assets.condition_damaged') }}
                                 </div>
                                 <div>
                                     <strong>{{ t('assets.image') }}:</strong>

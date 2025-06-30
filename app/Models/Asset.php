@@ -27,6 +27,7 @@ class Asset extends Model
         'model_number',
         'manufacturer',
         'status',
+        'condition',
         'notes',
         'image_path',
     ];

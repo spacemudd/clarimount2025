@@ -34,6 +34,7 @@ const form = useForm({
     company_id: props.asset.company_id,
     model_name: props.asset.model_name || '',
     model_number: props.asset.model_number || '',
+    condition: props.asset.condition || 'good',
     notes: props.asset.notes || '',
     image: null as File | null,
     remove_image: false as boolean,
@@ -326,6 +327,21 @@ const submit = () => {
                                         </option>
                                     </select>
                                     <InputError v-if="form.errors.location_id" :message="form.errors.location_id" class="mt-1" />
+                                </div>
+
+                                <!-- Condition -->
+                                <div>
+                                    <Label for="condition">{{ t('assets.condition') }} *</Label>
+                                    <select
+                                        id="condition"
+                                        v-model="form.condition"
+                                        required
+                                        class="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        <option value="good">{{ t('assets.condition_good') }}</option>
+                                        <option value="damaged">{{ t('assets.condition_damaged') }}</option>
+                                    </select>
+                                    <InputError v-if="form.errors.condition" :message="form.errors.condition" class="mt-1" />
                                 </div>
 
                                 <!-- Notes -->

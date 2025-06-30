@@ -57,7 +57,7 @@ class AssetController extends Controller
             $query->where('location_id', $locationId);
         }
 
-        $assets = $query->orderBy('asset_tag')->paginate(20)->withQueryString();
+        $assets = $query->orderBy('asset_tag')->paginate(1000)->withQueryString();
 
         // Get categories and locations for filters (from all owned companies)
         $categories = AssetCategory::withDepth()
@@ -132,6 +132,7 @@ class AssetController extends Controller
             'department_id' => 'nullable|exists:departments,id',
             'assigned_to' => 'nullable|exists:employees,id',
             'serial_number' => 'nullable|string|max:255',
+            'condition' => 'required|in:good,damaged',
             'image' => 'nullable|image|max:5120', // 5MB max
         ]);
 
@@ -195,6 +196,7 @@ class AssetController extends Controller
             'location_id' => $validated['location_id'],
             'assigned_to' => $validated['assigned_to'],
             'serial_number' => $validated['serial_number'],
+            'condition' => $validated['condition'],
             'model_name' => $template->model_name,
             'model_number' => $template->model_number,
             'manufacturer' => $template->manufacturer,
@@ -311,6 +313,7 @@ class AssetController extends Controller
             'company_id' => 'required|exists:companies,id',
             'model_name' => 'nullable|string|max:255',
             'model_number' => 'nullable|string|max:255',
+            'condition' => 'required|in:good,damaged',
             'notes' => 'nullable|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
             'remove_image' => 'boolean',
@@ -339,7 +342,7 @@ class AssetController extends Controller
             if ($asset->image_path && Storage::disk('public')->exists($asset->image_path)) {
                 Storage::disk('public')->delete($asset->image_path);
             }
-            
+
             // Store new image
             $validated['image_path'] = $request->file('image')->store('assets', 'public');
         } elseif ($request->boolean('remove_image') && $asset->image_path) {

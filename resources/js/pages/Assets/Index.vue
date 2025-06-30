@@ -81,21 +81,18 @@ const clearFilters = () => {
     locationFilter.value = '';
 };
 
+const getImageSrc = (asset: Asset) => {
+    const imagePath = asset.image_path || asset.assetTemplate?.image_path;
+    if (imagePath) {
+        return `/storage/${imagePath}`;
+    }
+    return null;
+};
+
 const handleImageError = (event: Event) => {
     const target = event.target as HTMLImageElement;
-    // Hide the image and show the fallback icon instead
-    const imageContainer = target.closest('.flex-shrink-0');
-    if (imageContainer) {
-        imageContainer.innerHTML = `
-            <div class="h-10 w-10 rounded-lg bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
-                <svg class="h-5 w-5 text-gray-700 dark:text-gray-300" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M2 3h6l2 4h8a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V3z"/>
-                    <path d="M8 21h8"/>
-                    <path d="M12 17v4"/>
-                </svg>
-            </div>
-        `;
-    }
+    // Hide the broken image so the fallback icon shows
+    target.style.display = 'none';
 };
 </script>
 
@@ -188,6 +185,9 @@ const handleImageError = (event: Event) => {
                                     {{ t('assets.location') }}
                                 </th>
                                 <th class="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                    {{ t('assets.condition') }}
+                                </th>
+                                <th class="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                     {{ t('assets.status') }}
                                 </th>
                                 <th class="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -201,9 +201,9 @@ const handleImageError = (event: Event) => {
                                     <div class="flex items-center">
                                         <div class="flex-shrink-0 h-10 w-10">
                                             <!-- Asset Image or Template Image -->
-                                            <div v-if="asset.image_path || asset.assetTemplate?.image_path" class="h-10 w-10 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600">
+                                            <div v-if="getImageSrc(asset)" class="h-10 w-10 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600">
                                                 <img 
-                                                    :src="`/storage/${asset.image_path || asset.assetTemplate?.image_path}`" 
+                                                    :src="getImageSrc(asset)!" 
                                                     :alt="asset.asset_tag"
                                                     class="h-full w-full object-cover"
                                                     @error="handleImageError"
@@ -235,6 +235,11 @@ const handleImageError = (event: Event) => {
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm text-gray-900 dark:text-gray-100">{{ asset.location?.name || '-' }}</div>
                                     <div class="text-sm text-gray-500 dark:text-gray-400">{{ asset.location?.code || '-' }}</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <Badge :variant="asset.condition === 'good' ? 'default' : 'destructive'">
+                                        {{ t(`assets.condition_${asset.condition}`) }}
+                                    </Badge>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <Badge :variant="getStatusVariant(asset.status)">
