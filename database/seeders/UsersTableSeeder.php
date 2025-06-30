@@ -7,6 +7,7 @@ use Illuminate\Database\Seeder;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
+use Illuminate\Auth\Events\Registered;
 
 class UsersTableSeeder extends Seeder
 {
@@ -43,9 +44,20 @@ class UsersTableSeeder extends Seeder
         // Explicitly set team_id to null for global role
         $admin->roles()->attach($superAdminRole->id, ['team_id' => null]);
 
+        // Fire the Registered event to trigger company and asset category creation
+        event(new Registered($admin));
+
         $this->command->info('✅ Super admin user created successfully!');
         $this->command->info('📧 Email: admin@clarimount.com');
         $this->command->info('🔑 Password: password');
         $this->command->info('🌐 Login at: ' . url('/login'));
+        
+        // Check if company and asset categories were created
+        $company = $admin->currentCompany();
+        if ($company) {
+            $categoriesCount = $company->assetCategories()->count();
+            $this->command->info("🏢 Company created: {$company->name_en}");
+            $this->command->info("📦 Asset categories created: {$categoriesCount}");
+        }
     }
 } 

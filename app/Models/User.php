@@ -71,6 +71,26 @@ class User extends Authenticatable
     }
 
     /**
+     * Get all companies owned by this user.
+     */
+    public function ownedCompanies(): HasMany
+    {
+        return $this->hasMany(Company::class, 'owner_id');
+    }
+
+    /**
+     * Get the current company for the user.
+     * This is a simplified approach - in a real app you might want to store 
+     * the current company ID in session or user preferences.
+     */
+    public function currentCompany(): ?Company
+    {
+        // For now, return the first company the user owns
+        // In a more complex system, you'd implement company switching
+        return $this->ownedCompanies()->first();
+    }
+
+    /**
      * Check if user owns the given team.
      */
     public function ownsTeam(Team $team): bool

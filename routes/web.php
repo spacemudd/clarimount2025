@@ -2,6 +2,10 @@
 
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\LocationController;
+use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\AssetCategoryController;
+use App\Http\Controllers\AssetController;
 use App\Http\Controllers\Admin\AdminTeamController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -62,6 +66,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
 // Company management routes
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('companies', CompanyController::class);
+});
+
+// IT Asset Management & Ticketing System routes
+Route::middleware(['auth', 'verified'])->group(function () {
+    // Locations management
+    Route::resource('locations', LocationController::class);
+    
+    // Employees management
+    Route::resource('employees', EmployeeController::class);
+    
+    // Asset Categories management
+    Route::resource('asset-categories', AssetCategoryController::class);
+    
+    // Assets management
+    Route::resource('assets', AssetController::class);
 });
 
 require __DIR__.'/auth.php';
