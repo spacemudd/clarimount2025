@@ -121,51 +121,88 @@
             </div>
 
             <!-- Current Image -->
-            <div v-if="template.image_path" class="space-y-2">
-              <Label>Current Image</Label>
-              <div class="flex items-start gap-4">
+            <div v-if="template.image_path && !imageDeleted" class="space-y-3">
+              <Label class="text-sm font-medium">Current Image</Label>
+              <div class="relative inline-block">
                 <img 
                   :src="`/storage/${template.image_path}`" 
                   alt="Current template image" 
-                  class="max-w-xs max-h-48 rounded-lg border border-gray-300 dark:border-gray-600"
+                  class="max-w-sm max-h-64 rounded-lg border-2 border-gray-200 dark:border-gray-600 shadow-sm"
+                  @error="handleImageError"
                 />
                 <button 
                   type="button" 
-                  @click="removeCurrentImage"
-                  class="text-sm text-red-600 hover:text-red-800 dark:text-red-400"
+                  @click="markImageForDeletion"
+                  class="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg transition-colors"
+                  title="Remove current image"
                 >
-                  Remove current image
+                  <Icon name="X" class="h-4 w-4" />
+                </button>
+              </div>
+              <p class="text-xs text-gray-500">Click the X to remove this image</p>
+            </div>
+
+            <!-- Image Deletion Notice -->
+            <div v-if="imageDeleted" class="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+              <div class="flex items-center gap-2">
+                <Icon name="AlertTriangle" class="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                <p class="text-sm text-yellow-800 dark:text-yellow-200">
+                  Current image will be removed when you save the template.
+                </p>
+                <button 
+                  type="button" 
+                  @click="restoreImage"
+                  class="ml-auto text-sm text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 underline"
+                >
+                  Undo
                 </button>
               </div>
             </div>
 
             <!-- Image Upload -->
-            <div>
-              <Label for="image">Template Image</Label>
-              <input
-                id="image"
-                type="file"
-                accept="image/*"
-                @change="handleImageChange"
-                class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-gray-700 dark:file:text-gray-300"
-              />
-              <p class="mt-1 text-sm text-gray-500">PNG, JPG, GIF up to 2MB</p>
+            <div class="space-y-3">
+              <Label for="image" class="text-sm font-medium">
+                {{ template.image_path ? 'Replace Image' : 'Upload Image' }}
+              </Label>
+              
+              <!-- File Input -->
+              <div class="relative">
+                <input
+                  id="image"
+                  type="file"
+                  accept="image/jpeg,image/png,image/jpg,image/gif"
+                  @change="handleImageChange"
+                  class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-gray-700 dark:file:text-gray-300 border border-gray-300 rounded-lg dark:border-gray-600"
+                />
+                <div class="mt-2 flex items-center gap-2 text-xs text-gray-500">
+                  <Icon name="Info" class="h-4 w-4" />
+                  <span>Supported: PNG, JPG, GIF up to 2MB</span>
+                </div>
+              </div>
+              
               <InputError v-if="errors.image" :message="errors.image" class="mt-1" />
               
-              <!-- Image Preview -->
-              <div v-if="imagePreview" class="mt-4">
-                <img 
-                  :src="imagePreview" 
-                  alt="Preview" 
-                  class="max-w-xs max-h-48 rounded-lg border border-gray-300 dark:border-gray-600"
-                />
-                <button 
-                  type="button" 
-                  @click="removeImage"
-                  class="mt-2 text-sm text-red-600 hover:text-red-800 dark:text-red-400"
-                >
-                  Remove new image
-                </button>
+              <!-- New Image Preview -->
+              <div v-if="imagePreview" class="mt-4 space-y-3">
+                <Label class="text-sm font-medium text-green-700 dark:text-green-400">New Image Preview</Label>
+                <div class="relative inline-block">
+                  <img 
+                    :src="imagePreview" 
+                    alt="New image preview" 
+                    class="max-w-sm max-h-64 rounded-lg border-2 border-green-200 dark:border-green-600 shadow-sm"
+                  />
+                  <button 
+                    type="button" 
+                    @click="removeImage"
+                    class="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg transition-colors"
+                    title="Remove new image"
+                  >
+                    <Icon name="X" class="h-4 w-4" />
+                  </button>
+                </div>
+                <p class="text-xs text-green-600 dark:text-green-400">
+                  This new image will replace the current one when saved
+                </p>
               </div>
             </div>
 
@@ -247,12 +284,15 @@ const form = useForm({
   specifications: {},
   default_notes: props.template.default_notes || '',
   image: null as File | null,
+  delete_image: false as boolean,
   is_global: props.template.is_global,
 })
 
 const processing = ref(false)
 const errors = ref<Record<string, string>>({})
 const imagePreview = ref<string | null>(null)
+const imageDeleted = ref(false)
+const imageError = ref(false)
 
 const handleSubmit = () => {
   processing.value = true
@@ -299,9 +339,22 @@ const removeImage = () => {
   }
 }
 
+const handleImageError = () => {
+  imageError.value = true
+}
+
+const markImageForDeletion = () => {
+  imageDeleted.value = true
+  // Add a flag to the form to indicate image should be deleted
+  form.delete_image = true
+}
+
+const restoreImage = () => {
+  imageDeleted.value = false
+  form.delete_image = false
+}
+
 const removeCurrentImage = () => {
-  // This could be implemented to mark for deletion on the backend
-  // For now, just show a message or handle as needed
-  console.log('Remove current image functionality can be implemented')
+  markImageForDeletion()
 }
 </script> 

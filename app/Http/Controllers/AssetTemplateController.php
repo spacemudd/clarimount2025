@@ -273,6 +273,7 @@ class AssetTemplateController extends Controller
             'specifications' => 'nullable|array',
             'default_notes' => 'nullable|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'delete_image' => 'boolean',
             'is_global' => 'boolean',
         ]);
 
@@ -281,16 +282,25 @@ class AssetTemplateController extends Controller
             $user->ownedCompanies()->findOrFail($validated['company_id']);
         }
 
-        // Handle image upload
+        // Handle image deletion
+        if ($validated['delete_image'] && $assetTemplate->image_path) {
+            \Storage::disk('public')->delete($assetTemplate->image_path);
+            $validated['image_path'] = null;
+        }
+
+        // Handle image upload (new image)
         if ($request->hasFile('image')) {
-            // Delete old image if exists
-            if ($assetTemplate->image_path) {
+            // Delete old image if exists (and not already deleted above)
+            if ($assetTemplate->image_path && !$validated['delete_image']) {
                 \Storage::disk('public')->delete($assetTemplate->image_path);
             }
             
             $imagePath = $request->file('image')->store('asset-templates', 'public');
             $validated['image_path'] = $imagePath;
         }
+
+        // Remove delete_image from validated data as it's not a model field
+        unset($validated['delete_image']);
 
         $assetTemplate->update($validated);
 
@@ -307,6 +317,11 @@ class AssetTemplateController extends Controller
         
         if (!$assetTemplate->canBeEditedBy($user)) {
             abort(403);
+        }
+
+        // Delete associated image if exists
+        if ($assetTemplate->image_path) {
+            \Storage::disk('public')->delete($assetTemplate->image_path);
         }
 
         $assetTemplate->delete();

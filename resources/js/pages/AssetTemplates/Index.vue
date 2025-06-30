@@ -91,6 +91,9 @@
                     {{ t('asset_templates.template') }}
                   </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    {{ t('common.image') }}
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {{ t('common.category') }}
                   </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -106,7 +109,7 @@
               </thead>
               <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                 <tr v-if="templates.data.length === 0">
-                  <td colspan="5" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                  <td colspan="6" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                     <Icon name="template" class="h-12 w-12 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
                     <p class="text-lg font-medium">{{ t('asset_templates.no_templates_found') }}</p>
                     <p class="mt-1">{{ t('asset_templates.create_first_template') }}</p>
@@ -137,6 +140,22 @@
                         <div v-if="template.formatted_specifications" class="text-xs text-gray-400 dark:text-gray-500 mt-1">
                           {{ template.formatted_specifications }}
                         </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex justify-center">
+                      <img 
+                        v-if="template.image_path"
+                        :src="`/storage/${template.image_path}`" 
+                        :alt="template.name" 
+                        class="h-12 w-12 object-cover rounded-lg border border-gray-200 dark:border-gray-600"
+                      />
+                      <div 
+                        v-else
+                        class="h-12 w-12 bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 flex items-center justify-center"
+                      >
+                        <Icon name="Image" class="h-5 w-5 text-gray-400" />
                       </div>
                     </div>
                   </td>

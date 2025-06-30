@@ -131,16 +131,37 @@
         <!-- Sidebar -->
         <div class="space-y-6">
           <!-- Template Image -->
-          <Card v-if="template.image_path">
+          <Card v-if="template.image_path" class="overflow-hidden">
             <CardHeader>
-              <CardTitle>{{ t('asset_templates.template_image') }}</CardTitle>
+              <CardTitle class="flex items-center gap-2">
+                <Icon name="Image" class="h-5 w-5" />
+                Template Image
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <img 
-                :src="`/storage/${template.image_path}`" 
-                :alt="template.name" 
-                class="w-full rounded-lg border border-gray-300 dark:border-gray-600"
-              />
+            <CardContent class="p-0">
+              <div class="relative group">
+                <img 
+                  :src="`/storage/${template.image_path}`" 
+                  :alt="template.name" 
+                  class="w-full h-auto max-h-80 object-cover transition-transform group-hover:scale-105"
+                  @error="handleImageError"
+                  @click="openImageModal"
+                />
+                <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all cursor-pointer flex items-center justify-center">
+                  <Icon 
+                    name="ZoomIn" 
+                    class="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" 
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <!-- Image Error State -->
+          <Card v-else-if="template.image_path && imageError" class="border-red-200 dark:border-red-800">
+            <CardContent class="p-6 text-center">
+              <Icon name="ImageOff" class="h-12 w-12 text-gray-400 mx-auto mb-3" />
+              <p class="text-sm text-gray-500">Unable to load template image</p>
             </CardContent>
           </Card>
 
@@ -199,6 +220,23 @@
       </div>
     </div>
 
+    <!-- Image Modal -->
+    <Dialog v-model:open="imageModal">
+      <DialogContent class="max-w-4xl w-full">
+        <DialogHeader>
+          <DialogTitle>{{ template.name }}</DialogTitle>
+        </DialogHeader>
+        <div class="flex justify-center">
+          <img 
+            v-if="template.image_path"
+            :src="`/storage/${template.image_path}`" 
+            :alt="template.name" 
+            class="max-w-full max-h-[70vh] object-contain rounded-lg"
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
+
     <!-- Delete Confirmation Dialog -->
     <Dialog v-model:open="deleteDialog.show">
       <DialogContent>
@@ -245,6 +283,7 @@ interface AssetTemplate {
   model_name?: string
   model_number?: string
   default_notes?: string
+  image_path?: string
   specifications?: Record<string, any>
   asset_category?: {
     id: number
@@ -274,6 +313,9 @@ const deleteDialog = ref({
   show: false,
   loading: false
 })
+
+const imageError = ref(false)
+const imageModal = ref(false)
 
 const breadcrumbs = computed((): BreadcrumbItem[] => [
   {
@@ -305,5 +347,13 @@ const handleDelete = () => {
       deleteDialog.value.loading = false
     }
   })
+}
+
+const handleImageError = () => {
+  imageError.value = true
+}
+
+const openImageModal = () => {
+  imageModal.value = true
 }
 </script> 
