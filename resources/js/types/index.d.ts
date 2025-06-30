@@ -170,6 +170,29 @@ export interface Asset {
     tickets?: Ticket[];
 }
 
+export interface AssetTemplate {
+    id: number;
+    name: string;
+    manufacturer?: string;
+    model_name?: string;
+    model_number?: string;
+    asset_category_id: number;
+    company_id?: number;
+    specifications?: Record<string, any>;
+    default_notes?: string;
+    image_path?: string;
+    is_global: boolean;
+    usage_count: number;
+    created_by_user_id: number;
+    created_at: string;
+    updated_at: string;
+    asset_category?: AssetCategory;
+    company?: Company;
+    created_by_user?: User;
+    display_name?: string;
+    formatted_specifications?: string;
+}
+
 export interface TicketCategory {
     id: number;
     name: string;

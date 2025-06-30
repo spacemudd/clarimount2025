@@ -114,6 +114,7 @@ class AssetTemplateController extends Controller
                     'display_name' => $template->display_name,
                     'specifications' => $template->specifications,
                     'default_notes' => $template->default_notes,
+                    'image_path' => $template->image_path,
                     'formatted_specifications' => $template->formatted_specifications,
                     'category_name' => $template->assetCategory?->name,
                     'company_name' => $template->company?->name_en ?? 'Global',
@@ -173,12 +174,19 @@ class AssetTemplateController extends Controller
             'company_id' => 'nullable|exists:companies,id',
             'specifications' => 'nullable|array',
             'default_notes' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'is_global' => 'boolean',
         ]);
 
         // Verify user owns the selected company (if not global)
         if (!$validated['is_global'] && $validated['company_id']) {
             $user->ownedCompanies()->findOrFail($validated['company_id']);
+        }
+
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('asset-templates', 'public');
+            $validated['image_path'] = $imagePath;
         }
 
         $validated['created_by_user_id'] = $user->id;
@@ -264,12 +272,24 @@ class AssetTemplateController extends Controller
             'company_id' => 'nullable|exists:companies,id',
             'specifications' => 'nullable|array',
             'default_notes' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'is_global' => 'boolean',
         ]);
 
         // Verify user owns the selected company (if not global)
         if (!$validated['is_global'] && $validated['company_id']) {
             $user->ownedCompanies()->findOrFail($validated['company_id']);
+        }
+
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            // Delete old image if exists
+            if ($assetTemplate->image_path) {
+                \Storage::disk('public')->delete($assetTemplate->image_path);
+            }
+            
+            $imagePath = $request->file('image')->store('asset-templates', 'public');
+            $validated['image_path'] = $imagePath;
         }
 
         $assetTemplate->update($validated);

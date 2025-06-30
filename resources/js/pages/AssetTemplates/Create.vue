@@ -120,6 +120,36 @@
               <InputError v-if="errors.default_notes" :message="errors.default_notes" class="mt-1" />
             </div>
 
+            <!-- Image Upload -->
+            <div>
+              <Label for="image">Template Image</Label>
+              <input
+                id="image"
+                type="file"
+                accept="image/*"
+                @change="handleImageChange"
+                class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-gray-700 dark:file:text-gray-300"
+              />
+              <p class="mt-1 text-sm text-gray-500">PNG, JPG, GIF up to 2MB</p>
+              <InputError v-if="errors.image" :message="errors.image" class="mt-1" />
+              
+              <!-- Image Preview -->
+              <div v-if="imagePreview" class="mt-4">
+                <img 
+                  :src="imagePreview" 
+                  alt="Preview" 
+                  class="max-w-xs max-h-48 rounded-lg border border-gray-300 dark:border-gray-600"
+                />
+                <button 
+                  type="button" 
+                  @click="removeImage"
+                  class="mt-2 text-sm text-red-600 hover:text-red-800 dark:text-red-400"
+                >
+                  Remove image
+                </button>
+              </div>
+            </div>
+
             <!-- Global Template -->
             <div class="flex items-center space-x-2">
               <input
@@ -189,11 +219,13 @@ const form = useForm({
   company_id: props.currentCompany?.id || '',
   specifications: {},
   default_notes: '',
+  image: null as File | null,
   is_global: true,
 })
 
 const processing = ref(false)
 const errors = ref<Record<string, string>>({})
+const imagePreview = ref<string | null>(null)
 
 const handleSubmit = () => {
   processing.value = true
@@ -211,5 +243,32 @@ const handleSubmit = () => {
       processing.value = false
     }
   })
+}
+
+const handleImageChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  
+  if (file) {
+    form.image = file
+    
+    // Create preview URL
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      imagePreview.value = e.target?.result as string
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+const removeImage = () => {
+  form.image = null
+  imagePreview.value = null
+  
+  // Clear the file input
+  const input = document.getElementById('image') as HTMLInputElement
+  if (input) {
+    input.value = ''
+  }
 }
 </script> 

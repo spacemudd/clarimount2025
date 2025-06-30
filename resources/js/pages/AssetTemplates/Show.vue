@@ -130,6 +130,20 @@
 
         <!-- Sidebar -->
         <div class="space-y-6">
+          <!-- Template Image -->
+          <Card v-if="template.image_path">
+            <CardHeader>
+              <CardTitle>{{ t('asset_templates.template_image') }}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <img 
+                :src="`/storage/${template.image_path}`" 
+                :alt="template.name" 
+                class="w-full rounded-lg border border-gray-300 dark:border-gray-600"
+              />
+            </CardContent>
+          </Card>
+
           <!-- Usage Statistics -->
           <Card>
             <CardHeader>

@@ -20,6 +20,7 @@ class AssetTemplate extends Model
         'company_id',
         'specifications',
         'default_notes',
+        'image_path',
         'is_global',
         'usage_count',
         'created_by_user_id',
