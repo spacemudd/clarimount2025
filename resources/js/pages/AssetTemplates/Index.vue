@@ -178,26 +178,25 @@
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div class="flex items-center space-x-2">
-                      <Button 
-                        as="Link" 
+                      <Link 
                         :href="route('asset-templates.show', template.id)"
-                        variant="ghost" 
-                        size="sm"
+                        class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-3"
+                        title="View template"
                       >
                         <Icon name="eye" class="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        as="Link" 
+                      </Link>
+                      <Link 
                         :href="route('asset-templates.edit', template.id)"
-                        variant="ghost" 
-                        size="sm"
+                        class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-3"
+                        title="Edit template"
                       >
                         <Icon name="edit" class="h-4 w-4" />
-                      </Button>
+                      </Link>
                       <Button 
                         variant="ghost" 
                         size="sm"
                         class="text-red-600 hover:text-red-900"
+                        title="Delete template"
                         @click="confirmDelete(template)"
                       >
                         <Icon name="trash" class="h-4 w-4" />
@@ -278,6 +277,7 @@ interface AssetTemplate {
   manufacturer?: string
   model_name?: string
   model_number?: string
+  image_path?: string
   formatted_specifications?: string
   asset_category?: {
     id: number
