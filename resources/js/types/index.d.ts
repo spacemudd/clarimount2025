@@ -84,6 +84,11 @@ export interface Location {
     code: string;
     building?: string;
     office_number?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    postal_code?: string;
+    country?: string;
     company_id: number;
     is_active: boolean;
     settings?: Record<string, any>;

@@ -16,6 +16,28 @@
                     </CardHeader>
                     <CardContent>
                         <form @submit.prevent="submit" class="space-y-6">
+                            <!-- Company Selection -->
+                            <div>
+                                <Label for="company_id">{{ t('common.company') }}</Label>
+                                <select
+                                    id="company_id"
+                                    v-model="form.company_id"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                                    required
+                                    :disabled="form.processing"
+                                >
+                                    <option value="">{{ t('locations.select_company') }}</option>
+                                    <option 
+                                        v-for="company in companies" 
+                                        :key="company.id" 
+                                        :value="company.id"
+                                    >
+                                        {{ company.name_en }}
+                                    </option>
+                                </select>
+                                <InputError :message="form.errors.company_id" />
+                            </div>
+
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <Label for="name">{{ t('locations.name') }}</Label>
@@ -69,6 +91,75 @@
                                 </div>
                             </div>
 
+                            <!-- Address Section -->
+                            <div class="space-y-4">
+                                <h3 class="text-lg font-medium">{{ t('locations.address_information') }}</h3>
+                                
+                                <div>
+                                    <Label for="address">{{ t('locations.address') }}</Label>
+                                    <Input
+                                        id="address"
+                                        v-model="form.address"
+                                        type="text"
+                                        :placeholder="t('locations.address_placeholder')"
+                                        :disabled="form.processing"
+                                    />
+                                    <InputError :message="form.errors.address" />
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <Label for="city">{{ t('locations.city') }}</Label>
+                                        <Input
+                                            id="city"
+                                            v-model="form.city"
+                                            type="text"
+                                            :placeholder="t('locations.city_placeholder')"
+                                            :disabled="form.processing"
+                                        />
+                                        <InputError :message="form.errors.city" />
+                                    </div>
+
+                                    <div>
+                                        <Label for="state">{{ t('locations.state') }}</Label>
+                                        <Input
+                                            id="state"
+                                            v-model="form.state"
+                                            type="text"
+                                            :placeholder="t('locations.state_placeholder')"
+                                            :disabled="form.processing"
+                                        />
+                                        <InputError :message="form.errors.state" />
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <Label for="postal_code">{{ t('locations.postal_code') }}</Label>
+                                        <Input
+                                            id="postal_code"
+                                            v-model="form.postal_code"
+                                            type="text"
+                                            :placeholder="t('locations.postal_code_placeholder')"
+                                            :disabled="form.processing"
+                                        />
+                                        <InputError :message="form.errors.postal_code" />
+                                    </div>
+
+                                    <div>
+                                        <Label for="country">{{ t('locations.country') }}</Label>
+                                        <Input
+                                            id="country"
+                                            v-model="form.country"
+                                            type="text"
+                                            :placeholder="t('locations.country_placeholder')"
+                                            :disabled="form.processing"
+                                        />
+                                        <InputError :message="form.errors.country" />
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="flex items-center justify-between">
                                 <Button variant="outline" asChild>
                                     <Link :href="route('locations.index')">
@@ -112,15 +203,25 @@ import type { BreadcrumbItem } from '@/types';
 
 interface Props {
     location: Location;
+    companies: Array<{
+        id: number;
+        name_en: string;
+    }>;
 }
 
 const props = defineProps<Props>();
 const { t } = useI18n();
 
 const form = useForm({
+    company_id: props.location.company_id,
     name: props.location.name,
     building: props.location.building || '',
     office_number: props.location.office_number || '',
+    address: props.location.address || '',
+    city: props.location.city || '',
+    state: props.location.state || '',
+    postal_code: props.location.postal_code || '',
+    country: props.location.country || '',
 });
 
 const breadcrumbs = computed((): BreadcrumbItem[] => [

@@ -103,16 +103,16 @@ class LocationController extends Controller
     public function show(Location $location): Response|RedirectResponse
     {
         $user = Auth::user();
-        $company = $user->currentCompany();
+        $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
         
-        // If user doesn't have a company, redirect to create one
-        if (!$company) {
+        // If user doesn't have any companies, redirect to create one
+        if ($ownedCompanyIds->isEmpty()) {
             return redirect()->route('companies.create')
                 ->with('info', 'Please create a company first to manage locations.');
         }
         
         // Check if user has access to this location
-        if ($location->company_id !== $company->id) {
+        if (!$ownedCompanyIds->contains($location->company_id)) {
             abort(403);
         }
 
@@ -130,21 +130,24 @@ class LocationController extends Controller
     public function edit(Location $location): Response|RedirectResponse
     {
         $user = Auth::user();
-        $company = $user->currentCompany();
+        $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
         
-        // If user doesn't have a company, redirect to create one
-        if (!$company) {
+        // If user doesn't have any companies, redirect to create one
+        if ($ownedCompanyIds->isEmpty()) {
             return redirect()->route('companies.create')
                 ->with('info', 'Please create a company first to manage locations.');
         }
         
         // Check if user has access to this location
-        if ($location->company_id !== $company->id) {
+        if (!$ownedCompanyIds->contains($location->company_id)) {
             abort(403);
         }
 
+        $companies = $user->ownedCompanies()->get();
+
         return Inertia::render('Locations/Edit', [
             'location' => $location,
+            'companies' => $companies,
         ]);
     }
 
@@ -154,24 +157,33 @@ class LocationController extends Controller
     public function update(Request $request, Location $location): RedirectResponse
     {
         $user = Auth::user();
-        $company = $user->currentCompany();
+        $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
         
-        // If user doesn't have a company, redirect to create one
-        if (!$company) {
+        // If user doesn't have any companies, redirect to create one
+        if ($ownedCompanyIds->isEmpty()) {
             return redirect()->route('companies.create')
                 ->with('info', 'Please create a company first to manage locations.');
         }
         
         // Check if user has access to this location
-        if ($location->company_id !== $company->id) {
+        if (!$ownedCompanyIds->contains($location->company_id)) {
             abort(403);
         }
 
         $validated = $request->validate([
+            'company_id' => 'required|exists:companies,id',
             'name' => 'required|string|max:255',
             'building' => 'nullable|string|max:100',
             'office_number' => 'nullable|string|max:50',
+            'address' => 'nullable|string|max:255',
+            'city' => 'nullable|string|max:100',
+            'state' => 'nullable|string|max:100',
+            'postal_code' => 'nullable|string|max:20',
+            'country' => 'nullable|string|max:100',
         ]);
+
+        // Verify user owns the selected company (in case they're changing it)
+        $user->ownedCompanies()->findOrFail($validated['company_id']);
 
         $location->update($validated);
 
@@ -185,16 +197,16 @@ class LocationController extends Controller
     public function destroy(Location $location): RedirectResponse
     {
         $user = Auth::user();
-        $company = $user->currentCompany();
+        $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
         
-        // If user doesn't have a company, redirect to create one
-        if (!$company) {
+        // If user doesn't have any companies, redirect to create one
+        if ($ownedCompanyIds->isEmpty()) {
             return redirect()->route('companies.create')
                 ->with('info', 'Please create a company first to manage locations.');
         }
         
         // Check if user has access to this location
-        if ($location->company_id !== $company->id) {
+        if (!$ownedCompanyIds->contains($location->company_id)) {
             abort(403);
         }
 
