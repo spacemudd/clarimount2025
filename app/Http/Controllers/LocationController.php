@@ -19,23 +19,25 @@ class LocationController extends Controller
     public function index(): Response|RedirectResponse
     {
         $user = Auth::user();
-        $company = $user->currentCompany();
+        $companies = $user->ownedCompanies()->get();
+        $ownedCompanyIds = $companies->pluck('id');
         
-        // If user doesn't have a company, redirect to create one
-        if (!$company) {
+        // If user doesn't have any companies, redirect to create one
+        if ($ownedCompanyIds->isEmpty()) {
             return redirect()->route('companies.create')
                 ->with('info', 'Please create a company first to manage locations.');
         }
         
-        $locations = Location::where('company_id', $company->id)
-            ->with(['assets'])
+        $locations = Location::whereIn('company_id', $ownedCompanyIds)
+            ->with(['company', 'assets'])
             ->withCount(['assets'])
             ->latest()
             ->paginate(12);
 
         return Inertia::render('Locations/Index', [
             'locations' => $locations,
-            'company' => $company,
+            'companies' => $companies,
+            'currentCompany' => $user->currentCompany(),
         ]);
     }
 
