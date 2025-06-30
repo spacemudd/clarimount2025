@@ -656,19 +656,28 @@ const printBarcode = () => {
         cpj.clientPrinter = new window.JSPM.InstalledPrinter(barcodeDialog.value.selectedPrinter)
       }
       
-      // Set content to print - Create Zebra ZPL commands for sample label
+      // Set content to print - Create Zebra ZPL commands for 2" x 1" label (406 x 203 dots at 203 DPI)
       let cmds = "^XA"
-      cmds += "^XA"
-      cmds += `^FO20,80^ADN,10,10^FD${props.asset.asset_tag}^FS`
-      cmds += "^FO20,100^BY2"
-      cmds += "^B3N,N,60,N,N"
+      
+      // Set label dimensions for 2" x 1" at 203 DPI
+      cmds += "^PW406"  // Print width 406 dots (2 inches * 203 DPI)
+      cmds += "^LL203"  // Label length 203 dots (1 inch * 203 DPI)
+      
+      // Asset tag at top (larger font)
+      cmds += `^FO10,10^A0N,28,28^FD${props.asset.asset_tag}^FS`
+      
+      // Serial number or asset tag as barcode (Code 128)
+      cmds += "^FO10,50^BY2,2,40"
+      cmds += "^BCN,40,Y,N,N"
       cmds += `^FD${props.asset.serial_number || props.asset.asset_tag}^FS`
-      cmds += "^FO290,4"
-      cmds += "^BQN,2,3"
+      
+      // QR Code on the right side (smaller)
+      cmds += "^FO300,10^BQN,2,3"
       cmds += `^FDMM,${props.asset.asset_tag}^FS`
-      cmds += "^FO10,10^GFA,20706,20706,51,,,K010408,L0C63,L066E,J07FB7DFE,K07IFE,K01IF8,J03KFC,J0MF,I01MF8,I038JFE1C,I063KFC4,J0LFE,I01MF8,I03KFBF8,I03E7IFE7C,I079KFBE,I073KFCEK07804L01FE,I0E7EIF7C6K07804I06007FF8,I0C7JFBE7K07806I0E00F8FC,I0CFBIFDF3K07807I0E01E03E,I08F7DFBEF1K0780F001E03C01F,I08E79F9E71K0780F803E07800F,I01CF1F0F31K0780F803E07800F8,I01CE0F0738K0780FC07E07800F8,I018E0F071L0780FE07E0780078,I018C0F071L0780FE0EE0F80078,J08C0F031L0780EF1CF0F80078,J08C0F021L0780EF1CF0F80078,K040F021L0781E7B8F0780078,K040F02M0781E3F8F07C00F8,M0FO0781C3F0F07C00F,M0FO0781C1F0F03E00F,M0FO0781C1E0F03F01E,M0FO0781C0E0F81FC7C,M0FO0783C0C0F807FF8,M0FO0783CI0F801FE,M0F,M0F,01FF003FC00FF8,0IFE1IF87IF,I07F8IF1FE004,J0FC7FE3F,J01F3FCFC,K0F8F1F,K03E03C,K01F0F8,L079E,L03FC,L01F8,K020F04,K021F84,K0239C4,K0370FC,K01E078,J0C3C03C3,J0E7E07F7,J0FE6067F,J07C2043E,L0204,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,"
-      cmds += `^FO20,170^ADN,10,10^FD${new Date().toISOString().split('T')[0]}^FS`
-      cmds += "^CN"
+      
+      // Date at bottom (smaller font)
+      cmds += `^FO10,170^A0N,20,20^FD${new Date().toISOString().split('T')[0]}^FS`
+      
       cmds += "^XZ"
       
       cpj.printerCommands = cmds
