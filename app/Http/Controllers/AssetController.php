@@ -20,15 +20,14 @@ class AssetController extends Controller
     {
         $user = Auth::user();
         $company = $user->currentCompany();
-        
+
         // If user doesn't have a company, redirect to create one
         if (!$company) {
             return redirect()->route('companies.create')
                 ->with('info', 'Please create a company first to manage assets.');
         }
 
-        $query = Asset::where('company_id', $company->id)
-            ->with(['category', 'location', 'assignments']);
+        $query = Asset::with(['category', 'location', 'assignments']);
 
         // Handle search
         if ($search = $request->get('search')) {
@@ -55,13 +54,11 @@ class AssetController extends Controller
         $assets = $query->orderBy('asset_tag')->paginate(20)->withQueryString();
 
         // Get categories and locations for filters
-        $categories = AssetCategory::scoped(['company_id' => $company->id])
-            ->withDepth()
+        $categories = AssetCategory::withDepth()
             ->orderBy('_lft')
             ->get();
-            
-        $locations = Location::where('company_id', $company->id)
-            ->orderBy('name')
+
+        $locations = Location::orderBy('name')
             ->get();
 
         return Inertia::render('Assets/Index', [
@@ -79,7 +76,7 @@ class AssetController extends Controller
     {
         $user = Auth::user();
         $companies = $user->ownedCompanies()->get();
-        
+
         // If user doesn't have any companies, redirect to create one
         if ($companies->isEmpty()) {
             return redirect()->route('companies.create')
@@ -87,15 +84,15 @@ class AssetController extends Controller
         }
 
         $currentCompany = $user->currentCompany();
-        
+
         // Get categories and locations for current company (for initial load)
-        $categories = $currentCompany ? 
+        $categories = $currentCompany ?
             AssetCategory::scoped(['company_id' => $currentCompany->id])
                 ->withDepth()
                 ->orderBy('_lft')
                 ->get() : collect();
-            
-        $locations = $currentCompany ? 
+
+        $locations = $currentCompany ?
             Location::where('company_id', $currentCompany->id)
                 ->orderBy('name')
                 ->get() : collect();
@@ -115,7 +112,7 @@ class AssetController extends Controller
     {
         $user = Auth::user();
         $company = $user->currentCompany();
-        
+
         // If user doesn't have a company, redirect to create one
         if (!$company) {
             return redirect()->route('companies.create')
@@ -137,32 +134,32 @@ class AssetController extends Controller
         if (!$template) {
             return back()->withErrors(['asset_template_id' => 'Invalid asset template.']);
         }
-        
+
         // Check if user has access to this template (either global or belongs to their company)
         if (!$template->is_global && $template->company_id !== $company->id) {
             return back()->withErrors(['asset_template_id' => 'Invalid asset template.']);
         }
-        
+
         // Ensure template has a valid category
         if (!$template->asset_category_id) {
             return back()->withErrors(['asset_template_id' => 'Selected template does not have a category assigned. Please update the template first.']);
         }
-        
+
         // Determine the company to use (from form or current company)
         $targetCompanyId = $validated['company_id'] ?? $company->id;
-        
+
         // Verify user owns the target company
         $targetCompany = $user->ownedCompanies()->find($targetCompanyId);
         if (!$targetCompany) {
             return back()->withErrors(['company_id' => 'Invalid company selection.']);
         }
-        
+
         // Just verify that the selected location, department, and employee exist (no company restrictions)
         $location = Location::find($validated['location_id']);
         if (!$location) {
             return back()->withErrors(['location_id' => 'Invalid location selection.']);
         }
-        
+
         // Validate department exists (if provided) - no company restriction
         if (!empty($validated['department_id'])) {
             $department = \App\Models\Department::find($validated['department_id']);
@@ -170,8 +167,8 @@ class AssetController extends Controller
                 return back()->withErrors(['department_id' => 'Invalid department selection.']);
             }
         }
-        
-        // Validate employee exists (if provided) - no company restriction  
+
+        // Validate employee exists (if provided) - no company restriction
         if (!empty($validated['assigned_to'])) {
             $employee = \App\Models\Employee::find($validated['assigned_to']);
             if (!$employee) {
@@ -223,13 +220,13 @@ class AssetController extends Controller
     {
         $user = Auth::user();
         $company = $user->currentCompany();
-        
+
         // If user doesn't have a company, redirect to create one
         if (!$company) {
             return redirect()->route('companies.create')
                 ->with('info', 'Please create a company first to manage assets.');
         }
-        
+
         // Check if user has access to this asset
         if ($asset->company_id !== $company->id) {
             abort(403);
@@ -249,13 +246,13 @@ class AssetController extends Controller
     {
         $user = Auth::user();
         $company = $user->currentCompany();
-        
+
         // If user doesn't have a company, redirect to create one
         if (!$company) {
             return redirect()->route('companies.create')
                 ->with('info', 'Please create a company first to manage assets.');
         }
-        
+
         // Check if user has access to this asset
         if ($asset->company_id !== $company->id) {
             abort(403);
@@ -265,7 +262,7 @@ class AssetController extends Controller
             ->withDepth()
             ->orderBy('_lft')
             ->get();
-            
+
         $locations = Location::where('company_id', $company->id)
             ->orderBy('name')
             ->get();
@@ -284,13 +281,13 @@ class AssetController extends Controller
     {
         $user = Auth::user();
         $company = $user->currentCompany();
-        
+
         // If user doesn't have a company, redirect to create one
         if (!$company) {
             return redirect()->route('companies.create')
                 ->with('info', 'Please create a company first to manage assets.');
         }
-        
+
         // Check if user has access to this asset
         if ($asset->company_id !== $company->id) {
             abort(403);
@@ -310,11 +307,11 @@ class AssetController extends Controller
         // Validate that category and location belong to the same company
         $category = AssetCategory::find($validated['asset_category_id']);
         $location = Location::find($validated['location_id']);
-        
+
         if (!$category || $category->company_id !== $company->id) {
             return back()->withErrors(['asset_category_id' => 'Invalid asset category.']);
         }
-        
+
         if (!$location || $location->company_id !== $company->id) {
             return back()->withErrors(['location_id' => 'Invalid location.']);
         }
@@ -332,13 +329,13 @@ class AssetController extends Controller
     {
         $user = Auth::user();
         $company = $user->currentCompany();
-        
+
         // If user doesn't have a company, redirect to create one
         if (!$company) {
             return redirect()->route('companies.create')
                 ->with('info', 'Please create a company first to manage assets.');
         }
-        
+
         // Check if user has access to this asset
         if ($asset->company_id !== $company->id) {
             abort(403);
@@ -355,4 +352,4 @@ class AssetController extends Controller
         return redirect()->route('assets.index')
             ->with('success', 'Asset deleted successfully.');
     }
-} 
+}
