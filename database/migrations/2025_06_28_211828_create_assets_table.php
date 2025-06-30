@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('assets', function (Blueprint $table) {
-            $table->id();
-            $table->string('asset_tag')->unique(); // Asset tag like 'IT-001'
+            $table->uuid('id')->primary();
+            $table->string('asset_tag'); // Sequential number like '1', '2', '3' per company
             $table->text('description')->nullable();
             $table->foreignId('asset_category_id')->constrained()->onDelete('cascade');
             $table->foreignId('location_id')->constrained()->onDelete('cascade');
@@ -46,6 +46,9 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->json('custom_data')->nullable();
             $table->timestamps();
+            
+            // Ensure asset_tag is unique within each company
+            $table->unique(['asset_tag', 'company_id']);
         });
     }
 

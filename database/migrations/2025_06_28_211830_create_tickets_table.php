@@ -23,7 +23,8 @@ return new class extends Migration
             $table->foreignId('reporter_id')->constrained('employees')->onDelete('cascade');
             $table->foreignId('assigned_to')->nullable()->constrained('users')->onDelete('set null');
             $table->foreignId('location_id')->nullable()->constrained()->onDelete('set null');
-            $table->foreignId('asset_id')->nullable()->constrained()->onDelete('set null');
+            $table->uuid('asset_id')->nullable();
+            $table->foreign('asset_id')->references('id')->on('assets')->onDelete('set null');
             
             // Status & Priority
             $table->enum('status', ['open', 'in_progress', 'pending', 'resolved', 'closed'])->default('open');

@@ -13,7 +13,8 @@ return new class extends Migration
     {
         Schema::create('asset_assignments', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('asset_id')->constrained()->onDelete('cascade');
+            $table->uuid('asset_id');
+            $table->foreign('asset_id')->references('id')->on('assets')->onDelete('cascade');
             $table->foreignId('employee_id')->constrained()->onDelete('cascade');
             $table->foreignId('assigned_by')->constrained('users')->onDelete('cascade');
             $table->date('assigned_date');
