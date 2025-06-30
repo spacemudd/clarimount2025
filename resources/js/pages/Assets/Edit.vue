@@ -11,7 +11,7 @@ import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import { useI18n } from 'vue-i18n';
 import { computed, ref } from 'vue';
-import type { Asset, AssetCategory, Location, BreadcrumbItem } from '@/types';
+import type { Asset, AssetCategory, Location, Company, BreadcrumbItem } from '@/types';
 
 const { t } = useI18n();
 
@@ -19,6 +19,7 @@ interface Props {
     asset: Asset;
     categories: AssetCategory[];
     locations: Location[];
+    companies: Company[];
 }
 
 const props = defineProps<Props>();
@@ -30,6 +31,7 @@ const form = useForm({
     finance_tag_number: props.asset.finance_tag_number || '',
     asset_category_id: props.asset.asset_category_id,
     location_id: props.asset.location_id,
+    company_id: props.asset.company_id,
     model_name: props.asset.model_name || '',
     model_number: props.asset.model_number || '',
     notes: props.asset.notes || '',
@@ -279,6 +281,30 @@ const submit = () => {
                                         </option>
                                     </select>
                                     <InputError v-if="form.errors.asset_category_id" :message="form.errors.asset_category_id" class="mt-1" />
+                                </div>
+
+                                <!-- Company -->
+                                <div>
+                                    <Label for="company_id">{{ t('assets.company') }} *</Label>
+                                    <select
+                                        id="company_id"
+                                        v-model="form.company_id"
+                                        required
+                                        class="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        <option value="">{{ t('assets.select_company') }}</option>
+                                        <option 
+                                            v-for="company in companies" 
+                                            :key="company.id" 
+                                            :value="company.id"
+                                        >
+                                            {{ company.name_en }}
+                                        </option>
+                                    </select>
+                                    <InputError v-if="form.errors.company_id" :message="form.errors.company_id" class="mt-1" />
+                                    <p class="text-xs text-gray-500 mt-1">
+                                        Changing the company will affect asset ownership and access permissions.
+                                    </p>
                                 </div>
 
                                 <!-- Location -->

@@ -420,6 +420,7 @@ return [
         'view_details' => 'View Details',
         'all_assets' => 'All Assets',
         'select_category' => 'Select a category',
+        'select_company' => 'Select a company',
         'asset_details' => 'Asset Details',
     ],
     'asset_templates' => [

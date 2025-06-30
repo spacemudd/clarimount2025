@@ -419,6 +419,7 @@ return [
         'view_details' => 'عرض التفاصيل',
         'all_assets' => 'جميع الأصول',
         'select_category' => 'اختر فئة',
+        'select_company' => 'اختر شركة',
         'asset_details' => 'تفاصيل الأصل',
     ],
     'asset_templates' => [

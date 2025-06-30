@@ -8,6 +8,7 @@ use App\Models\Location;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -271,10 +272,14 @@ class AssetController extends Controller
         $locations = Location::orderBy('name')
             ->get();
 
+        // Get user's owned companies for company selection
+        $companies = $user->ownedCompanies()->orderBy('name_en')->get();
+
         return Inertia::render('Assets/Edit', [
             'asset' => $asset,
             'categories' => $categories,
             'locations' => $locations,
+            'companies' => $companies,
         ]);
     }
 
@@ -303,10 +308,18 @@ class AssetController extends Controller
             'finance_tag_number' => 'nullable|string|max:255',
             'asset_category_id' => 'required|exists:asset_categories,id',
             'location_id' => 'required|exists:locations,id',
+            'company_id' => 'required|exists:companies,id',
             'model_name' => 'nullable|string|max:255',
             'model_number' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+            'remove_image' => 'boolean',
         ]);
+
+        // Validate that the selected company is owned by the user
+        if (!$ownedCompanyIds->contains($validated['company_id'])) {
+            return back()->withErrors(['company_id' => 'You can only assign assets to companies you own.']);
+        }
 
         // Just validate that category and location exist (no company restrictions)
         $category = AssetCategory::find($validated['asset_category_id']);
@@ -319,6 +332,26 @@ class AssetController extends Controller
         if (!$location) {
             return back()->withErrors(['location_id' => 'Invalid location.']);
         }
+
+        // Handle image upload/removal
+        if ($request->hasFile('image')) {
+            // Delete old image if exists
+            if ($asset->image_path && Storage::disk('public')->exists($asset->image_path)) {
+                Storage::disk('public')->delete($asset->image_path);
+            }
+            
+            // Store new image
+            $validated['image_path'] = $request->file('image')->store('assets', 'public');
+        } elseif ($request->boolean('remove_image') && $asset->image_path) {
+            // Remove current image
+            if (Storage::disk('public')->exists($asset->image_path)) {
+                Storage::disk('public')->delete($asset->image_path);
+            }
+            $validated['image_path'] = null;
+        }
+
+        // Remove non-model fields from validated data
+        unset($validated['image'], $validated['remove_image']);
 
         $asset->update($validated);
 
