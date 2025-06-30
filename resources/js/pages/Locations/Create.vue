@@ -14,15 +14,22 @@ import type { Company, BreadcrumbItem } from '@/types';
 const { t } = useI18n();
 
 interface Props {
-    company: Company;
+    companies: Company[];
+    currentCompany?: Company;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 const form = useForm({
+    company_id: props.currentCompany?.id || (props.companies.length === 1 ? props.companies[0].id : ''),
     name: '',
     building: '',
     office_number: '',
+    address: '',
+    city: '',
+    state: '',
+    postal_code: '',
+    country: '',
 });
 
 const breadcrumbs = computed((): BreadcrumbItem[] => [
@@ -58,10 +65,29 @@ const submit = () => {
                 </CardHeader>
                 <CardContent>
                     <form @submit.prevent="submit" class="space-y-6">
+                        <!-- Company Selection -->
+                        <div>
+                            <Label for="company_id">{{ t('locations.company') }} *</Label>
+                            <select
+                                id="company_id"
+                                v-model="form.company_id"
+                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                :class="{ 'border-red-500': form.errors.company_id }"
+                                :disabled="form.processing"
+                                required
+                            >
+                                <option value="">{{ t('locations.select_company') }}</option>
+                                <option v-for="company in companies" :key="company.id" :value="company.id">
+                                    {{ company.name_en }} {{ company.name_ar ? `(${company.name_ar})` : '' }}
+                                </option>
+                            </select>
+                            <InputError :message="form.errors.company_id" />
+                        </div>
+
                         <!-- Basic Information -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <Label for="name">{{ t('locations.name') }}</Label>
+                                <Label for="name">{{ t('locations.name') }} *</Label>
                                 <Input
                                     id="name"
                                     v-model="form.name"
@@ -96,19 +122,84 @@ const submit = () => {
                                 />
                                 <InputError :message="form.errors.building" />
                             </div>
+
+                            <div>
+                                <Label for="office_number">{{ t('locations.office_number') }}</Label>
+                                <Input
+                                    id="office_number"
+                                    v-model="form.office_number"
+                                    type="text"
+                                    :placeholder="t('locations.office_number_placeholder')"
+                                    :disabled="form.processing"
+                                />
+                                <InputError :message="form.errors.office_number" />
+                            </div>
                         </div>
 
                         <!-- Address Information -->
-                        <div>
-                            <Label for="office_number">{{ t('locations.office_number') }}</Label>
-                            <Input
-                                id="office_number"
-                                v-model="form.office_number"
-                                type="text"
-                                :placeholder="t('locations.office_number_placeholder')"
-                                :disabled="form.processing"
-                            />
-                            <InputError :message="form.errors.office_number" />
+                        <div class="space-y-4">
+                            <h3 class="text-lg font-medium">{{ t('locations.address_information') }}</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="md:col-span-2">
+                                    <Label for="address">{{ t('locations.address') }}</Label>
+                                    <Input
+                                        id="address"
+                                        v-model="form.address"
+                                        type="text"
+                                        :placeholder="t('locations.address_placeholder')"
+                                        :disabled="form.processing"
+                                    />
+                                    <InputError :message="form.errors.address" />
+                                </div>
+
+                                <div>
+                                    <Label for="city">{{ t('locations.city') }}</Label>
+                                    <Input
+                                        id="city"
+                                        v-model="form.city"
+                                        type="text"
+                                        :placeholder="t('locations.city_placeholder')"
+                                        :disabled="form.processing"
+                                    />
+                                    <InputError :message="form.errors.city" />
+                                </div>
+
+                                <div>
+                                    <Label for="state">{{ t('locations.state') }}</Label>
+                                    <Input
+                                        id="state"
+                                        v-model="form.state"
+                                        type="text"
+                                        :placeholder="t('locations.state_placeholder')"
+                                        :disabled="form.processing"
+                                    />
+                                    <InputError :message="form.errors.state" />
+                                </div>
+
+                                <div>
+                                    <Label for="postal_code">{{ t('locations.postal_code') }}</Label>
+                                    <Input
+                                        id="postal_code"
+                                        v-model="form.postal_code"
+                                        type="text"
+                                        :placeholder="t('locations.postal_code_placeholder')"
+                                        :disabled="form.processing"
+                                    />
+                                    <InputError :message="form.errors.postal_code" />
+                                </div>
+
+                                <div>
+                                    <Label for="country">{{ t('locations.country') }}</Label>
+                                    <Input
+                                        id="country"
+                                        v-model="form.country"
+                                        type="text"
+                                        :placeholder="t('locations.country_placeholder')"
+                                        :disabled="form.processing"
+                                    />
+                                    <InputError :message="form.errors.country" />
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Form Actions -->

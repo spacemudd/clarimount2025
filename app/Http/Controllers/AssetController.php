@@ -78,24 +78,31 @@ class AssetController extends Controller
     public function create(): Response|RedirectResponse
     {
         $user = Auth::user();
-        $company = $user->currentCompany();
+        $companies = $user->ownedCompanies()->get();
         
-        // If user doesn't have a company, redirect to create one
-        if (!$company) {
+        // If user doesn't have any companies, redirect to create one
+        if ($companies->isEmpty()) {
             return redirect()->route('companies.create')
                 ->with('info', 'Please create a company first to manage assets.');
         }
 
-        $categories = AssetCategory::scoped(['company_id' => $company->id])
-            ->withDepth()
-            ->orderBy('_lft')
-            ->get();
+        $currentCompany = $user->currentCompany();
+        
+        // Get categories and locations for current company (for initial load)
+        $categories = $currentCompany ? 
+            AssetCategory::scoped(['company_id' => $currentCompany->id])
+                ->withDepth()
+                ->orderBy('_lft')
+                ->get() : collect();
             
-        $locations = Location::where('company_id', $company->id)
-            ->orderBy('name')
-            ->get();
+        $locations = $currentCompany ? 
+            Location::where('company_id', $currentCompany->id)
+                ->orderBy('name')
+                ->get() : collect();
 
         return Inertia::render('Assets/Create', [
+            'companies' => $companies,
+            'currentCompany' => $currentCompany,
             'categories' => $categories,
             'locations' => $locations,
         ]);

@@ -6,6 +6,7 @@ use App\Http\Controllers\LocationController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\AssetCategoryController;
 use App\Http\Controllers\AssetController;
+use App\Http\Controllers\AssetTemplateController;
 use App\Http\Controllers\Admin\AdminTeamController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -81,6 +82,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
     // Assets management
     Route::resource('assets', AssetController::class);
+    
+    // Asset Templates management
+    Route::resource('asset-templates', AssetTemplateController::class);
+    
+    // API endpoints for async searches
+    Route::get('api/locations/search', [LocationController::class, 'search'])->name('api.locations.search');
+    Route::get('api/asset-templates/search', [AssetTemplateController::class, 'search'])->name('api.asset-templates.search');
 });
 
 require __DIR__.'/auth.php';
