@@ -673,8 +673,8 @@ const printBarcode = () => {
       // Company name above asset tag (small text)
       cmds += "^FO70,30^A0N,18,18^FDFAHAD NAWAF ALZEER HOLDING CO.^FS"  // Company name in English
       
-      // Asset tag next to logo (centered with top margin)
-      cmds += `^FO70,50^A0N,24,24^FD${props.asset.asset_tag}^FS`
+      // Asset tag next to logo (with extra margin under company name)
+      cmds += `^FO70,55^A0N,24,24^FD${props.asset.asset_tag}^FS`
       
       // Serial number or asset tag as barcode (Code 128) - centered
       cmds += "^FO70,85^BY2,2,35"  // Moved down to center
