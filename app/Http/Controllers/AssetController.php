@@ -19,15 +19,20 @@ class AssetController extends Controller
     public function index(Request $request): Response|RedirectResponse
     {
         $user = Auth::user();
-        $company = $user->currentCompany();
+        $ownedCompanies = $user->ownedCompanies();
 
-        // If user doesn't have a company, redirect to create one
-        if (!$company) {
+        // If user doesn't have any companies, redirect to create one
+        if ($ownedCompanies->count() === 0) {
             return redirect()->route('companies.create')
                 ->with('info', 'Please create a company first to manage assets.');
         }
 
-        $query = Asset::with(['category', 'location', 'assignments']);
+        // Get company IDs that the user owns
+        $ownedCompanyIds = $ownedCompanies->pluck('id');
+
+        // Only show assets from companies the user owns
+        $query = Asset::with(['category', 'location', 'assignments', 'company'])
+            ->whereIn('company_id', $ownedCompanyIds);
 
         // Handle search
         if ($search = $request->get('search')) {
@@ -53,7 +58,7 @@ class AssetController extends Controller
 
         $assets = $query->orderBy('asset_tag')->paginate(20)->withQueryString();
 
-        // Get categories and locations for filters
+        // Get categories and locations for filters (from all owned companies)
         $categories = AssetCategory::withDepth()
             ->orderBy('_lft')
             ->get();
@@ -219,16 +224,16 @@ class AssetController extends Controller
     public function show(Asset $asset): Response|RedirectResponse
     {
         $user = Auth::user();
-        $company = $user->currentCompany();
+        $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
 
-        // If user doesn't have a company, redirect to create one
-        if (!$company) {
+        // If user doesn't have any companies, redirect to create one
+        if ($ownedCompanyIds->isEmpty()) {
             return redirect()->route('companies.create')
                 ->with('info', 'Please create a company first to manage assets.');
         }
 
-        // Check if user has access to this asset
-        if ($asset->company_id !== $company->id) {
+        // Check if user has access to this asset (asset must belong to one of their companies)
+        if (!$ownedCompanyIds->contains($asset->company_id)) {
             abort(403);
         }
 
@@ -245,26 +250,25 @@ class AssetController extends Controller
     public function edit(Asset $asset): Response|RedirectResponse
     {
         $user = Auth::user();
-        $company = $user->currentCompany();
+        $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
 
-        // If user doesn't have a company, redirect to create one
-        if (!$company) {
+        // If user doesn't have any companies, redirect to create one
+        if ($ownedCompanyIds->isEmpty()) {
             return redirect()->route('companies.create')
                 ->with('info', 'Please create a company first to manage assets.');
         }
 
-        // Check if user has access to this asset
-        if ($asset->company_id !== $company->id) {
+        // Check if user has access to this asset (asset must belong to one of their companies)
+        if (!$ownedCompanyIds->contains($asset->company_id)) {
             abort(403);
         }
 
-        $categories = AssetCategory::scoped(['company_id' => $company->id])
-            ->withDepth()
+        // Get categories and locations from all owned companies for editing flexibility
+        $categories = AssetCategory::withDepth()
             ->orderBy('_lft')
             ->get();
 
-        $locations = Location::where('company_id', $company->id)
-            ->orderBy('name')
+        $locations = Location::orderBy('name')
             ->get();
 
         return Inertia::render('Assets/Edit', [
@@ -280,16 +284,16 @@ class AssetController extends Controller
     public function update(Request $request, Asset $asset): RedirectResponse
     {
         $user = Auth::user();
-        $company = $user->currentCompany();
+        $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
 
-        // If user doesn't have a company, redirect to create one
-        if (!$company) {
+        // If user doesn't have any companies, redirect to create one
+        if ($ownedCompanyIds->isEmpty()) {
             return redirect()->route('companies.create')
                 ->with('info', 'Please create a company first to manage assets.');
         }
 
-        // Check if user has access to this asset
-        if ($asset->company_id !== $company->id) {
+        // Check if user has access to this asset (asset must belong to one of their companies)
+        if (!$ownedCompanyIds->contains($asset->company_id)) {
             abort(403);
         }
 
@@ -304,15 +308,15 @@ class AssetController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        // Validate that category and location belong to the same company
+        // Just validate that category and location exist (no company restrictions)
         $category = AssetCategory::find($validated['asset_category_id']);
         $location = Location::find($validated['location_id']);
 
-        if (!$category || $category->company_id !== $company->id) {
+        if (!$category) {
             return back()->withErrors(['asset_category_id' => 'Invalid asset category.']);
         }
 
-        if (!$location || $location->company_id !== $company->id) {
+        if (!$location) {
             return back()->withErrors(['location_id' => 'Invalid location.']);
         }
 
@@ -328,16 +332,16 @@ class AssetController extends Controller
     public function destroy(Asset $asset): RedirectResponse
     {
         $user = Auth::user();
-        $company = $user->currentCompany();
+        $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
 
-        // If user doesn't have a company, redirect to create one
-        if (!$company) {
+        // If user doesn't have any companies, redirect to create one
+        if ($ownedCompanyIds->isEmpty()) {
             return redirect()->route('companies.create')
                 ->with('info', 'Please create a company first to manage assets.');
         }
 
-        // Check if user has access to this asset
-        if ($asset->company_id !== $company->id) {
+        // Check if user has access to this asset (asset must belong to one of their companies)
+        if (!$ownedCompanyIds->contains($asset->company_id)) {
             abort(403);
         }
 
