@@ -667,23 +667,23 @@ const printBarcode = () => {
       cmds += "^MD30"   // Media darkness (0-30, higher = darker)
       cmds += "^SD15"   // Set darkness (0-30, higher = darker)
       
-      // Company logo on the left side (properly sized)
-      cmds += "^FO10,20^GFA,329,329,7,,,,,,K0F1C,J01E3E,I039F1C4,I079E10F,I07BF03E,I073E17E,00213E7FC,00607CFF8,00F87CFF,00F8F9F800C,00FCF8J08,007EF,003E6,03BEK03F,039FK07F,039FK07F,07CFK03F8,008F,I0F8I018,I07J03C,03DK03E68,07FCJ01C7,03FFJ01E7,03FF8I01F3,017FEI09F,I0FE0018F8,0043E003CF8,00F1I03C7C,00F80807C3C,0070700F838,0020F00F008,I03E00F3,I07E01F38,I07C01E78,I03801E3,L01E,L01C,L01,,,,,^FS"
+      // Company logo on the left side (centered with top margin)
+      cmds += "^FO10,50^GFA,329,329,7,,,,,,K0F1C,J01E3E,I039F1C4,I079E10F,I07BF03E,I073E17E,00213E7FC,00607CFF8,00F87CFF,00F8F9F800C,00FCF8J08,007EF,003E6,03BEK03F,039FK07F,039FK07F,07CFK03F8,008F,I0F8I018,I07J03C,03DK03E68,07FCJ01C7,03FFJ01E7,03FF8I01F3,017FEI09F,I0FE0018F8,0043E003CF8,00F1I03C7C,00F80807C3C,0070700F838,0020F00F008,I03E00F3,I07E01F38,I07C01E78,I03801E3,L01E,L01C,L01,,,,,^FS"
       
-      // Asset tag at top right (moved to accommodate logo)
-      cmds += `^FO70,20^A0N,24,24^FD${props.asset.asset_tag}^FS`
+      // Asset tag next to logo (centered with top margin)
+      cmds += `^FO70,50^A0N,24,24^FD${props.asset.asset_tag}^FS`
       
-      // Serial number or asset tag as barcode (Code 128) - moved right
-      cmds += "^FO70,55^BY2,2,35"  // Slightly smaller to fit with logo
+      // Serial number or asset tag as barcode (Code 128) - centered
+      cmds += "^FO70,85^BY2,2,35"  // Moved down to center
       cmds += "^BCN,35,Y,N,N"
       cmds += `^FD${props.asset.serial_number || props.asset.asset_tag}^FS`
       
-      // QR Code on the right side - with padding
-      cmds += "^FO320,20^BQN,2,4"  // Moved slightly right
+      // QR Code on the right side - centered with top margin
+      cmds += "^FO320,50^BQN,2,4"  // Moved down to align with logo and title
       cmds += `^FDMM,${props.asset.asset_tag}^FS`
       
-      // Date at bottom left (below logo area)
-      cmds += `^FO70,175^A0N,18,18^FD${new Date().toISOString().split('T')[0]}^FS`
+      // Date at bottom left (below barcode)
+      cmds += `^FO70,160^A0N,18,18^FD${new Date().toISOString().split('T')[0]}^FS`
       
       cmds += "^XZ"
       
