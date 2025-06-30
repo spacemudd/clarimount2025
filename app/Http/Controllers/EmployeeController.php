@@ -114,13 +114,12 @@ class EmployeeController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        // Validate department belongs to a company owned by the user
+        // Just validate department exists (no company restriction)
         if (!empty($validated['department_id'])) {
             $department = \App\Models\Department::find($validated['department_id']);
-            $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
             
-            if (!$department || !$ownedCompanyIds->contains($department->company_id)) {
-                return back()->withErrors(['department_id' => 'Department must belong to one of your companies.']);
+            if (!$department) {
+                return back()->withErrors(['department_id' => 'Invalid department selection.']);
             }
         }
 
@@ -224,13 +223,12 @@ class EmployeeController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        // Validate department belongs to a company owned by the user
+        // Just validate department exists (no company restriction)
         if (!empty($validated['department_id'])) {
             $department = \App\Models\Department::find($validated['department_id']);
-            $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
             
-            if (!$department || !$ownedCompanyIds->contains($department->company_id)) {
-                return back()->withErrors(['department_id' => 'Department must belong to one of your companies.']);
+            if (!$department) {
+                return back()->withErrors(['department_id' => 'Invalid department selection.']);
             }
         }
 
@@ -282,15 +280,11 @@ class EmployeeController extends Controller
      */
     public function search(Request $request): JsonResponse
     {
-        $user = Auth::user();
-        $companies = $user->ownedCompanies()->pluck('id');
-        
         $query = $request->get('q', '');
         $companyId = $request->get('company_id');
         $departmentId = $request->get('department_id');
         
         $employees = Employee::query()
-            ->whereIn('company_id', $companies)
             ->when($companyId, function ($q) use ($companyId) {
                 return $q->where('company_id', $companyId);
             })

@@ -229,14 +229,10 @@ class LocationController extends Controller
      */
     public function search(Request $request)
     {
-        $user = Auth::user();
-        $companies = $user->ownedCompanies()->pluck('id');
-        
         $query = $request->get('q', '');
         $companyId = $request->get('company_id');
         
         $locations = Location::query()
-            ->whereIn('company_id', $companies)
             ->when($companyId, function ($q) use ($companyId) {
                 return $q->where('company_id', $companyId);
             })

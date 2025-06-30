@@ -157,25 +157,25 @@ class AssetController extends Controller
             return back()->withErrors(['company_id' => 'Invalid company selection.']);
         }
         
-        // Validate location belongs to the target company
+        // Just verify that the selected location, department, and employee exist (no company restrictions)
         $location = Location::find($validated['location_id']);
-        if (!$location || $location->company_id !== $targetCompanyId) {
-            return back()->withErrors(['location_id' => 'Location must belong to the selected company.']);
+        if (!$location) {
+            return back()->withErrors(['location_id' => 'Invalid location selection.']);
         }
         
-        // Validate department belongs to the target company (if provided)
+        // Validate department exists (if provided) - no company restriction
         if (!empty($validated['department_id'])) {
             $department = \App\Models\Department::find($validated['department_id']);
-            if (!$department || $department->company_id !== $targetCompanyId) {
-                return back()->withErrors(['department_id' => 'Department must belong to the selected company.']);
+            if (!$department) {
+                return back()->withErrors(['department_id' => 'Invalid department selection.']);
             }
         }
         
-        // Validate employee belongs to the target company (if provided)
+        // Validate employee exists (if provided) - no company restriction  
         if (!empty($validated['assigned_to'])) {
             $employee = \App\Models\Employee::find($validated['assigned_to']);
-            if (!$employee || $employee->company_id !== $targetCompanyId) {
-                return back()->withErrors(['assigned_to' => 'Employee must belong to the selected company.']);
+            if (!$employee) {
+                return back()->withErrors(['assigned_to' => 'Invalid employee selection.']);
             }
         }
 

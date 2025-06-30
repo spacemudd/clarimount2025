@@ -178,14 +178,10 @@ class DepartmentController extends Controller
      */
     public function search(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $companyIds = Company::where('owner_id', $user->id)->pluck('id');
-        
         $query = $request->get('q', '');
         $companyId = $request->get('company_id');
         
         $departments = Department::query()
-            ->whereIn('company_id', $companyIds)
             ->when($companyId, function ($q) use ($companyId) {
                 return $q->where('company_id', $companyId);
             })
