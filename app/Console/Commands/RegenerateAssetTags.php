@@ -41,20 +41,35 @@ class RegenerateAssetTags extends Command
             $this->newLine();
         }
 
-        // Get all companies with assets
-        $companies = Company::whereHas('assets')->with('assets')->get();
+        // Get all assets with their templates and companies
+        $assets = Asset::with(['assetTemplate.company', 'company'])->get();
         
-        if ($companies->isEmpty()) {
-            $this->error('No companies with assets found.');
+        if ($assets->isEmpty()) {
+            $this->error('No assets found.');
             return 1;
         }
 
         $totalUpdated = 0;
-        $this->info("Found {$companies->count()} companies with assets...");
+        $this->info("Found {$assets->count()} assets...");
         $this->newLine();
 
-        foreach ($companies as $company) {
-            $this->regenerateCompanyAssetTags($company, $dryRun, $totalUpdated);
+        // Group assets by the company that should be used for tag generation (template's company)
+        $assetsByTagCompany = $assets->groupBy(function ($asset) {
+            if (!$asset->assetTemplate) {
+                return $asset->company_id; // Fallback to asset's company if no template
+            }
+            // Always use template's company for tag generation
+            return $asset->assetTemplate->company_id;
+        });
+
+        foreach ($assetsByTagCompany as $companyId => $companyAssets) {
+            $company = Company::find($companyId);
+            if (!$company) {
+                $this->warn("Company with ID {$companyId} not found, skipping...");
+                continue;
+            }
+            
+            $this->regenerateAssetTagsForCompany($company, $companyAssets, $dryRun, $totalUpdated);
         }
 
         $this->newLine();
@@ -68,63 +83,72 @@ class RegenerateAssetTags extends Command
     }
 
     /**
-     * Regenerate asset tags for a specific company
+     * Regenerate asset tags for assets based on a specific company's naming
      */
-    private function regenerateCompanyAssetTags(Company $company, bool $dryRun, int &$totalUpdated): void
+    private function regenerateAssetTagsForCompany(Company $company, $assets, bool $dryRun, int &$totalUpdated): void
     {
-        $assets = $company->assets()->orderBy('created_at')->get();
-        
         if ($assets->isEmpty()) {
             return;
         }
 
-        // Generate company abbreviation
-        $abbreviation = $this->generateCompanyAbbreviation($company->name_en);
-        
-        $this->info("🏢 Company: {$company->name_en}");
-        $this->info("📝 Abbreviation: {$abbreviation}");
+        $this->info("🏢 Tag Company: {$company->name_en}");
         $this->info("📦 Assets: {$assets->count()}");
 
         $updatedCount = 0;
-        $counter = 1;
 
-        foreach ($assets as $asset) {
+        // Sort assets by creation date for consistent numbering
+        $sortedAssets = $assets->sortBy('created_at');
+
+        // Generate sequential tags manually to avoid duplicates during the same run
+        $abbreviation = $this->generateCompanyAbbreviation($company->name_en);
+        $counter = 1;
+        $existingTags = Asset::with(['assetTemplate.company', 'company'])
+            ->get()
+            ->filter(function ($existingAsset) use ($company) {
+                if (!$existingAsset->assetTemplate) {
+                    return $existingAsset->company_id == $company->id;
+                }
+                return $existingAsset->assetTemplate->company_id == $company->id;
+            })
+            ->pluck('asset_tag')
+            ->toArray();
+
+        foreach ($sortedAssets as $asset) {
             $oldTag = $asset->asset_tag;
-            $newTag = $abbreviation . '-' . str_pad($counter, 3, '0', STR_PAD_LEFT);
             
-            // Check if the new tag already exists for a different asset
-            while (Asset::where('company_id', $company->id)
-                       ->where('asset_tag', $newTag)
-                       ->where('id', '!=', $asset->id)
-                       ->exists()) {
-                $counter++;
+            // Generate new sequential tag
+            do {
                 $newTag = $abbreviation . '-' . str_pad($counter, 3, '0', STR_PAD_LEFT);
-            }
+                $counter++;
+            } while (in_array($newTag, $existingTags) && $newTag !== $oldTag);
 
             if ($oldTag !== $newTag) {
                 if ($dryRun) {
-                    $this->line("  • {$oldTag} → {$newTag}");
+                    $this->line("  • {$oldTag} → {$newTag} (Asset: {$asset->id})");
                 } else {
                     $asset->asset_tag = $newTag;
                     $asset->save();
-                    $this->line("  ✓ {$oldTag} → {$newTag}");
+                    $this->line("  ✓ {$oldTag} → {$newTag} (Asset: {$asset->id})");
+                    
+                    // Update the existing tags array to prevent duplicates in current run
+                    $existingTags[] = $newTag;
+                    if (($key = array_search($oldTag, $existingTags)) !== false) {
+                        unset($existingTags[$key]);
+                    }
                 }
                 $updatedCount++;
                 $totalUpdated++;
             } else {
-                $this->line("  - {$oldTag} (no change needed)");
+                $this->line("  - {$oldTag} (no change needed, Asset: {$asset->id})");
             }
-            
-            $counter++;
         }
 
-        $this->info("📊 Updated: {$updatedCount}/{$assets->count()} assets for {$company->name_en}");
+        $this->info("📊 Updated: {$updatedCount}/{$assets->count()} assets using {$company->name_en} naming");
         $this->newLine();
     }
 
     /**
      * Generate a 4-letter abbreviation from company name
-     * (Same logic as in Asset model)
      */
     private function generateCompanyAbbreviation(string $companyName): string
     {
@@ -152,4 +176,6 @@ class RegenerateAssetTags extends Command
         
         return strtoupper(substr($abbreviation, 0, 4));
     }
+
+
 }

@@ -202,7 +202,8 @@ class AssetController extends Controller
             'assigned_date' => !empty($validated['assigned_to']) ? now() : null,
         ];
 
-        // Asset tag will be generated automatically by the Asset model
+        // Generate asset tag based on template's company
+        $assetData['asset_tag'] = Asset::generateUniqueAssetTag($template->company_id);
 
         $asset = Asset::create($assetData);
 

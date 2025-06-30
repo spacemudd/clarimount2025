@@ -53,7 +53,7 @@ class Asset extends Model
      * Example: "Advanced Line for Technology" -> ADTY-001, ADTY-002, ADTY-003...
      * Example: "Global Tech Solutions" -> GTSL-001, GTSL-002, GTSL-003...
      */
-    protected static function generateUniqueAssetTag($companyId): string
+    public static function generateUniqueAssetTag($companyId): string
     {
         // Get the company to extract name
         $company = Company::find($companyId);
