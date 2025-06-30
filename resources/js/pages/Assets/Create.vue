@@ -79,7 +79,6 @@ const fileError = ref<string | null>(null);
 const form = useForm({
     location_id: '',
     asset_template_id: '',
-    asset_category_id: '',
     serial_number: '',
     image: null as File | null,
 });
@@ -206,7 +205,6 @@ const handleTemplateSearchInput = () => {
 const selectTemplate = (template: AssetTemplate) => {
     selectedTemplate.value = template;
     form.asset_template_id = template.id.toString();
-    form.asset_category_id = template.asset_category?.id?.toString() || '';
     templateSearchQuery.value = template.display_name;
     showTemplateSearchResults.value = false;
 };
@@ -214,7 +212,6 @@ const selectTemplate = (template: AssetTemplate) => {
 const clearTemplateSelection = () => {
     selectedTemplate.value = null;
     form.asset_template_id = '';
-    form.asset_category_id = '';
     templateSearchQuery.value = '';
     templateSearchResults.value = [];
     showTemplateSearchResults.value = false;

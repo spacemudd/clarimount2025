@@ -1,0 +1,700 @@
+<template>
+  <Head :title="asset.asset_tag" />
+
+  <AppLayout :breadcrumbs="breadcrumbs">
+    <div class="space-y-6">
+      <!-- Header -->
+      <div class="flex items-center justify-between">
+        <div>
+          <Heading :title="asset.asset_tag" />
+          <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            {{ t('assets.asset_details') }}
+          </p>
+        </div>
+        <div class="flex items-center space-x-3">
+          <Button
+            variant="outline"
+            @click="showBarcodeDialog"
+            class="inline-flex items-center"
+          >
+            <Icon name="Printer" class="mr-2 h-4 w-4" />
+            Barcode
+          </Button>
+          <Link 
+            :href="route('assets.edit', asset.id)"
+            class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
+          >
+            <Icon name="Edit" class="mr-2 h-4 w-4" />
+            {{ t('common.edit') }}
+          </Link>
+          <Button
+            variant="destructive"
+            @click="confirmDelete"
+          >
+            <Icon name="Trash2" class="mr-2 h-4 w-4" />
+            {{ t('common.delete') }}
+          </Button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Information -->
+        <div class="lg:col-span-2 space-y-6">
+          <!-- Asset Image -->
+          <Card v-if="asset.image_path">
+            <CardHeader>
+              <CardTitle>{{ t('assets.asset_image') }}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div class="flex justify-center">
+                <img
+                  :src="`/storage/${asset.image_path}`"
+                  :alt="asset.asset_tag"
+                  class="max-w-full h-auto max-h-96 rounded-lg border border-gray-200 dark:border-gray-700"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <!-- Basic Information -->
+          <Card>
+            <CardHeader>
+              <CardTitle>{{ t('assets.basic_information') }}</CardTitle>
+            </CardHeader>
+            <CardContent class="space-y-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    {{ t('assets.asset_tag') }}
+                  </Label>
+                  <p class="mt-1 text-sm text-gray-900 dark:text-gray-100 font-mono">
+                    {{ asset.asset_tag }}
+                  </p>
+                </div>
+                
+                <div>
+                  <Label class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    {{ t('assets.serial_number') }}
+                  </Label>
+                  <p class="mt-1 text-sm text-gray-900 dark:text-gray-100 font-mono">
+                    {{ asset.serial_number || '—' }}
+                  </p>
+                </div>
+
+                <div>
+                  <Label class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    {{ t('assets.manufacturer') }}
+                  </Label>
+                  <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                    {{ asset.manufacturer || '—' }}
+                  </p>
+                </div>
+
+                <div>
+                  <Label class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    {{ t('assets.model_name') }}
+                  </Label>
+                  <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                    {{ asset.model_name || '—' }}
+                  </p>
+                </div>
+
+                <div>
+                  <Label class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    {{ t('assets.model_number') }}
+                  </Label>
+                  <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                    {{ asset.model_number || '—' }}
+                  </p>
+                </div>
+
+                <div>
+                  <Label class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    {{ t('assets.status') }}
+                  </Label>
+                  <Badge 
+                    :variant="getStatusVariant(asset.status)"
+                    class="mt-1"
+                  >
+                    {{ t(`assets.status_${asset.status}`) }}
+                  </Badge>
+                </div>
+              </div>
+
+              <div v-if="asset.notes">
+                <Label class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  {{ t('assets.notes') }}
+                </Label>
+                <p class="mt-1 text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
+                  {{ asset.notes }}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <!-- Template Information -->
+          <Card v-if="asset.asset_template">
+            <CardHeader>
+              <CardTitle>{{ t('assets.template_information') }}</CardTitle>
+            </CardHeader>
+            <CardContent class="space-y-3">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    {{ t('assets.template_name') }}
+                  </Label>
+                  <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                    {{ asset.asset_template.name }}
+                  </p>
+                </div>
+                
+                <div>
+                  <Label class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    {{ t('assets.template_type') }}
+                  </Label>
+                  <Badge 
+                    :variant="asset.asset_template.is_global ? 'secondary' : 'default'"
+                    class="mt-1"
+                  >
+                    {{ asset.asset_template.is_global ? t('asset_templates.global') : asset.asset_template.company?.name_en }}
+                  </Badge>
+                </div>
+              </div>
+              
+              <div class="flex justify-end">
+                <Link 
+                  :href="route('asset-templates.show', asset.asset_template.id)"
+                  class="inline-flex items-center text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                >
+                  {{ t('assets.view_template') }}
+                  <Icon name="ExternalLink" class="ml-1 h-3 w-3" />
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+          <!-- Location Information -->
+          <Card>
+            <CardHeader>
+              <CardTitle>{{ t('assets.location_information') }}</CardTitle>
+            </CardHeader>
+            <CardContent class="space-y-3">
+              <div>
+                <Label class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  {{ t('assets.location') }}
+                </Label>
+                <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                  {{ asset.location?.name || '—' }}
+                </p>
+              </div>
+              
+              <div v-if="asset.location?.code">
+                <Label class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  {{ t('locations.code') }}
+                </Label>
+                <p class="mt-1 text-sm text-gray-900 dark:text-gray-100 font-mono">
+                  {{ asset.location.code }}
+                </p>
+              </div>
+
+              <div v-if="asset.location?.building">
+                <Label class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  {{ t('locations.building') }}
+                </Label>
+                <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                  {{ asset.location.building }}
+                </p>
+              </div>
+
+              <div v-if="asset.location?.office_number">
+                <Label class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  {{ t('locations.office_number') }}
+                </Label>
+                <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                  {{ asset.location.office_number }}
+                </p>
+              </div>
+
+              <div v-if="asset.location" class="flex justify-end">
+                <Link 
+                  :href="route('locations.show', asset.location.id)"
+                  class="inline-flex items-center text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                >
+                  {{ t('assets.view_location') }}
+                  <Icon name="ExternalLink" class="ml-1 h-3 w-3" />
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+
+          <!-- Category Information -->
+          <Card v-if="asset.category">
+            <CardHeader>
+              <CardTitle>{{ t('assets.category_information') }}</CardTitle>
+            </CardHeader>
+            <CardContent class="space-y-3">
+              <div>
+                <Label class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  {{ t('assets.category') }}
+                </Label>
+                <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                  {{ asset.category.name }}
+                </p>
+              </div>
+              
+              <div v-if="asset.category.code">
+                <Label class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  {{ t('asset_categories.code') }}
+                </Label>
+                <p class="mt-1 text-sm text-gray-900 dark:text-gray-100 font-mono">
+                  {{ asset.category.code }}
+                </p>
+              </div>
+
+              <div class="flex justify-end">
+                <Link 
+                  :href="route('asset-categories.show', asset.category.id)"
+                  class="inline-flex items-center text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                >
+                  {{ t('assets.view_category') }}
+                  <Icon name="ExternalLink" class="ml-1 h-3 w-3" />
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+
+          <!-- Asset Metadata -->
+          <Card>
+            <CardHeader>
+              <CardTitle>{{ t('assets.asset_metadata') }}</CardTitle>
+            </CardHeader>
+            <CardContent class="space-y-3">
+              <div>
+                <Label class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  {{ t('common.created_at') }}
+                </Label>
+                <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                  {{ new Date(asset.created_at).toLocaleDateString() }}
+                </p>
+              </div>
+              
+              <div>
+                <Label class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  {{ t('common.updated_at') }}
+                </Label>
+                <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                  {{ new Date(asset.updated_at).toLocaleDateString() }}
+                </p>
+              </div>
+
+              <div>
+                <Label class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  {{ t('assets.company') }}
+                </Label>
+                <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                  {{ asset.company?.name_en || '—' }}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <!-- Assignment Information -->
+          <Card v-if="asset.status === 'assigned' && asset.assigned_to">
+            <CardHeader>
+              <CardTitle>{{ t('assets.assignment_information') }}</CardTitle>
+            </CardHeader>
+            <CardContent class="space-y-3">
+              <div>
+                <Label class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  {{ t('assets.assigned_to') }}
+                </Label>
+                <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                  {{ asset.assigned_to?.name || '—' }}
+                </p>
+              </div>
+              
+              <div v-if="asset.assigned_date">
+                <Label class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  {{ t('assets.assigned_date') }}
+                </Label>
+                <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                  {{ new Date(asset.assigned_date).toLocaleDateString() }}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barcode Print Dialog -->
+    <Dialog v-model:open="barcodeDialog.show">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Print Barcode Label</DialogTitle>
+          <DialogDescription>
+            Configure printer settings for the Zebra label printer.
+          </DialogDescription>
+        </DialogHeader>
+        <div class="space-y-4">
+          <div class="flex items-center space-x-2">
+            <input 
+              type="checkbox" 
+              id="useDefaultPrinter" 
+              v-model="barcodeDialog.useDefaultPrinter"
+              class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+            />
+            <Label for="useDefaultPrinter" class="font-medium">
+              Print to Default printer
+            </Label>
+          </div>
+          
+          <div v-if="!barcodeDialog.useDefaultPrinter" class="space-y-2">
+            <Label for="installedPrinterName">Select an installed Printer:</Label>
+            <select 
+              id="installedPrinterName" 
+              v-model="barcodeDialog.selectedPrinter"
+              class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="">Select a printer...</option>
+              <option v-for="printer in barcodeDialog.availablePrinters" :key="printer" :value="printer">
+                {{ printer }}
+              </option>
+            </select>
+          </div>
+
+          <div v-if="barcodeDialog.status" class="text-sm text-gray-600 dark:text-gray-400">
+            Status: {{ barcodeDialog.status }}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" @click="barcodeDialog.show = false">
+            Cancel
+          </Button>
+          <Button 
+            @click="printBarcode" 
+            :disabled="barcodeDialog.printing || (!barcodeDialog.useDefaultPrinter && !barcodeDialog.selectedPrinter)"
+          >
+            <Icon v-if="barcodeDialog.printing" name="Loader2" class="h-4 w-4 mr-2 animate-spin" />
+            Print Now
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Delete Confirmation Dialog -->
+    <Dialog v-model:open="deleteDialog.show">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{{ t('assets.confirm_delete') }}</DialogTitle>
+          <DialogDescription>
+            {{ t('assets.delete_warning') }}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" @click="deleteDialog.show = false">
+            {{ t('common.cancel') }}
+          </Button>
+          <Button variant="destructive" @click="handleDelete" :disabled="deleteDialog.loading">
+            <Icon v-if="deleteDialog.loading" name="Loader2" class="h-4 w-4 mr-2 animate-spin" />
+            {{ t('common.delete') }}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </AppLayout>
+</template>
+
+<script setup lang="ts">
+import { computed, ref, onMounted, nextTick } from 'vue'
+import { Head, Link, router } from '@inertiajs/vue3'
+import { useI18n } from 'vue-i18n'
+import AppLayout from '@/layouts/AppLayout.vue'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import Icon from '@/components/Icon.vue'
+import Heading from '@/components/Heading.vue'
+import type { BreadcrumbItem } from '@/types'
+
+// Type declarations for JSPrintManager
+declare global {
+  interface Window {
+    JSPM: {
+      JSPrintManager: {
+        auto_reconnect: boolean
+        start: () => void
+        websocket_status: number
+        WS: {
+          onStatusChanged: () => void
+        }
+        getPrinters: () => Promise<string[]>
+      }
+      WSStatus: {
+        Open: number
+        Closed: number
+        Blocked: number
+      }
+      ClientPrintJob: new () => {
+        clientPrinter: any
+        printerCommands: string
+        sendToClient: () => void
+      }
+      DefaultPrinter: new () => any
+      InstalledPrinter: new (printerName: string) => any
+    }
+  }
+}
+
+const { t } = useI18n()
+
+interface Asset {
+  id: number
+  asset_tag: string
+  serial_number?: string
+  manufacturer?: string
+  model_name?: string
+  model_number?: string
+  status: string
+  notes?: string
+  image_path?: string
+  assigned_date?: string
+  created_at: string
+  updated_at: string
+  asset_template?: {
+    id: number
+    name: string
+    is_global: boolean
+    company?: {
+      name_en: string
+    }
+  }
+  location?: {
+    id: number
+    name: string
+    code?: string
+    building?: string
+    office_number?: string
+  }
+  category?: {
+    id: number
+    name: string
+    code?: string
+  }
+  company?: {
+    name_en: string
+  }
+  assigned_to?: {
+    name: string
+  }
+}
+
+interface Props {
+  asset: Asset
+}
+
+const props = defineProps<Props>()
+
+const deleteDialog = ref({
+  show: false,
+  loading: false
+})
+
+const barcodeDialog = ref({
+  show: false,
+  printing: false,
+  useDefaultPrinter: false,
+  selectedPrinter: '',
+  availablePrinters: [] as string[],
+  status: ''
+})
+
+const breadcrumbs = computed((): BreadcrumbItem[] => [
+  {
+    title: t('nav.dashboard'),
+    href: '/dashboard',
+  },
+  {
+    title: t('nav.assets'),
+    href: '/assets',
+  },
+  {
+    title: props.asset.asset_tag,
+    href: `/assets/${props.asset.id}`,
+  },
+])
+
+const getStatusVariant = (status: string) => {
+  switch (status) {
+    case 'available':
+      return 'default'
+    case 'assigned':
+      return 'secondary'
+    case 'maintenance':
+      return 'destructive'
+    case 'retired':
+      return 'outline'
+    default:
+      return 'secondary'
+  }
+}
+
+const confirmDelete = () => {
+  deleteDialog.value.show = true
+}
+
+const handleDelete = () => {
+  deleteDialog.value.loading = true
+  
+  router.delete(route('assets.destroy', props.asset.id), {
+    onSuccess: () => {
+      router.visit(route('assets.index'))
+    },
+    onFinish: () => {
+      deleteDialog.value.loading = false
+    }
+  })
+}
+
+// Function to dynamically load JavaScript files
+const loadScript = (src: string): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    // Check if script is already loaded
+    const existingScript = document.querySelector(`script[src="${src}"]`)
+    if (existingScript) {
+      resolve()
+      return
+    }
+
+    const script = document.createElement('script')
+    script.src = src
+    script.onload = () => resolve()
+    script.onerror = () => reject(new Error(`Failed to load script: ${src}`))
+    document.head.appendChild(script)
+  })
+}
+
+// Load all required scripts
+const loadRequiredScripts = async (): Promise<void> => {
+  try {
+    barcodeDialog.value.status = 'Loading print libraries...'
+    
+    // Load scripts in sequence
+    await loadScript('/js/bluebird.min.js')
+    await loadScript('/js/jquery-3.2.1.slim.min.js') 
+    await loadScript('/js/jsmanager/JSPrintManager.js')
+    
+    barcodeDialog.value.status = 'Print libraries loaded successfully'
+  } catch (error) {
+    console.error('Failed to load scripts:', error)
+    barcodeDialog.value.status = 'Failed to load print libraries'
+  }
+}
+
+const showBarcodeDialog = async () => {
+  barcodeDialog.value.show = true
+  
+  // Load scripts if not already loaded
+  if (typeof window.JSPM === 'undefined') {
+    await loadRequiredScripts()
+  }
+  
+  initializeJSPrintManager()
+}
+
+const initializeJSPrintManager = () => {
+  nextTick(() => {
+    if (typeof window.JSPM !== 'undefined') {
+      // WebSocket settings
+      window.JSPM.JSPrintManager.auto_reconnect = true
+      window.JSPM.JSPrintManager.start()
+      window.JSPM.JSPrintManager.WS.onStatusChanged = function () {
+        if (jspmWSStatus()) {
+          barcodeDialog.value.status = 'Connected to JSPrintManager'
+          // Get client installed printers
+          window.JSPM.JSPrintManager.getPrinters().then(function (myPrinters: string[]) {
+            barcodeDialog.value.availablePrinters = myPrinters
+          })
+        }
+      }
+    } else {
+      barcodeDialog.value.status = 'JSPrintManager not loaded'
+    }
+  })
+}
+
+const jspmWSStatus = () => {
+  if (window.JSPM.JSPrintManager.websocket_status == window.JSPM.WSStatus.Open) {
+    return true
+  } else if (window.JSPM.JSPrintManager.websocket_status == window.JSPM.WSStatus.Closed) {
+    barcodeDialog.value.status = 'JSPrintManager is not installed or not running! Download JSPM Client App from https://neodynamic.com/downloads/jspm'
+    return false
+  } else if (window.JSPM.JSPrintManager.websocket_status == window.JSPM.WSStatus.Blocked) {
+    barcodeDialog.value.status = 'JSPM has blocked this website!'
+    return false
+  }
+  return false
+}
+
+const printBarcode = () => {
+  if (jspmWSStatus()) {
+    barcodeDialog.value.printing = true
+    
+    try {
+      // Create a ClientPrintJob
+      const cpj = new window.JSPM.ClientPrintJob()
+      
+      // Set Printer type
+      if (barcodeDialog.value.useDefaultPrinter) {
+        cpj.clientPrinter = new window.JSPM.DefaultPrinter()
+      } else {
+        cpj.clientPrinter = new window.JSPM.InstalledPrinter(barcodeDialog.value.selectedPrinter)
+      }
+      
+      // Set content to print - Create Zebra ZPL commands for sample label
+      let cmds = "^XA"
+      cmds += "^XA"
+      cmds += `^FO20,80^ADN,10,10^FD${props.asset.asset_tag}^FS`
+      cmds += "^FO20,100^BY2"
+      cmds += "^B3N,N,60,N,N"
+      cmds += `^FD${props.asset.serial_number || props.asset.asset_tag}^FS`
+      cmds += "^FO290,4"
+      cmds += "^BQN,2,3"
+      cmds += `^FDMM,${props.asset.asset_tag}^FS`
+      cmds += "^FO10,10^GFA,20706,20706,51,,,K010408,L0C63,L066E,J07FB7DFE,K07IFE,K01IF8,J03KFC,J0MF,I01MF8,I038JFE1C,I063KFC4,J0LFE,I01MF8,I03KFBF8,I03E7IFE7C,I079KFBE,I073KFCEK07804L01FE,I0E7EIF7C6K07804I06007FF8,I0C7JFBE7K07806I0E00F8FC,I0CFBIFDF3K07807I0E01E03E,I08F7DFBEF1K0780F001E03C01F,I08E79F9E71K0780F803E07800F,I01CF1F0F31K0780F803E07800F8,I01CE0F0738K0780FC07E07800F8,I018E0F071L0780FE07E0780078,I018C0F071L0780FE0EE0F80078,J08C0F031L0780EF1CF0F80078,J08C0F021L0780EF1CF0F80078,K040F021L0781E7B8F0780078,K040F02M0781E3F8F07C00F8,M0FO0781C3F0F07C00F,M0FO0781C1F0F03E00F,M0FO0781C1E0F03F01E,M0FO0781C0E0F81FC7C,M0FO0783C0C0F807FF8,M0FO0783CI0F801FE,M0F,M0F,01FF003FC00FF8,0IFE1IF87IF,I07F8IF1FE004,J0FC7FE3F,J01F3FCFC,K0F8F1F,K03E03C,K01F0F8,L079E,L03FC,L01F8,K020F04,K021F84,K0239C4,K0370FC,K01E078,J0C3C03C3,J0E7E07F7,J0FE6067F,J07C2043E,L0204,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,"
+      cmds += `^FO20,170^ADN,10,10^FD${new Date().toISOString().split('T')[0]}^FS`
+      cmds += "^CN"
+      cmds += "^XZ"
+      
+      cpj.printerCommands = cmds
+      
+      // Send print job to printer!
+      cpj.sendToClient()
+      
+      barcodeDialog.value.status = 'Print job sent successfully!'
+      
+      // Close dialog after successful print
+      setTimeout(() => {
+        barcodeDialog.value.show = false
+        barcodeDialog.value.printing = false
+      }, 2000)
+      
+    } catch (error) {
+      console.error('Print error:', error)
+      barcodeDialog.value.status = 'Error occurred while printing'
+      barcodeDialog.value.printing = false
+    }
+  } else {
+    barcodeDialog.value.printing = false
+  }
+}
+</script>
+
+<style>
+/* Add any custom styles if needed */
+</style> 

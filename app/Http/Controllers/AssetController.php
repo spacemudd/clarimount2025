@@ -123,34 +123,81 @@ class AssetController extends Controller
         }
 
         $validated = $request->validate([
-            'serial_number' => 'nullable|string|max:255',
-            'service_tag_number' => 'nullable|string|max:255',
-            'finance_tag_number' => 'nullable|string|max:255',
-            'asset_category_id' => 'required|exists:asset_categories,id',
+            'asset_template_id' => 'required|exists:asset_templates,id',
             'location_id' => 'required|exists:locations,id',
-            'model_name' => 'nullable|string|max:255',
-            'model_number' => 'nullable|string|max:255',
-            'notes' => 'nullable|string',
+            'serial_number' => 'nullable|string|max:255',
+            'image' => 'nullable|image|max:5120', // 5MB max
         ]);
 
-        // Validate that category and location belong to the same company
-        $category = AssetCategory::find($validated['asset_category_id']);
-        $location = Location::find($validated['location_id']);
-        
-        if (!$category || $category->company_id !== $company->id) {
-            return back()->withErrors(['asset_category_id' => 'Invalid asset category.']);
+        // Get the asset template and validate access
+        $template = \App\Models\AssetTemplate::find($validated['asset_template_id']);
+        if (!$template) {
+            return back()->withErrors(['asset_template_id' => 'Invalid asset template.']);
         }
         
+        // Check if user has access to this template (either global or belongs to their company)
+        if (!$template->is_global && $template->company_id !== $company->id) {
+            return back()->withErrors(['asset_template_id' => 'Invalid asset template.']);
+        }
+        
+        // Validate location belongs to the company
+        $location = Location::find($validated['location_id']);
         if (!$location || $location->company_id !== $company->id) {
             return back()->withErrors(['location_id' => 'Invalid location.']);
         }
 
-        $validated['company_id'] = $company->id;
+        // Handle image upload
+        $imagePath = null;
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('assets', 'public');
+        }
 
-        $asset = Asset::create($validated);
+        // Create asset with data from template
+        $assetData = [
+            'company_id' => $company->id,
+            'asset_category_id' => $template->asset_category_id,
+            'location_id' => $validated['location_id'],
+            'serial_number' => $validated['serial_number'],
+            'model_name' => $template->model_name,
+            'model_number' => $template->model_number,
+            'manufacturer' => $template->manufacturer,
+            'notes' => $template->default_notes,
+            'image_path' => $imagePath,
+            'asset_template_id' => $template->id,
+            'status' => 'available',
+        ];
 
-        return redirect()->route('assets.show', $asset)
+        // Generate unique asset tag
+        $assetData['asset_tag'] = $this->generateAssetTag($company);
+
+        $asset = Asset::create($assetData);
+
+        // Increment template usage count
+        $template->increment('usage_count');
+
+        return redirect()->route('assets.index')
             ->with('success', 'Asset created successfully.');
+    }
+
+    /**
+     * Generate a unique asset tag for the company.
+     */
+    private function generateAssetTag($company): string
+    {
+        $prefix = strtoupper(substr($company->name_en, 0, 3));
+        $lastAsset = Asset::where('company_id', $company->id)
+            ->where('asset_tag', 'like', $prefix . '%')
+            ->orderBy('asset_tag', 'desc')
+            ->first();
+
+        if ($lastAsset) {
+            $lastNumber = (int) substr($lastAsset->asset_tag, strlen($prefix));
+            $nextNumber = $lastNumber + 1;
+        } else {
+            $nextNumber = 1;
+        }
+
+        return $prefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -172,7 +219,7 @@ class AssetController extends Controller
             abort(403);
         }
 
-        $asset->load(['category', 'location', 'assignments.employee', 'company']);
+        $asset->load(['category', 'location', 'assignments.employee', 'company', 'assetTemplate.company']);
 
         return Inertia::render('Assets/Show', [
             'asset' => $asset,

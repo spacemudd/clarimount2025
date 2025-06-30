@@ -17,14 +17,17 @@ class Asset extends Model
         'service_tag_number',
         'finance_tag_number',
         'asset_category_id',
+        'asset_template_id',
         'location_id',
         'company_id',
         'assigned_to',
         'assigned_date',
         'model_name',
         'model_number',
+        'manufacturer',
         'status',
         'notes',
+        'image_path',
     ];
 
     protected $casts = [
@@ -64,6 +67,14 @@ class Asset extends Model
         }
         
         return (string)$nextNumber;
+    }
+
+    /**
+     * Get the template this asset was created from.
+     */
+    public function assetTemplate(): BelongsTo
+    {
+        return $this->belongsTo(AssetTemplate::class);
     }
 
     /**
