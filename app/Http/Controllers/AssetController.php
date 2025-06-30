@@ -140,6 +140,11 @@ class AssetController extends Controller
             return back()->withErrors(['asset_template_id' => 'Invalid asset template.']);
         }
         
+        // Ensure template has a valid category
+        if (!$template->asset_category_id) {
+            return back()->withErrors(['asset_template_id' => 'Selected template does not have a category assigned. Please update the template first.']);
+        }
+        
         // Validate location belongs to the company
         $location = Location::find($validated['location_id']);
         if (!$location || $location->company_id !== $company->id) {
