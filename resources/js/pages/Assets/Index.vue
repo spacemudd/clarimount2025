@@ -127,17 +127,52 @@ const clearFilters = () => {
 };
 
 const getImageSrc = (asset: Asset) => {
-    const imagePath = asset.image_path || asset.assetTemplate?.image_path;
-    if (imagePath) {
-        return `/storage/${imagePath}`;
+    // First try asset's own image
+    if (asset.image_path) {
+        return `/storage/${asset.image_path}`;
+    }
+    // Then try asset template's image
+    if (asset.assetTemplate?.image_path) {
+        return `/storage/${asset.assetTemplate.image_path}`;
     }
     return null;
 };
 
 const handleImageError = (event: Event) => {
     const target = event.target as HTMLImageElement;
-    // Hide the broken image so the fallback icon shows
+    
+    // Get asset from data attribute
+    const assetId = target.getAttribute('data-asset-id');
+    if (!assetId) {
+        target.style.display = 'none';
+        return;
+    }
+    
+    const asset = props.assets.data.find(a => a.id.toString() === assetId);
+    if (!asset) {
+        target.style.display = 'none';
+        const fallbackElement = document.getElementById(`fallback-${assetId}`);
+        if (fallbackElement) {
+            fallbackElement.classList.remove('hidden');
+        }
+        return;
+    }
+    
+    // If asset image failed and we have a template image, try that
+    if (asset.image_path && asset.assetTemplate?.image_path) {
+        const templateImageSrc = `/storage/${asset.assetTemplate.image_path}`;
+        if (target.src !== templateImageSrc) {
+            target.src = templateImageSrc;
+            return;
+        }
+    }
+    
+    // If both failed or no images available, hide image and show fallback icon
     target.style.display = 'none';
+    const fallbackElement = document.getElementById(`fallback-${assetId}`);
+    if (fallbackElement) {
+        fallbackElement.classList.remove('hidden');
+    }
 };
 
 // Function to dynamically load JavaScript files
@@ -487,15 +522,20 @@ const printBarcode = () => {
                                     <div class="flex items-center">
                                         <div class="flex-shrink-0 h-10 w-10">
                                             <!-- Asset Image or Template Image -->
-                                            <div v-if="getImageSrc(asset)" class="h-10 w-10 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600">
+                                            <div v-if="getImageSrc(asset)" class="h-10 w-10 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 relative">
                                                 <img 
                                                     :src="getImageSrc(asset)!" 
                                                     :alt="asset.asset_tag"
+                                                    :data-asset-id="asset.id"
                                                     class="h-full w-full object-cover"
                                                     @error="handleImageError"
                                                 />
+                                                <!-- Fallback Icon (hidden by default, shown when image fails) -->
+                                                <div class="absolute inset-0 bg-gray-300 dark:bg-gray-600 flex items-center justify-center hidden" :id="`fallback-${asset.id}`">
+                                                    <Icon name="HardDrive" class="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                                                </div>
                                             </div>
-                                            <!-- Fallback Icon -->
+                                            <!-- Fallback Icon (when no image source available) -->
                                             <div v-else class="h-10 w-10 rounded-lg bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
                                                 <Icon name="HardDrive" class="h-5 w-5 text-gray-700 dark:text-gray-300" />
                                             </div>
