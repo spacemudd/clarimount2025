@@ -64,6 +64,9 @@ const search = ref(props.filters?.search || '');
 const categoryFilter = ref(props.filters?.category_id || '');
 const locationFilter = ref(props.filters?.location_id || '');
 
+const selectedAssets = ref<Set<number>>(new Set());
+const selectAllChecked = ref(false);
+
 const barcodeDialog = ref({
   show: false,
   printing: false,
@@ -71,7 +74,8 @@ const barcodeDialog = ref({
   selectedPrinter: '',
   availablePrinters: [] as string[],
   status: '',
-  currentAsset: null as Asset | null
+  currentAsset: null as Asset | null,
+  selectedAssets: [] as Asset[]
 });
 
 const breadcrumbs = computed((): BreadcrumbItem[] => [
@@ -171,8 +175,48 @@ const loadRequiredScripts = async (): Promise<void> => {
   }
 }
 
-const showBarcodeDialog = async (asset: Asset) => {
-  barcodeDialog.value.currentAsset = asset
+// Asset selection functions
+const toggleAssetSelection = (assetId: number) => {
+  if (selectedAssets.value.has(assetId)) {
+    selectedAssets.value.delete(assetId)
+  } else {
+    selectedAssets.value.add(assetId)
+  }
+  updateSelectAllState()
+}
+
+const toggleSelectAll = () => {
+  if (selectAllChecked.value) {
+    selectedAssets.value.clear()
+  } else {
+    props.assets.data.forEach(asset => {
+      selectedAssets.value.add(asset.id)
+    })
+  }
+  selectAllChecked.value = !selectAllChecked.value
+}
+
+const updateSelectAllState = () => {
+  const totalAssets = props.assets.data.length
+  const selectedCount = selectedAssets.value.size
+  selectAllChecked.value = totalAssets > 0 && selectedCount === totalAssets
+}
+
+const getSelectedAssetsData = (): Asset[] => {
+  return props.assets.data.filter(asset => selectedAssets.value.has(asset.id))
+}
+
+const showBarcodeDialog = async (asset?: Asset) => {
+  if (asset) {
+    // Single asset print
+    barcodeDialog.value.currentAsset = asset
+    barcodeDialog.value.selectedAssets = [asset]
+  } else {
+    // Multiple assets print
+    barcodeDialog.value.currentAsset = null
+    barcodeDialog.value.selectedAssets = getSelectedAssetsData()
+  }
+  
   barcodeDialog.value.show = true
   
   // Load scripts if not already loaded
@@ -218,10 +262,12 @@ const jspmWSStatus = () => {
 }
 
 const printBarcode = () => {
-  if (!barcodeDialog.value.currentAsset) return
+  const assetsToPrint = barcodeDialog.value.selectedAssets
+  if (!assetsToPrint || assetsToPrint.length === 0) return
   
   if (jspmWSStatus()) {
     barcodeDialog.value.printing = true
+    barcodeDialog.value.status = `Printing ${assetsToPrint.length} label(s)...`
     
     try {
       // Create a ClientPrintJob
@@ -234,51 +280,61 @@ const printBarcode = () => {
         cpj.clientPrinter = new window.JSPM.InstalledPrinter(barcodeDialog.value.selectedPrinter)
       }
       
-      // Set content to print - Create Zebra ZPL commands for 2" x 1" label (406 x 203 dots at 203 DPI)
-      let cmds = "^XA"
+      // Generate ZPL commands for all selected assets
+      let allCommands = ""
       
-      // Set label dimensions for 2" x 1" at 203 DPI
-      cmds += "^PW406"  // Print width 406 dots (2 inches * 203 DPI)
-      cmds += "^LL203"  // Label length 203 dots (1 inch * 203 DPI)
+      assetsToPrint.forEach((asset, index) => {
+        // Set content to print - Create Zebra ZPL commands for 2" x 1" label (406 x 203 dots at 203 DPI)
+        let cmds = "^XA"
+        
+        // Set label dimensions for 2" x 1" at 203 DPI
+        cmds += "^PW406"  // Print width 406 dots (2 inches * 203 DPI)
+        cmds += "^LL203"  // Label length 203 dots (1 inch * 203 DPI)
+        
+        // Set print density for darker printing
+        cmds += "^MD30"   // Media darkness (0-30, higher = darker)
+        cmds += "^SD15"   // Set darkness (0-30, higher = darker)
+        
+        // Company logo on the left side (centered with top margin)
+        cmds += "^FO10,50^GFA,329,329,7,,,,,,K0F1C,J01E3E,I039F1C4,I079E10F,I07BF03E,I073E17E,00213E7FC,00607CFF8,00F87CFF,00F8F9F800C,00FCF8J08,007EF,003E6,03BEK03F,039FK07F,039FK07F,07CFK03F8,008F,I0F8I018,I07J03C,03DK03E68,07FCJ01C7,03FFJ01E7,03FF8I01F3,017FEI09F,I0FE0018F8,0043E003CF8,00F1I03C7C,00F80807C3C,0070700F838,0020F00F008,I03E00F3,I07E01F38,I07C01E78,I03801E3,L01E,L01C,L01,,,,,^FS"
+        
+        // Company name above asset tag (small text)
+        cmds += "^FO70,30^A0N,18,18^FDFAHAD NAWAF ALZEER HOLDING CO.^FS"  // Company name in English
+        
+        // Asset tag next to logo (with double margin under company name)
+        cmds += `^FO70,65^A0N,24,24^FD${asset.asset_tag}^FS`
+        
+        // Serial number or asset tag as barcode (Code 128) - centered
+        cmds += "^FO70,100^BY2,2,35"  // Adjusted position to maintain spacing
+        cmds += "^BCN,35,Y,N,N"
+        cmds += `^FD${asset.serial_number || asset.asset_tag}^FS`
+        
+        // QR Code on the right side - centered with top margin
+        cmds += "^FO320,50^BQN,2,4"  // Moved down to align with logo and title
+        cmds += `^FDMM,${asset.asset_tag}^FS`
+        
+        // Date at bottom left (below barcode)
+        cmds += `^FO70,175^A0N,18,18^FD${new Date().toISOString().split('T')[0]}^FS`
+        
+        cmds += "^XZ"
+        
+        allCommands += cmds
+      })
       
-      // Set print density for darker printing
-      cmds += "^MD30"   // Media darkness (0-30, higher = darker)
-      cmds += "^SD15"   // Set darkness (0-30, higher = darker)
-      
-      // Company logo on the left side (centered with top margin)
-      cmds += "^FO10,50^GFA,329,329,7,,,,,,K0F1C,J01E3E,I039F1C4,I079E10F,I07BF03E,I073E17E,00213E7FC,00607CFF8,00F87CFF,00F8F9F800C,00FCF8J08,007EF,003E6,03BEK03F,039FK07F,039FK07F,07CFK03F8,008F,I0F8I018,I07J03C,03DK03E68,07FCJ01C7,03FFJ01E7,03FF8I01F3,017FEI09F,I0FE0018F8,0043E003CF8,00F1I03C7C,00F80807C3C,0070700F838,0020F00F008,I03E00F3,I07E01F38,I07C01E78,I03801E3,L01E,L01C,L01,,,,,^FS"
-      
-      // Company name above asset tag (small text)
-      cmds += "^FO70,30^A0N,18,18^FDFAHAD NAWAF ALZEER HOLDING CO.^FS"  // Company name in English
-      
-      // Asset tag next to logo (with double margin under company name)
-      cmds += `^FO70,65^A0N,24,24^FD${barcodeDialog.value.currentAsset.asset_tag}^FS`
-      
-      // Serial number or asset tag as barcode (Code 128) - centered
-      cmds += "^FO70,100^BY2,2,35"  // Adjusted position to maintain spacing
-      cmds += "^BCN,35,Y,N,N"
-      cmds += `^FD${barcodeDialog.value.currentAsset.serial_number || barcodeDialog.value.currentAsset.asset_tag}^FS`
-      
-      // QR Code on the right side - centered with top margin
-      cmds += "^FO320,50^BQN,2,4"  // Moved down to align with logo and title
-      cmds += `^FDMM,${barcodeDialog.value.currentAsset.asset_tag}^FS`
-      
-      // Date at bottom left (below barcode)
-      cmds += `^FO70,175^A0N,18,18^FD${new Date().toISOString().split('T')[0]}^FS`
-      
-      cmds += "^XZ"
-      
-      cpj.printerCommands = cmds
+      cpj.printerCommands = allCommands
       
       // Send print job to printer!
       cpj.sendToClient()
       
-      barcodeDialog.value.status = 'Print job sent successfully!'
+      barcodeDialog.value.status = `${assetsToPrint.length} label(s) sent to printer successfully!`
       
       // Close dialog after successful print
       setTimeout(() => {
         barcodeDialog.value.show = false
         barcodeDialog.value.printing = false
+        // Clear selections after successful print
+        selectedAssets.value.clear()
+        selectAllChecked.value = false
       }, 2000)
       
     } catch (error) {
@@ -346,6 +402,24 @@ const printBarcode = () => {
                 </Button>
             </div>
 
+            <!-- Bulk Actions -->
+            <div v-if="selectedAssets.size > 0" class="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-4">
+                <div class="flex items-center gap-4">
+                    <span class="text-sm font-medium text-blue-900 dark:text-blue-100">
+                        {{ selectedAssets.size }} asset(s) selected
+                    </span>
+                    <Button variant="outline" size="sm" @click="selectedAssets.clear(); selectAllChecked = false">
+                        Clear Selection
+                    </Button>
+                </div>
+                <div class="flex items-center gap-2">
+                    <Button @click="showBarcodeDialog()" class="bg-blue-600 hover:bg-blue-700">
+                        <Icon name="Printer" class="h-4 w-4 mr-2" />
+                        Print {{ selectedAssets.size }} Label(s)
+                    </Button>
+                </div>
+            </div>
+
             <div v-if="assets.data.length === 0" class="text-center py-12">
                 <Icon name="HardDrive" class="mx-auto h-12 w-12 text-gray-400 mb-4" />
                 <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
@@ -368,6 +442,14 @@ const printBarcode = () => {
                     <table class="w-full">
                         <thead class="bg-gray-50 dark:bg-gray-700">
                             <tr class="text-left rtl:text-right">
+                                <th class="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-12">
+                                    <input 
+                                        type="checkbox" 
+                                        :checked="selectAllChecked"
+                                        @change="toggleSelectAll"
+                                        class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                                    />
+                                </th>
                                 <th class="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                     {{ t('assets.asset') }}
                                 </th>
@@ -393,6 +475,14 @@ const printBarcode = () => {
                         </thead>
                         <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                             <tr v-for="asset in assets.data" :key="asset.id" class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <input 
+                                        type="checkbox" 
+                                        :checked="selectedAssets.has(asset.id)"
+                                        @change="toggleAssetSelection(asset.id)"
+                                        class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                                    />
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center">
                                         <div class="flex-shrink-0 h-10 w-10">
@@ -475,9 +565,20 @@ const printBarcode = () => {
                     <DialogTitle>Print Barcode Label</DialogTitle>
                     <DialogDescription>
                         Configure printer settings for the Zebra label printer.
-                        <span v-if="barcodeDialog.currentAsset" class="block mt-2 font-medium">
-                            Asset: {{ barcodeDialog.currentAsset.asset_tag }}
-                        </span>
+                        <div v-if="barcodeDialog.selectedAssets.length === 1" class="mt-2 font-medium">
+                            Asset: {{ barcodeDialog.selectedAssets[0].asset_tag }}
+                        </div>
+                        <div v-else-if="barcodeDialog.selectedAssets.length > 1" class="mt-2">
+                            <div class="font-medium mb-2">
+                                Printing {{ barcodeDialog.selectedAssets.length }} assets:
+                            </div>
+                            <div class="max-h-32 overflow-y-auto bg-gray-50 dark:bg-gray-800 rounded p-2 text-sm">
+                                <div v-for="asset in barcodeDialog.selectedAssets" :key="asset.id" class="py-1">
+                                    {{ asset.asset_tag }}
+                                    <span v-if="asset.serial_number" class="text-gray-500 ml-2">({{ asset.serial_number }})</span>
+                                </div>
+                            </div>
+                        </div>
                     </DialogDescription>
                 </DialogHeader>
                 <div class="space-y-4">
@@ -520,7 +621,7 @@ const printBarcode = () => {
                         :disabled="barcodeDialog.printing || (!barcodeDialog.useDefaultPrinter && !barcodeDialog.selectedPrinter)"
                     >
                         <Icon v-if="barcodeDialog.printing" name="Loader2" class="h-4 w-4 mr-2 animate-spin" />
-                        Print Now
+                        Print {{ barcodeDialog.selectedAssets.length > 1 ? `${barcodeDialog.selectedAssets.length} Labels` : 'Label' }}
                     </Button>
                 </DialogFooter>
             </DialogContent>
