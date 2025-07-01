@@ -489,6 +489,9 @@ const printBarcode = () => {
                                     {{ t('assets.asset') }}
                                 </th>
                                 <th class="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                    {{ t('assets.template_image') }}
+                                </th>
+                                <th class="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                     {{ t('assets.company') }}
                                 </th>
                                 <th class="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -547,6 +550,22 @@ const printBarcode = () => {
                                             <div class="text-sm text-gray-500 dark:text-gray-400">
                                                 {{ asset.model_name || asset.serial_number || '-' }}
                                             </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex justify-center">
+                                        <img 
+                                            v-if="asset.assetTemplate?.image_path"
+                                            :src="`/storage/${asset.assetTemplate.image_path}`" 
+                                            :alt="asset.assetTemplate.name || 'Template'" 
+                                            class="h-12 w-12 object-cover rounded-lg border border-gray-200 dark:border-gray-600"
+                                        />
+                                        <div 
+                                            v-else
+                                            class="h-12 w-12 bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 flex items-center justify-center"
+                                        >
+                                            <Icon name="Image" class="h-5 w-5 text-gray-400" />
                                         </div>
                                     </div>
                                 </td>

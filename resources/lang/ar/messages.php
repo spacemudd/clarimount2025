@@ -375,6 +375,7 @@ return [
         'serial_number_placeholder' => 'أدخل الرقم التسلسلي (اختياري)',
         'serial_number_optional' => 'الرقم التسلسلي اختياري ولكن مُوصى به للتتبع',
         'image' => 'صورة الأصل',
+        'template_image' => 'صورة القالب',
         'click_to_upload' => 'انقر للرفع',
         'or_drag_and_drop' => 'أو اسحب وأفلت',
         'supported_formats' => 'PNG, JPG, GIF حتى 5 ميجابايت',

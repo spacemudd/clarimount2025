@@ -376,6 +376,7 @@ return [
         'serial_number_placeholder' => 'Enter serial number (optional)',
         'serial_number_optional' => 'Serial number is optional but recommended for tracking',
         'image' => 'Asset Image',
+        'template_image' => 'Template Image',
         'click_to_upload' => 'Click to upload',
         'or_drag_and_drop' => 'or drag and drop',
         'supported_formats' => 'PNG, JPG, GIF up to 5MB',
