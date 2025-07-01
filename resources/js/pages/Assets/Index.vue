@@ -67,6 +67,10 @@ const locationFilter = ref(props.filters?.location_id || '');
 const selectedAssets = ref<Set<number>>(new Set());
 const selectAllChecked = ref(false);
 
+// Track failed images
+const failedAssetImages = ref<Set<number>>(new Set());
+const failedTemplateImages = ref<Set<number>>(new Set());
+
 const barcodeDialog = ref({
   show: false,
   printing: false,
@@ -126,53 +130,12 @@ const clearFilters = () => {
     locationFilter.value = '';
 };
 
-const getImageSrc = (asset: Asset) => {
-    // First try asset's own image
-    if (asset.image_path) {
-        return `/storage/${asset.image_path}`;
-    }
-    // Then try asset template's image
-    if (asset.assetTemplate?.image_path) {
-        return `/storage/${asset.assetTemplate.image_path}`;
-    }
-    return null;
+const handleAssetImageError = (event: Event, asset: Asset) => {
+    failedAssetImages.value.add(asset.id);
 };
 
-const handleImageError = (event: Event) => {
-    const target = event.target as HTMLImageElement;
-    
-    // Get asset from data attribute
-    const assetId = target.getAttribute('data-asset-id');
-    if (!assetId) {
-        target.style.display = 'none';
-        return;
-    }
-    
-    const asset = props.assets.data.find(a => a.id.toString() === assetId);
-    if (!asset) {
-        target.style.display = 'none';
-        const fallbackElement = document.getElementById(`fallback-${assetId}`);
-        if (fallbackElement) {
-            fallbackElement.classList.remove('hidden');
-        }
-        return;
-    }
-    
-    // If asset image failed and we have a template image, try that
-    if (asset.image_path && asset.assetTemplate?.image_path) {
-        const templateImageSrc = `/storage/${asset.assetTemplate.image_path}`;
-        if (target.src !== templateImageSrc) {
-            target.src = templateImageSrc;
-            return;
-        }
-    }
-    
-    // If both failed or no images available, hide image and show fallback icon
-    target.style.display = 'none';
-    const fallbackElement = document.getElementById(`fallback-${assetId}`);
-    if (fallbackElement) {
-        fallbackElement.classList.remove('hidden');
-    }
+const handleTemplateImageError = (event: Event, asset: Asset) => {
+    failedTemplateImages.value.add(asset.id);
 };
 
 // Function to dynamically load JavaScript files
@@ -524,21 +487,25 @@ const printBarcode = () => {
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center">
                                         <div class="flex-shrink-0 h-10 w-10">
-                                            <!-- Asset Image or Template Image -->
-                                            <div v-if="getImageSrc(asset)" class="h-10 w-10 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 relative">
+                                            <!-- Asset Image (priority 1) -->
+                                            <div v-if="asset.image_path && !failedAssetImages.has(asset.id)" class="h-10 w-10 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600">
                                                 <img 
-                                                    :src="getImageSrc(asset)!" 
+                                                    :src="`/storage/${asset.image_path}`" 
                                                     :alt="asset.asset_tag"
-                                                    :data-asset-id="asset.id"
                                                     class="h-full w-full object-cover"
-                                                    @error="handleImageError"
+                                                    @error="(e) => handleAssetImageError(e, asset)"
                                                 />
-                                                <!-- Fallback Icon (hidden by default, shown when image fails) -->
-                                                <div class="absolute inset-0 bg-gray-300 dark:bg-gray-600 flex items-center justify-center hidden" :id="`fallback-${asset.id}`">
-                                                    <Icon name="HardDrive" class="h-5 w-5 text-gray-700 dark:text-gray-300" />
-                                                </div>
                                             </div>
-                                            <!-- Fallback Icon (when no image source available) -->
+                                            <!-- Template Image (priority 2) -->
+                                            <div v-else-if="asset.assetTemplate?.image_path && !failedTemplateImages.has(asset.id)" class="h-10 w-10 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600">
+                                                <img 
+                                                    :src="`/storage/${asset.assetTemplate.image_path}`" 
+                                                    :alt="asset.assetTemplate.name || 'Template'"
+                                                    class="h-full w-full object-cover"
+                                                    @error="(e) => handleTemplateImageError(e, asset)"
+                                                />
+                                            </div>
+                                            <!-- Fallback Icon (priority 3) -->
                                             <div v-else class="h-10 w-10 rounded-lg bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
                                                 <Icon name="HardDrive" class="h-5 w-5 text-gray-700 dark:text-gray-300" />
                                             </div>
