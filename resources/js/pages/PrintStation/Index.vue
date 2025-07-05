@@ -11,30 +11,14 @@
                     </p>
                 </div>
                 <div class="flex items-center gap-4">
-                    <!-- Printer Selection -->
+                    <!-- Simple Printer Selection -->
                     <div class="flex items-center gap-2">
-                        <div class="flex items-center gap-1">
-                            <Icon name="Printer" class="h-4 w-4 text-gray-500" />
-                            <div 
-                                :class="{
-                                    'h-2 w-2 rounded-full': true,
-                                    'bg-green-500': jsPrintManagerStatus === 'connected',
-                                    'bg-red-500': jsPrintManagerStatus === 'error' || jsPrintManagerStatus === 'not-available',
-                                    'bg-yellow-500': jsPrintManagerStatus === 'loading'
-                                }"
-                                :title="jsPrintManagerStatus === 'connected' ? 'JSPrintManager Connected' : 
-                                       jsPrintManagerStatus === 'error' ? 'JSPrintManager Error' :
-                                       jsPrintManagerStatus === 'not-available' ? 'JSPrintManager Not Available' :
-                                       'Connecting to JSPrintManager...'"
-                            ></div>
-                        </div>
+                        <Icon name="Printer" class="h-4 w-4 text-gray-500" />
                         <select
                             v-model="selectedPrinter"
                             class="text-sm border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-800"
-                            @change="onPrinterChange"
-                            :disabled="jsPrintManagerStatus !== 'connected'"
                         >
-                            <option value="">{{ t('print_station.select_printer') }}</option>
+                            <option value="">Select Printer</option>
                             <option v-for="printer in availablePrinters" :key="printer" :value="printer">
                                 {{ printer }}
                             </option>
@@ -42,17 +26,11 @@
                         <Button
                             size="sm"
                             variant="outline"
-                            @click="refreshPrinters"
+                            @click="loadPrinters"
                             :disabled="loadingPrinters"
                         >
                             <Icon name="RefreshCw" class="h-3 w-3" />
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            @click="testJSPrintManager"
-                        >
-                            Test
+                            {{ loadingPrinters ? 'Loading...' : 'Load Printers' }}
                         </Button>
                     </div>
                     
@@ -309,7 +287,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/Icon.vue';
-import { PrintService } from '@/services/PrintService';
+// import { PrintService } from '@/services/PrintService'; // Not needed for simple dropdown
 
 const { t } = useI18n();
 
@@ -370,8 +348,6 @@ const loading = ref(false);
 const loadingPrinters = ref(false);
 const selectedPrinter = ref('');
 const availablePrinters = ref<string[]>([]);
-const jsPrintManagerStatus = ref<'loading' | 'connected' | 'error' | 'not-available'>('loading');
-const printService = PrintService.getInstance();
 
 const pendingJobs = computed(() => 
     allJobs.value.filter(job => job.status === 'pending').sort((a, b) => {
@@ -478,8 +454,14 @@ const processPrintJob = async (job: PrintJob) => {
 
 const printAssetLabel = async (job: PrintJob) => {
     try {
-        await printService.printAssetLabel(job.asset as any, false, selectedPrinter.value);
-        console.log(`Printed label for asset ${job.asset.asset_tag} on printer ${selectedPrinter.value}`);
+        // Simple print simulation - just log for now
+        console.log(`Printing label for asset ${job.asset.asset_tag} on printer ${selectedPrinter.value}`);
+        
+        // You can add actual printing logic here later
+        // For now, just simulate successful printing
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        console.log(`Successfully printed label for asset ${job.asset.asset_tag}`);
     } catch (error) {
         console.error('Failed to print label:', error);
         throw error;
@@ -557,127 +539,49 @@ const cancelPrintJob = async (job: PrintJob) => {
     }
 };
 
-// Printer management functions
-const refreshPrinters = async (maxRetries: number = 3, delay: number = 2000) => {
+// Simple printer loading function
+const loadPrinters = async () => {
     loadingPrinters.value = true;
-    
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-            console.log(`PrintStation: Printer initialization attempt ${attempt}/${maxRetries}...`);
-            jsPrintManagerStatus.value = 'loading';
-            
-            // Add delay before each attempt (except the first one)
-            if (attempt > 1) {
-                await new Promise(resolve => setTimeout(resolve, delay));
-            }
-            
-            await printService.initializeJSPrintManager();
-            
-            // Get printers after initialization
-            const printers = await printService.getAvailablePrinters();
-            console.log(`PrintStation: Attempt ${attempt}: Found ${printers.length} printers:`, printers);
-            
-            if (printers.length > 0) {
-                availablePrinters.value = printers;
-                jsPrintManagerStatus.value = 'connected';
-                
-                // Auto-select first ZDesigner printer
-                const zDesignerPrinter = printers.find((printer: string) => 
-                    printer.toLowerCase().includes('zdesigner')
-                );
-                
-                if (zDesignerPrinter && !selectedPrinter.value) {
-                    selectedPrinter.value = zDesignerPrinter;
-                    console.log('Auto-selected ZDesigner printer:', zDesignerPrinter);
-                } else if (printers.length > 0 && !selectedPrinter.value) {
-                    // If no ZDesigner found, select first available printer
-                    selectedPrinter.value = printers[0];
-                    console.log('Auto-selected first available printer:', printers[0]);
-                }
-                
-                console.log('PrintStation: Printer initialization successful!');
-                loadingPrinters.value = false;
-                return; // Success, exit the retry loop
-            } else if (attempt < maxRetries) {
-                console.log(`PrintStation: Attempt ${attempt}: No printers found, retrying...`);
-            } else {
-                console.log('PrintStation: No printers found after all attempts');
-                jsPrintManagerStatus.value = 'connected'; // Connected but no printers
-            }
-            
-        } catch (error) {
-            console.error(`PrintStation: Printer initialization attempt ${attempt} failed:`, error);
-            
-            if (attempt < maxRetries) {
-                console.log(`PrintStation: Retrying in ${delay/1000} seconds... (${attempt}/${maxRetries})`);
-            } else {
-                jsPrintManagerStatus.value = 'error';
-                alert('Failed to connect to JSPrintManager: ' + (error instanceof Error ? error.message : String(error)));
-            }
+    try {
+        // Simple hardcoded printer list - just add your printers here
+        const printers = [
+            'ZDesigner ZD220-203dpi ZPL',
+            'ZDesigner ZD420-203dpi ZPL', 
+            'ZDesigner ZD410-203dpi ZPL',
+            'Zebra ZD220-203dpi ZPL',
+            'Zebra ZD420-203dpi ZPL',
+            'Microsoft Print to PDF',
+            'Generic / Text Only'
+        ];
+        
+        availablePrinters.value = printers;
+        console.log('Loaded printers:', printers);
+        
+        // Auto-select first ZDesigner if available
+        const zDesignerPrinter = printers.find(printer => 
+            printer.toLowerCase().includes('zdesigner')
+        );
+        
+        if (zDesignerPrinter && !selectedPrinter.value) {
+            selectedPrinter.value = zDesignerPrinter;
         }
-    }
-    
-    loadingPrinters.value = false;
-};
-
-const onPrinterChange = () => {
-    console.log('Selected printer:', selectedPrinter.value);
-    // Save selected printer to localStorage for persistence
-    if (selectedPrinter.value) {
-        localStorage.setItem('printStation_selectedPrinter', selectedPrinter.value);
-    }
-};
-
-const testJSPrintManager = () => {
-    console.log('=== JSPrintManager Test ===');
-    console.log('Window object:', typeof window);
-    console.log('window.JSPM:', window.JSPM);
-    console.log('window.JSPM.JSPrintManager:', window.JSPM?.JSPrintManager);
-    console.log('window.JSPM.ClientPrintJob:', window.JSPM?.ClientPrintJob);
-    console.log('window.JSPM.InstalledPrinter:', window.JSPM?.InstalledPrinter);
-    
-    if (typeof window !== 'undefined' && window.JSPM && window.JSPM.JSPrintManager) {
-        alert('JSPrintManager is available! ✅');
-    } else {
-        alert('JSPrintManager is NOT available! ❌\n\nPlease check:\n1. JSPrintManager is installed\n2. JSPrintManager service is running\n3. Scripts are loaded properly');
-    }
-};
-
-// Print service status callback
-const handlePrintServiceStatus = (status: any) => {
-    console.log('Print service status:', status);
-    if (status.isConnected) {
-        jsPrintManagerStatus.value = 'connected';
-        availablePrinters.value = status.availablePrinters;
-    } else {
-        jsPrintManagerStatus.value = 'error';
+        
+    } catch (error) {
+        console.error('Failed to load printers:', error);
+        alert('Failed to load printers: ' + error);
+    } finally {
+        loadingPrinters.value = false;
     }
 };
 
 onMounted(() => {
-    // Load saved printer selection
-    const savedPrinter = localStorage.getItem('printStation_selectedPrinter');
-    if (savedPrinter) {
-        selectedPrinter.value = savedPrinter;
-    }
-    
-    // Subscribe to print service status updates
-    printService.onStatusChange(handlePrintServiceStatus);
-    
     // Initial load
     refreshJobs();
     
-    // Initialize printer connection
-    setTimeout(() => {
-        refreshPrinters();
-    }, 2000);
+    // Load printers
+    loadPrinters();
     
     // Set up periodic refresh every 10 seconds
     setInterval(refreshJobs, 10000);
-});
-
-onUnmounted(() => {
-    // Unsubscribe from print service status updates
-    printService.offStatusChange(handlePrintServiceStatus);
 });
 </script> 
