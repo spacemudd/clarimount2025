@@ -45,6 +45,12 @@
             </div>
           </div>
           
+          <!-- Camera info -->
+          <div v-if="availableCameras.length > 0" class="text-xs text-gray-600 dark:text-gray-400 text-center">
+            Camera: {{ availableCameras[selectedCameraIndex]?.label || 'Unknown' }}
+            <span v-if="availableCameras.length > 1">({{ selectedCameraIndex + 1 }}/{{ availableCameras.length }})</span>
+          </div>
+          
           <!-- Samsung device tip -->
           <div v-if="isSamsungDevice" class="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg text-center">
             <div class="flex items-center justify-center gap-2 mb-1">
@@ -73,9 +79,18 @@
               type="button"
               variant="outline"
               size="sm"
+              @click="switchCamera"
+              v-if="availableCameras.length > 1"
+            >
+              📹 Switch Camera
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               @click="restartScanning"
             >
-              Restart Camera
+              🔄 Restart
             </Button>
           </div>
 
@@ -141,6 +156,8 @@ const manualInput = ref('')
 let codeReader: BrowserMultiFormatReader | BrowserQRCodeReader | null = null
 let stream: MediaStream | null = null
 let isQRMode = ref(false)
+let availableCameras = ref<MediaDeviceInfo[]>([])
+let selectedCameraIndex = ref(0)
 
 // Detect Samsung device
 const isSamsungDevice = ref(false)
@@ -182,16 +199,38 @@ const startScanning = async () => {
       return
     }
     
-    // Prefer back camera on mobile devices
-    const backCamera = videoDevices.find((device: any) => 
-      device.label.toLowerCase().includes('back') || 
-      device.label.toLowerCase().includes('rear') ||
-      device.label.toLowerCase().includes('environment')
-    )
+    // Store available cameras
+    availableCameras.value = videoDevices
     
-    const selectedDevice = backCamera || videoDevices[0]
+    // Debug: log available cameras
+    console.log('Available cameras:', videoDevices.map(d => ({ id: d.deviceId, label: d.label })))
     
-    status.value = 'Starting camera...'
+    // If this is the first time, try to find back camera
+    if (selectedCameraIndex.value === 0) {
+      // Prefer back camera on mobile devices - improved detection
+      const backCameraIndex = videoDevices.findIndex((device: any) => {
+        const label = device.label.toLowerCase()
+        return label.includes('back') || 
+               label.includes('rear') ||
+               label.includes('environment') ||
+               label.includes('camera2') ||
+               label.includes('facing back') ||
+               label.includes('world') ||
+               // Samsung specific back camera identifiers
+               (label.includes('camera') && label.includes('1')) ||
+               // Generic back camera patterns
+               label.match(/camera.*[^0]$/) // Not ending with 0 (front camera)
+      })
+      
+      // If back camera found, use it; otherwise use last camera (usually back on mobile)
+      selectedCameraIndex.value = backCameraIndex !== -1 ? backCameraIndex : videoDevices.length - 1
+    }
+    
+    // Use the selected camera
+    const selectedDevice = videoDevices[selectedCameraIndex.value]
+    
+    console.log('Selected camera:', { id: selectedDevice.deviceId, label: selectedDevice.label })
+    status.value = `Starting camera: ${selectedDevice.label || 'Unknown camera'}...`
     
     // Detect Samsung device - improved detection
     const userAgent = navigator.userAgent.toLowerCase()
@@ -385,61 +424,90 @@ const optimizeForSamsung = (videoElement: HTMLVideoElement) => {
   // Samsung S24+ specific camera optimizations
   try {
     // Enhanced tap-to-focus functionality for Samsung devices
-    const handleTapToFocus = async () => {
+    const handleTapToFocus = async (event?: Event) => {
       if (videoElement.srcObject) {
-        const stream = videoElement.srcObject as MediaStream
-        const videoTrack = stream.getVideoTracks()[0]
+        const videoStream = videoElement.srcObject as MediaStream
+        const videoTrack = videoStream.getVideoTracks()[0]
         
         if (videoTrack && videoTrack.applyConstraints) {
           try {
-            // Apply Samsung S24+ optimized constraints for barcode scanning
-            await videoTrack.applyConstraints({
-              width: { ideal: 1920, min: 1280 },
-              height: { ideal: 1080, min: 720 },
-              frameRate: { ideal: 30, min: 20 },
-              // Force continuous autofocus for Samsung
-              focusMode: 'continuous',
-              // Advanced Samsung S24+ settings
-              advanced: [{
-                focusMode: 'continuous',
-                exposureMode: 'continuous',
-                whiteBalanceMode: 'continuous',
-                focusDistance: 0.25, // Optimal for close-up barcode scanning
-                exposureCompensation: 0.1, // Slightly brighter for better barcode reading
-                iso: 200, // Lower ISO for less noise
-                sharpness: 0.8, // Increase sharpness for better barcode detection
-              }]
-            } as any)
+            // Get current capabilities to see what's actually supported
+            const capabilities = videoTrack.getCapabilities ? videoTrack.getCapabilities() : {} as any
+            console.log('Camera capabilities:', capabilities)
             
-            // Apply additional focus trigger after constraint application
-            setTimeout(async () => {
-              try {
-                // Secondary focus trigger for Samsung devices
-                await videoTrack.applyConstraints({
-                  focusMode: 'continuous',
-                  advanced: [{
-                    focusMode: 'continuous',
-                    focusDistance: 0.3,
-                  }]
-                } as any)
-              } catch (e) {
-                console.warn('Samsung secondary focus failed:', e)
+            // Try to apply focus constraints that are actually supported
+            const constraints: any = {}
+            
+            // Only apply constraints that are supported
+            if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
+              constraints.focusMode = 'continuous'
+            }
+            
+            if (capabilities.exposureMode && capabilities.exposureMode.includes('continuous')) {
+              constraints.exposureMode = 'continuous'
+            }
+            
+            if (capabilities.whiteBalanceMode && capabilities.whiteBalanceMode.includes('continuous')) {
+              constraints.whiteBalanceMode = 'continuous'
+            }
+            
+            // Apply supported constraints
+            if (Object.keys(constraints).length > 0) {
+              await videoTrack.applyConstraints(constraints)
+              console.log('Applied focus constraints:', constraints)
+            }
+            
+            // Alternative approach: restart the track to trigger refocus
+            if (event) {
+              console.log('Manual focus trigger - restarting track')
+              
+              // Stop and restart the track to force refocus
+              const devices = await navigator.mediaDevices.enumerateDevices()
+              const videoDevices = devices.filter(device => device.kind === 'videoinput')
+              const currentDevice = videoDevices[selectedCameraIndex.value]
+              
+              if (currentDevice) {
+                // Get fresh stream with focus trigger
+                const newStream = await navigator.mediaDevices.getUserMedia({
+                  video: {
+                    deviceId: currentDevice.deviceId,
+                    width: { ideal: 1920, min: 1280 },
+                    height: { ideal: 1080, min: 720 },
+                    frameRate: { ideal: 30, min: 15 }
+                  }
+                })
+                
+                // Replace the video source
+                videoElement.srcObject = newStream
+                
+                // Update our stream reference
+                if (videoStream) {
+                  videoStream.getTracks().forEach(track => track.stop())
+                }
+                
+                // Update the global stream reference
+                stream = newStream as any
+                
+                status.value = 'Camera refocused!'
+                setTimeout(() => {
+                  status.value = 'Ready to scan. Position QR code (blue square) or barcode (red rectangle) in the frame.'
+                }, 2000)
               }
-            }, 300)
+            }
             
           } catch (error) {
-            console.warn('Could not apply Samsung S24+ focus constraints:', error)
+            console.warn('Focus constraints failed, trying alternative method:', error)
             
-            // Fallback to basic constraints
+            // Fallback: try to restart the camera with basic constraints
             try {
               await videoTrack.applyConstraints({
-                focusMode: 'continuous',
                 width: { ideal: 1920 },
                 height: { ideal: 1080 },
                 frameRate: { ideal: 30 }
-              } as any)
+              })
+              console.log('Applied basic constraints for focus')
             } catch (fallbackError) {
-              console.warn('Samsung fallback constraints also failed:', fallbackError)
+              console.warn('All focus methods failed:', fallbackError)
             }
           }
         }
@@ -449,30 +517,39 @@ const optimizeForSamsung = (videoElement: HTMLVideoElement) => {
     // Add click event for manual focus trigger
     videoElement.addEventListener('click', handleTapToFocus)
     
+    // Add touch events for better mobile support
+    videoElement.addEventListener('touchstart', (e) => {
+      e.preventDefault() // Prevent default touch behavior
+      handleTapToFocus(e)
+    })
+    
     // Add double-tap for enhanced focus
     let lastTap = 0
-    const handleDoubleTap = () => {
+    const handleDoubleTap = (e: Event) => {
       const now = Date.now()
       if (now - lastTap < 300) {
         // Double tap detected - trigger enhanced focus
-        handleTapToFocus()
-        setTimeout(handleTapToFocus, 200) // Second focus attempt
+        e.preventDefault()
+        console.log('Double tap detected - enhanced focus')
+        handleTapToFocus(e)
+        setTimeout(() => handleTapToFocus(e), 500) // Second focus attempt
       }
       lastTap = now
     }
     
     videoElement.addEventListener('touchend', handleDoubleTap)
+    videoElement.addEventListener('click', handleDoubleTap)
     
-    // Trigger focus every 3 seconds for Samsung devices (optimized interval)
-    const focusInterval = setInterval(handleTapToFocus, 3000)
+    // Trigger focus every 5 seconds for Samsung devices (less aggressive)
+    const focusInterval = setInterval(() => handleTapToFocus(), 5000)
     
     // Set Samsung S24+ specific video properties for better barcode visibility
-    videoElement.style.filter = 'contrast(1.2) brightness(1.15) saturate(1.05) sharpen(0.5)'
+    videoElement.style.filter = 'contrast(1.2) brightness(1.15) saturate(1.05)'
     
     // Add visual feedback for Samsung users
     const addTapIndicator = () => {
       const indicator = document.createElement('div')
-      indicator.innerHTML = '📱 Tap to focus • Double-tap for enhanced focus'
+      indicator.innerHTML = '👆 Tap anywhere to focus • Double-tap for enhanced focus'
       indicator.style.cssText = `
         position: absolute;
         top: 10px;
@@ -486,7 +563,7 @@ const optimizeForSamsung = (videoElement: HTMLVideoElement) => {
         text-align: center;
         z-index: 10;
         pointer-events: none;
-        animation: fadeInOut 6s ease-in-out;
+        animation: fadeInOut 8s ease-in-out;
       `
       
       // Add CSS animation
@@ -495,7 +572,7 @@ const optimizeForSamsung = (videoElement: HTMLVideoElement) => {
         @keyframes fadeInOut {
           0% { opacity: 0; transform: translateY(-10px); }
           10% { opacity: 1; transform: translateY(0); }
-          90% { opacity: 1; transform: translateY(0); }
+          85% { opacity: 1; transform: translateY(0); }
           100% { opacity: 0; transform: translateY(-10px); }
         }
       `
@@ -507,20 +584,22 @@ const optimizeForSamsung = (videoElement: HTMLVideoElement) => {
       setTimeout(() => {
         indicator.remove()
         style.remove()
-      }, 6000)
+      }, 8000)
     }
     
     // Show tap indicator after 1 second
     setTimeout(addTapIndicator, 1000)
     
-    // Initial focus trigger after 500ms
-    setTimeout(handleTapToFocus, 500)
+    // Initial focus trigger after 1 second
+    setTimeout(() => handleTapToFocus(), 1000)
     
     // Clear interval and event listeners when video ends or component unmounts
     const cleanup = () => {
       clearInterval(focusInterval)
       videoElement.removeEventListener('click', handleTapToFocus)
+      videoElement.removeEventListener('touchstart', handleTapToFocus)
       videoElement.removeEventListener('touchend', handleDoubleTap)
+      videoElement.removeEventListener('click', handleDoubleTap)
     }
     
     videoElement.addEventListener('ended', cleanup, { once: true })
@@ -537,6 +616,16 @@ const handleCancel = () => {
   emit('cancel')
   emit('update:modelValue', false)
   stopScanning()
+}
+
+const switchCamera = () => {
+  if (availableCameras.value.length > 1) {
+    // Cycle to next camera
+    selectedCameraIndex.value = (selectedCameraIndex.value + 1) % availableCameras.value.length
+    
+    // Restart scanning with new camera
+    restartScanning()
+  }
 }
 
 onMounted(() => {
