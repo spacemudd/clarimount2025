@@ -13,11 +13,26 @@
                 <div class="flex items-center gap-4">
                     <!-- Printer Selection -->
                     <div class="flex items-center gap-2">
-                        <Icon name="Printer" class="h-4 w-4 text-gray-500" />
+                        <div class="flex items-center gap-1">
+                            <Icon name="Printer" class="h-4 w-4 text-gray-500" />
+                            <div 
+                                :class="{
+                                    'h-2 w-2 rounded-full': true,
+                                    'bg-green-500': jsPrintManagerStatus === 'connected',
+                                    'bg-red-500': jsPrintManagerStatus === 'error' || jsPrintManagerStatus === 'not-available',
+                                    'bg-yellow-500': jsPrintManagerStatus === 'loading'
+                                }"
+                                :title="jsPrintManagerStatus === 'connected' ? 'JSPrintManager Connected' : 
+                                       jsPrintManagerStatus === 'error' ? 'JSPrintManager Error' :
+                                       jsPrintManagerStatus === 'not-available' ? 'JSPrintManager Not Available' :
+                                       'Connecting to JSPrintManager...'"
+                            ></div>
+                        </div>
                         <select
                             v-model="selectedPrinter"
                             class="text-sm border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-800"
                             @change="onPrinterChange"
+                            :disabled="jsPrintManagerStatus !== 'connected'"
                         >
                             <option value="">{{ t('print_station.select_printer') }}</option>
                             <option v-for="printer in availablePrinters" :key="printer" :value="printer">
@@ -31,6 +46,13 @@
                             :disabled="loadingPrinters"
                         >
                             <Icon name="RefreshCw" class="h-3 w-3" />
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            @click="testJSPrintManager"
+                        >
+                            Test
                         </Button>
                     </div>
                     
@@ -338,6 +360,7 @@ const loading = ref(false);
 const loadingPrinters = ref(false);
 const selectedPrinter = ref('');
 const availablePrinters = ref<string[]>([]);
+const jsPrintManagerStatus = ref<'loading' | 'connected' | 'error' | 'not-available'>('loading');
 
 const pendingJobs = computed(() => 
     allJobs.value.filter(job => job.status === 'pending').sort((a, b) => {
@@ -555,13 +578,20 @@ const cancelPrintJob = async (job: PrintJob) => {
 const refreshPrinters = async () => {
     loadingPrinters.value = true;
     try {
+        // Wait for JSPrintManager to be available
+        await waitForJSPrintManager();
+        
         // Check if JSPrintManager is available
         if (typeof window !== 'undefined' && window.JSPM && window.JSPM.JSPrintManager) {
+            // Start JSPrintManager
             await window.JSPM.JSPrintManager.start();
+            console.log('JSPrintManager started successfully');
+            jsPrintManagerStatus.value = 'connected';
             
             // Get installed printers
             const printers = await window.JSPM.JSPrintManager.getPrinters();
             availablePrinters.value = printers;
+            console.log('Available printers:', printers);
             
             // Auto-select first ZDesigner printer
             const zDesignerPrinter = printers.find((printer: string) => 
@@ -571,15 +601,44 @@ const refreshPrinters = async () => {
             if (zDesignerPrinter && !selectedPrinter.value) {
                 selectedPrinter.value = zDesignerPrinter;
                 console.log('Auto-selected ZDesigner printer:', zDesignerPrinter);
+            } else if (printers.length > 0 && !selectedPrinter.value) {
+                // If no ZDesigner found, select first available printer
+                selectedPrinter.value = printers[0];
+                console.log('Auto-selected first available printer:', printers[0]);
             }
         } else {
-            console.warn('JSPrintManager not available');
+            console.error('JSPrintManager not available after waiting');
+            jsPrintManagerStatus.value = 'not-available';
+            alert('JSPrintManager is not available. Please make sure JSPrintManager is installed and running on this computer.');
         }
     } catch (error) {
         console.error('Failed to refresh printers:', error);
+        jsPrintManagerStatus.value = 'error';
+        alert('Failed to connect to JSPrintManager: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
         loadingPrinters.value = false;
     }
+};
+
+const waitForJSPrintManager = (): Promise<void> => {
+    return new Promise((resolve, reject) => {
+        let attempts = 0;
+        const maxAttempts = 50; // 5 seconds with 100ms intervals
+        
+        const checkJSPM = () => {
+            attempts++;
+            
+            if (typeof window !== 'undefined' && window.JSPM && window.JSPM.JSPrintManager) {
+                resolve();
+            } else if (attempts >= maxAttempts) {
+                reject(new Error('JSPrintManager not loaded after 5 seconds'));
+            } else {
+                setTimeout(checkJSPM, 100);
+            }
+        };
+        
+        checkJSPM();
+    });
 };
 
 const onPrinterChange = () => {
@@ -587,6 +646,21 @@ const onPrinterChange = () => {
     // Save selected printer to localStorage for persistence
     if (selectedPrinter.value) {
         localStorage.setItem('printStation_selectedPrinter', selectedPrinter.value);
+    }
+};
+
+const testJSPrintManager = () => {
+    console.log('=== JSPrintManager Test ===');
+    console.log('Window object:', typeof window);
+    console.log('window.JSPM:', window.JSPM);
+    console.log('window.JSPM.JSPrintManager:', window.JSPM?.JSPrintManager);
+    console.log('window.JSPM.ClientPrintJob:', window.JSPM?.ClientPrintJob);
+    console.log('window.JSPM.InstalledPrinter:', window.JSPM?.InstalledPrinter);
+    
+    if (typeof window !== 'undefined' && window.JSPM && window.JSPM.JSPrintManager) {
+        alert('JSPrintManager is available! ✅');
+    } else {
+        alert('JSPrintManager is NOT available! ❌\n\nPlease check:\n1. JSPrintManager is installed\n2. JSPrintManager service is running\n3. Scripts are loaded properly');
     }
 };
 
@@ -599,7 +673,18 @@ onMounted(() => {
     
     // Initial load
     refreshJobs();
-    refreshPrinters();
+    
+    // Debug JSPrintManager availability
+    console.log('Window object:', typeof window);
+    console.log('JSPM available:', typeof window !== 'undefined' && window.JSPM);
+    console.log('JSPrintManager available:', typeof window !== 'undefined' && window.JSPM && window.JSPM.JSPrintManager);
+    
+    // Wait a bit for scripts to load, then try to initialize
+    setTimeout(() => {
+        console.log('After timeout - JSPM available:', typeof window !== 'undefined' && window.JSPM);
+        console.log('After timeout - JSPrintManager available:', typeof window !== 'undefined' && window.JSPM && window.JSPM.JSPrintManager);
+        refreshPrinters();
+    }, 2000);
     
     // Set up periodic refresh every 10 seconds
     setInterval(refreshJobs, 10000);

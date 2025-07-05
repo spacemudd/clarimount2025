@@ -8,13 +8,13 @@ declare global {
             JSPrintManager: {
                 start(): Promise<void>;
                 getPrinters(): Promise<string[]>;
-                ClientPrintJob: new () => {
-                    clientPrinter: any;
-                    printerCommands: string;
-                    sendToClient(): Promise<void>;
-                };
-                InstalledPrinter: new (printerName: string) => any;
             };
+            ClientPrintJob: new () => {
+                clientPrinter: any;
+                printerCommands: string;
+                sendToClient(): Promise<void>;
+            };
+            InstalledPrinter: new (printerName: string) => any;
         };
     }
 }

@@ -40,6 +40,11 @@
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
 
+        <!-- JSPrintManager Scripts -->
+        <script src="/js/bluebird.min.js"></script>
+        <script src="/js/jquery-3.2.1.slim.min.js"></script>
+        <script src="/js/jsmanager/JSPrintManager.js"></script>
+
         @routes
         @vite(['resources/js/app.ts', "resources/js/pages/{$page['component']}.vue"])
         @inertiaHead
