@@ -15,6 +15,12 @@
                             </div>
                         </div>
                         <div class="flex gap-2">
+                            <Button asChild>
+                                <Link :href="`/assets/create?location_id=${location.id}`">
+                                    <Icon name="Plus" class="mr-2 h-4 w-4" />
+                                    {{ t('assets.create_asset') }}
+                                </Link>
+                            </Button>
                             <Button variant="outline" asChild>
                                 <Link :href="route('locations.edit', location.id)">
                                     <Icon name="SquarePen" class="mr-2 h-4 w-4" />
@@ -86,6 +92,115 @@
                             </CardContent>
                         </Card>
                     </div>
+                </div>
+
+                <!-- Assets at this Location -->
+                <div v-if="location.assets && location.assets.length > 0" class="mt-6">
+                    <Card>
+                        <CardHeader>
+                            <div class="flex items-center justify-between">
+                                <CardTitle>{{ t('locations.assets_at_location') }}</CardTitle>
+                                <Button variant="outline" size="sm" asChild>
+                                    <Link :href="`/assets?location_id=${location.id}`">
+                                        {{ t('locations.view_all_assets') }}
+                                    </Link>
+                                </Button>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div class="space-y-3">
+                                <div 
+                                    v-for="asset in location.assets.slice(0, 5)" 
+                                    :key="asset.id"
+                                    class="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                >
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                                            <Icon name="Package" class="h-4 w-4 text-primary" />
+                                        </div>
+                                        <div>
+                                            <div class="font-medium text-sm">{{ asset.asset_tag }}</div>
+                                            <div class="text-xs text-muted-foreground">
+                                                {{ asset.model_name || asset.category?.name || 'Asset' }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <Badge 
+                                            :variant="asset.status === 'available' ? 'default' : asset.status === 'assigned' ? 'secondary' : 'destructive'"
+                                            class="text-xs"
+                                        >
+                                            {{ t(`assets.status_${asset.status}`) }}
+                                        </Badge>
+                                        <Button variant="ghost" size="sm" asChild>
+                                            <Link :href="`/assets/${asset.id}`">
+                                                <Icon name="Eye" class="h-3 w-3" />
+                                            </Link>
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div v-if="location.assets.length > 5" class="text-center pt-2">
+                                    <Button variant="outline" size="sm" asChild>
+                                        <Link :href="`/assets?location_id=${location.id}`">
+                                            {{ t('locations.view_remaining_assets', { count: location.assets.length - 5 }) }}
+                                        </Link>
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="mt-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>{{ t('locations.quick_actions') }}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                <Button variant="outline" class="justify-start h-auto p-4" asChild>
+                                    <Link :href="`/assets/create?location_id=${location.id}`">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center">
+                                                <Icon name="Plus" class="h-4 w-4 text-green-600 dark:text-green-400" />
+                                            </div>
+                                            <div class="text-left">
+                                                <div class="font-medium text-sm">{{ t('assets.create_asset') }}</div>
+                                                <div class="text-xs text-muted-foreground">{{ t('locations.create_asset_desc') }}</div>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                </Button>
+                                <Button variant="outline" class="justify-start h-auto p-4" asChild>
+                                    <Link :href="`/assets?location_id=${location.id}`">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
+                                                <Icon name="Package" class="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                            </div>
+                                            <div class="text-left">
+                                                <div class="font-medium text-sm">{{ t('locations.view_assets') }}</div>
+                                                <div class="text-xs text-muted-foreground">{{ t('locations.view_assets_desc') }}</div>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                </Button>
+                                <Button variant="outline" class="justify-start h-auto p-4" asChild>
+                                    <Link :href="route('locations.edit', location.id)">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 bg-orange-100 dark:bg-orange-900/20 rounded-lg flex items-center justify-center">
+                                                <Icon name="SquarePen" class="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                                            </div>
+                                            <div class="text-left">
+                                                <div class="font-medium text-sm">{{ t('locations.edit_location') }}</div>
+                                                <div class="text-xs text-muted-foreground">{{ t('locations.edit_location_desc') }}</div>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
         </div>

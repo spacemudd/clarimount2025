@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import Icon from '@/components/Icon.vue';
 import Heading from '@/components/Heading.vue';
 import { useI18n } from 'vue-i18n';
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import type { AssetCategory, Location, Company, BreadcrumbItem } from '@/types';
 import BarcodeScanner from '@/components/BarcodeScanner.vue';
 
@@ -43,6 +43,10 @@ interface Props {
 
 const props = defineProps<Props>();
 const page = usePage();
+
+// Check for URL parameters to pre-populate location
+const urlParams = new URLSearchParams(window.location.search);
+const preSelectedLocationId = urlParams.get('location_id');
 
 // Function to get CSRF token
 const getCsrfToken = (): string => {
@@ -634,6 +638,30 @@ const handleBarcodeScanned = (scannedValue: string) => {
     form.serial_number = scannedValue;
     showBarcodeScanner.value = false;
 };
+
+// Auto-select location if provided via URL parameter
+onMounted(async () => {
+    if (preSelectedLocationId) {
+        try {
+            // Fetch the specific location details
+            const response = await fetch(`/api/locations/search?q=`);
+            const allLocations = await response.json();
+            const matchedLocation = allLocations.find((loc: any) => loc.id.toString() === preSelectedLocationId);
+            
+            if (matchedLocation) {
+                // Auto-select the location
+                selectLocation(matchedLocation);
+                
+                // Remove the URL parameter to clean up the URL
+                const newUrl = new URL(window.location.href);
+                newUrl.searchParams.delete('location_id');
+                window.history.replaceState({}, '', newUrl.toString());
+            }
+        } catch (error) {
+            console.error('Failed to load pre-selected location:', error);
+        }
+    }
+});
 </script>
 
 <template>
