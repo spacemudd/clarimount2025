@@ -363,27 +363,29 @@ import Icon from '@/components/Icon.vue';
 // Type declarations for JSPrintManager
 declare global {
     interface Window {
-        JSPrintManager: {
-            auto_reconnect: boolean;
-            start: () => void;
-            websocket_status: number;
-            WS: {
-                onStatusChanged: () => void;
+        JSPM: {
+            JSPrintManager: {
+                auto_reconnect: boolean;
+                start: () => void;
+                websocket_status: number;
+                WS: {
+                    onStatusChanged: () => void;
+                };
+                getPrinters: () => Promise<string[]>;
             };
-            getPrinters: () => Promise<string[]>;
+            WSStatus: {
+                Open: number;
+                Closed: number;
+                Blocked: number;
+            };
+            ClientPrintJob: new () => {
+                clientPrinter: any;
+                printerCommands: string;
+                sendToClient: () => void;
+            };
+            DefaultPrinter: new () => any;
+            InstalledPrinter: new (printerName: string) => any;
         };
-        WSStatus: {
-            Open: number;
-            Closed: number;
-            Blocked: number;
-        };
-        ClientPrintJob: new () => {
-            clientPrinter: any;
-            printerCommands: string;
-            sendToClient: () => void;
-        };
-        DefaultPrinter: new () => any;
-        InstalledPrinter: new (printerName: string) => any;
     }
 }
 
@@ -726,18 +728,18 @@ const loadRequiredScripts = async (): Promise<void> => {
 
 const loadAvailablePrinters = async (): Promise<void> => {
     try {
-        if (typeof window.JSPrintManager === 'undefined') {
+        if (typeof window.JSPM === 'undefined') {
             printerStatus.value = 'JSPrintManager not loaded';
             return;
         }
 
-        if (window.JSPrintManager.websocket_status !== window.WSStatus.Open) {
+        if (window.JSPM.JSPrintManager.websocket_status !== window.JSPM.WSStatus.Open) {
             printerStatus.value = 'JSPrintManager not connected';
             return;
         }
 
         printerStatus.value = 'Loading printers...';
-        const printers = await window.JSPrintManager.getPrinters();
+        const printers = await window.JSPM.JSPrintManager.getPrinters();
         availablePrinters.value = printers;
         printerStatus.value = `Found ${printers.length} printer(s)`;
         
@@ -753,25 +755,25 @@ const testJSPrintManager = async (): Promise<void> => {
     try {
         console.log('Testing JSPrintManager connection...');
         
-        if (typeof window.JSPrintManager === 'undefined') {
+        if (typeof window.JSPM === 'undefined') {
             alert('JSPrintManager not loaded. Please check if the scripts are loaded correctly.');
             return;
         }
 
-        const status = window.JSPrintManager.websocket_status;
+        const status = window.JSPM.JSPrintManager.websocket_status;
         let statusText = 'Unknown';
         
-        if (status === window.WSStatus.Open) {
+        if (status === window.JSPM.WSStatus.Open) {
             statusText = 'Connected';
-        } else if (status === window.WSStatus.Closed) {
+        } else if (status === window.JSPM.WSStatus.Closed) {
             statusText = 'Disconnected';
-        } else if (status === window.WSStatus.Blocked) {
+        } else if (status === window.JSPM.WSStatus.Blocked) {
             statusText = 'Blocked';
         }
 
         console.log('JSPrintManager status:', statusText);
         
-        if (status === window.WSStatus.Open) {
+        if (status === window.JSPM.WSStatus.Open) {
             await loadAvailablePrinters();
             alert(`JSPrintManager is connected! Found ${availablePrinters.value.length} printer(s).`);
         } else {
@@ -785,23 +787,23 @@ const testJSPrintManager = async (): Promise<void> => {
 
 const initializeJSPrintManager = async (): Promise<boolean> => {
     try {
-        if (typeof window.JSPrintManager === 'undefined') {
+        if (typeof window.JSPM === 'undefined') {
             await loadRequiredScripts();
         }
 
-        if (typeof window.JSPrintManager === 'undefined') {
+        if (typeof window.JSPM === 'undefined') {
             return false;
         }
 
-        window.JSPrintManager.auto_reconnect = true;
-        window.JSPrintManager.start();
+        window.JSPM.JSPrintManager.auto_reconnect = true;
+        window.JSPM.JSPrintManager.start();
         
         // Wait for connection
         await new Promise<void>((resolve, reject) => {
             const timeout = setTimeout(() => reject(new Error('Connection timeout')), 10000);
             
-            window.JSPrintManager.WS.onStatusChanged = function () {
-                if (window.JSPrintManager.websocket_status === window.WSStatus.Open) {
+            window.JSPM.JSPrintManager.WS.onStatusChanged = function () {
+                if (window.JSPM.JSPrintManager.websocket_status === window.JSPM.WSStatus.Open) {
                     clearTimeout(timeout);
                     printerStatus.value = 'Connected to JSPrintManager';
                     
@@ -809,11 +811,11 @@ const initializeJSPrintManager = async (): Promise<boolean> => {
                     loadAvailablePrinters();
                     
                     resolve();
-                } else if (window.JSPrintManager.websocket_status === window.WSStatus.Closed) {
+                } else if (window.JSPM.JSPrintManager.websocket_status === window.JSPM.WSStatus.Closed) {
                     clearTimeout(timeout);
                     printerStatus.value = 'JSPrintManager not running';
                     reject(new Error('JSPrintManager not running'));
-                } else if (window.JSPrintManager.websocket_status === window.WSStatus.Blocked) {
+                } else if (window.JSPM.JSPrintManager.websocket_status === window.JSPM.WSStatus.Blocked) {
                     clearTimeout(timeout);
                     printerStatus.value = 'JSPrintManager blocked this website';
                     reject(new Error('JSPrintManager blocked'));
@@ -831,20 +833,20 @@ const initializeJSPrintManager = async (): Promise<boolean> => {
 
 const printAssetLabel = async (job: PrintJob) => {
     try {
-        if (typeof window.JSPrintManager === 'undefined') {
+        if (typeof window.JSPM === 'undefined') {
             throw new Error('JSPrintManager not available');
         }
 
         const printData = job.print_data;
         
         // Create print job
-        const cpj = new window.ClientPrintJob();
+        const cpj = new window.JSPM.ClientPrintJob();
         
         // Set printer
         if (useDefaultPrinter.value) {
-            cpj.clientPrinter = new window.DefaultPrinter();
+            cpj.clientPrinter = new window.JSPM.DefaultPrinter();
         } else {
-            cpj.clientPrinter = new window.InstalledPrinter(selectedPrinter.value);
+            cpj.clientPrinter = new window.JSPM.InstalledPrinter(selectedPrinter.value);
         }
         
         // Create ZPL content for label printer
