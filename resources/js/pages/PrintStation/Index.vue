@@ -11,6 +11,29 @@
                     </p>
                 </div>
                 <div class="flex items-center gap-4">
+                    <!-- Printer Selection -->
+                    <div class="flex items-center gap-2">
+                        <Icon name="Printer" class="h-4 w-4 text-gray-500" />
+                        <select
+                            v-model="selectedPrinter"
+                            class="text-sm border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-800"
+                            @change="onPrinterChange"
+                        >
+                            <option value="">{{ t('print_station.select_printer') }}</option>
+                            <option v-for="printer in availablePrinters" :key="printer" :value="printer">
+                                {{ printer }}
+                            </option>
+                        </select>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            @click="refreshPrinters"
+                            :disabled="loadingPrinters"
+                        >
+                            <Icon name="RefreshCw" class="h-3 w-3" />
+                        </Button>
+                    </div>
+                    
                     <Button @click="refreshJobs" :disabled="loading">
                         <Icon name="RefreshCw" class="mr-2 h-4 w-4" />
                         {{ t('print_station.refresh') }}
@@ -312,6 +335,9 @@ const statistics = ref<Statistics>({
 });
 
 const loading = ref(false);
+const loadingPrinters = ref(false);
+const selectedPrinter = ref('');
+const availablePrinters = ref<string[]>([]);
 
 const pendingJobs = computed(() => 
     allJobs.value.filter(job => job.status === 'pending').sort((a, b) => {
@@ -380,6 +406,11 @@ const refreshJobs = async () => {
 };
 
 const processPrintJob = async (job: PrintJob) => {
+    if (!selectedPrinter.value) {
+        alert('Please select a printer first');
+        return;
+    }
+
     try {
         // Mark as processing
         const response = await fetch(`/api/print-jobs/${job.id}/status`, {
@@ -391,6 +422,7 @@ const processPrintJob = async (job: PrintJob) => {
             body: JSON.stringify({
                 status: 'processing',
                 print_station_id: 'MANUAL_STATION_' + Date.now(),
+                printer_name: selectedPrinter.value,
             }),
         });
 
@@ -401,13 +433,51 @@ const processPrintJob = async (job: PrintJob) => {
                 allJobs.value[jobIndex].status = 'processing';
             }
             
-            // Here you would integrate with your actual printing system
-            // For now, we'll just show a message
-            alert(`Print job ${job.job_id} is now processing. Please send the label to your printer.`);
+            // Print using JSPrintManager
+            await printAssetLabel(job);
         }
     } catch (error) {
         console.error('Failed to process print job:', error);
+        alert('Failed to process print job: ' + error);
     }
+};
+
+const printAssetLabel = async (job: PrintJob) => {
+    try {
+        if (typeof window !== 'undefined' && window.JSPM && window.JSPM.JSPrintManager) {
+            // Generate ZPL for asset label
+            const zplCode = generateAssetLabelZPL(job.asset);
+            
+            // Create print job
+            const printJob = new window.JSPM.ClientPrintJob();
+            printJob.clientPrinter = new window.JSPM.InstalledPrinter(selectedPrinter.value);
+            printJob.printerCommands = zplCode;
+            
+            // Send to printer
+            await printJob.sendToClient();
+            
+            console.log(`Printed label for asset ${job.asset.asset_tag} on printer ${selectedPrinter.value}`);
+        } else {
+            throw new Error('JSPrintManager not available');
+        }
+    } catch (error) {
+        console.error('Failed to print label:', error);
+        throw error;
+    }
+};
+
+const generateAssetLabelZPL = (asset: any) => {
+    // Generate ZPL code for asset label
+    return `
+^XA
+^CF0,30
+^FO50,50^FD${asset.asset_tag}^FS
+^CF0,20
+^FO50,100^FD${asset.model_name || 'N/A'}^FS
+^FO50,130^FD${asset.serial_number || 'N/A'}^FS
+^FO50,160^FD${asset.category || 'N/A'}^FS
+^XZ
+    `.trim();
 };
 
 const completePrintJob = async (job: PrintJob) => {
@@ -481,9 +551,55 @@ const cancelPrintJob = async (job: PrintJob) => {
     }
 };
 
+// Printer management functions
+const refreshPrinters = async () => {
+    loadingPrinters.value = true;
+    try {
+        // Check if JSPrintManager is available
+        if (typeof window !== 'undefined' && window.JSPM && window.JSPM.JSPrintManager) {
+            await window.JSPM.JSPrintManager.start();
+            
+            // Get installed printers
+            const printers = await window.JSPM.JSPrintManager.getPrinters();
+            availablePrinters.value = printers;
+            
+            // Auto-select first ZDesigner printer
+            const zDesignerPrinter = printers.find((printer: string) => 
+                printer.toLowerCase().includes('zdesigner')
+            );
+            
+            if (zDesignerPrinter && !selectedPrinter.value) {
+                selectedPrinter.value = zDesignerPrinter;
+                console.log('Auto-selected ZDesigner printer:', zDesignerPrinter);
+            }
+        } else {
+            console.warn('JSPrintManager not available');
+        }
+    } catch (error) {
+        console.error('Failed to refresh printers:', error);
+    } finally {
+        loadingPrinters.value = false;
+    }
+};
+
+const onPrinterChange = () => {
+    console.log('Selected printer:', selectedPrinter.value);
+    // Save selected printer to localStorage for persistence
+    if (selectedPrinter.value) {
+        localStorage.setItem('printStation_selectedPrinter', selectedPrinter.value);
+    }
+};
+
 onMounted(() => {
+    // Load saved printer selection
+    const savedPrinter = localStorage.getItem('printStation_selectedPrinter');
+    if (savedPrinter) {
+        selectedPrinter.value = savedPrinter;
+    }
+    
     // Initial load
     refreshJobs();
+    refreshPrinters();
     
     // Set up periodic refresh every 10 seconds
     setInterval(refreshJobs, 10000);

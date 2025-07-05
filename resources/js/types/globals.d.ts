@@ -4,6 +4,18 @@ import Pusher from 'pusher-js';
 declare global {
     interface Window {
         Pusher: typeof Pusher;
+        JSPM: {
+            JSPrintManager: {
+                start(): Promise<void>;
+                getPrinters(): Promise<string[]>;
+                ClientPrintJob: new () => {
+                    clientPrinter: any;
+                    printerCommands: string;
+                    sendToClient(): Promise<void>;
+                };
+                InstalledPrinter: new (printerName: string) => any;
+            };
+        };
     }
 }
 
