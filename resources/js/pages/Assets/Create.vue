@@ -133,6 +133,13 @@ const selectedFile = ref<File | null>(null);
 const filePreview = ref<string | null>(null);
 const fileError = ref<string | null>(null);
 
+// Asset Template Creation Modal state
+const isTemplateDialogOpen = ref(false);
+const templateCameraActive = ref(false);
+const templateImageFile = ref<File | null>(null);
+const templateImagePreview = ref<string | null>(null);
+const templateImageError = ref<string | null>(null);
+
 const form = useForm({
     location_id: '',
     asset_template_id: '',
@@ -162,6 +169,17 @@ const locationForm = useForm({
     state: '',
     postal_code: '',
     country: '',
+});
+
+const templateForm = useForm({
+    name: '',
+    manufacturer: '',
+    model_name: '',
+    model_number: '',
+    asset_category_id: '',
+    company_id: props.currentCompany?.id || '',
+    is_global: false,
+    image: null as File | null,
 });
 
 const breadcrumbs = computed((): BreadcrumbItem[] => [
@@ -307,6 +325,204 @@ const hideTemplateSearchResults = () => {
     setTimeout(() => {
         showTemplateSearchResults.value = false;
     }, 200);
+};
+
+// Asset Template Creation Modal functions
+const resizeImage = (file: File, maxSizeKB: number = 1800): Promise<File> => {
+    return new Promise((resolve) => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d')!;
+        const img = new Image();
+        
+        img.onload = () => {
+            // Calculate new dimensions
+            let { width, height } = img;
+            const maxDimension = 1920; // Max width or height
+            
+            if (width > height && width > maxDimension) {
+                height = (height * maxDimension) / width;
+                width = maxDimension;
+            } else if (height > maxDimension) {
+                width = (width * maxDimension) / height;
+                height = maxDimension;
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            // Draw and compress
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Try different quality levels to get under maxSizeKB
+            const tryCompress = (quality: number): void => {
+                canvas.toBlob((blob) => {
+                    if (blob && blob.size <= maxSizeKB * 1024) {
+                        const compressedFile = new File([blob], file.name, {
+                            type: 'image/jpeg',
+                            lastModified: Date.now(),
+                        });
+                        resolve(compressedFile);
+                    } else if (quality > 0.1) {
+                        tryCompress(quality - 0.1);
+                    } else {
+                        // If still too large, resolve with current blob
+                        const compressedFile = new File([blob!], file.name, {
+                            type: 'image/jpeg',
+                            lastModified: Date.now(),
+                        });
+                        resolve(compressedFile);
+                    }
+                }, 'image/jpeg', quality);
+            };
+            
+            tryCompress(0.8);
+        };
+        
+        img.src = URL.createObjectURL(file);
+    });
+};
+
+const handleTemplateImageSelect = async (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    
+    if (!file) {
+        templateImageFile.value = null;
+        templateImagePreview.value = null;
+        templateForm.image = null;
+        return;
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+        templateImageError.value = t('assets.invalid_file_type');
+        return;
+    }
+
+    templateImageError.value = null;
+    
+    try {
+        // Resize image to under 1.8MB
+        const resizedFile = await resizeImage(file, 1800);
+        templateImageFile.value = resizedFile;
+        templateForm.image = resizedFile;
+
+        // Create preview
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            templateImagePreview.value = e.target?.result as string;
+        };
+        reader.readAsDataURL(resizedFile);
+    } catch (error) {
+        console.error('Error processing image:', error);
+        templateImageError.value = t('assets.image_processing_error');
+    }
+};
+
+const handleTemplateCameraCapture = async (imageData: string) => {
+    try {
+        // Convert base64 to blob
+        const response = await fetch(imageData);
+        const blob = await response.blob();
+        const file = new File([blob], `template-${Date.now()}.jpg`, { type: 'image/jpeg' });
+        
+        // Resize image to under 1.8MB
+        const resizedFile = await resizeImage(file, 1800);
+        templateImageFile.value = resizedFile;
+        templateForm.image = resizedFile;
+        templateImagePreview.value = imageData;
+        templateCameraActive.value = false;
+    } catch (error) {
+        console.error('Error processing camera image:', error);
+        templateImageError.value = t('assets.image_processing_error');
+    }
+};
+
+const removeTemplateImage = () => {
+    templateImageFile.value = null;
+    templateImagePreview.value = null;
+    templateImageError.value = null;
+    templateForm.image = null;
+    
+    // Reset file input
+    const fileInput = document.getElementById('template_image') as HTMLInputElement;
+    if (fileInput) {
+        fileInput.value = '';
+    }
+};
+
+const createAssetTemplate = async () => {
+    templateForm.processing = true;
+    templateForm.clearErrors();
+
+    try {
+        const formData = new FormData();
+        formData.append('name', templateForm.name);
+        formData.append('manufacturer', templateForm.manufacturer);
+        formData.append('model_name', templateForm.model_name);
+        formData.append('model_number', templateForm.model_number);
+        formData.append('asset_category_id', templateForm.asset_category_id.toString());
+        formData.append('company_id', templateForm.company_id.toString());
+        formData.append('is_global', templateForm.is_global ? '1' : '0');
+        formData.append('_from_modal', '1'); // Flag to indicate this is from modal
+        
+        if (templateForm.image) {
+            formData.append('image', templateForm.image);
+        }
+
+        const response = await fetch('/asset-templates', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrfToken(),
+            },
+            body: formData,
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            // Successfully created template
+            isTemplateDialogOpen.value = false;
+            templateForm.reset();
+            removeTemplateImage();
+            
+            // Create the template object for selection
+            const newTemplate: AssetTemplate = {
+                id: data.template.id,
+                name: data.template.name,
+                manufacturer: data.template.manufacturer,
+                model_name: data.template.model_name,
+                model_number: data.template.model_number,
+                asset_category: data.template.asset_category,
+                company: data.template.company,
+                is_global: data.template.is_global,
+                display_name: data.template.display_name,
+                category_name: data.template.asset_category?.name,
+            };
+            
+            // Auto-select the newly created template
+            selectTemplate(newTemplate);
+        } else {
+            // Handle validation errors
+            if (data.errors) {
+                const validFields = ['name', 'manufacturer', 'model_name', 'model_number', 'asset_category_id', 'company_id', 'image'] as const;
+                Object.keys(data.errors).forEach(key => {
+                    if (validFields.includes(key as typeof validFields[number])) {
+                        templateForm.setError(key as typeof validFields[number], data.errors[key][0]);
+                    }
+                });
+            } else {
+                console.error('Failed to create template:', data);
+            }
+        }
+    } catch (error) {
+        console.error('Error creating template:', error);
+        templateForm.setError('name', 'An error occurred while creating the template.');
+    } finally {
+        templateForm.processing = false;
+    }
 };
 
 // Company search functions
@@ -1174,69 +1390,245 @@ onMounted(async () => {
                         <!-- Template Selection -->
                         <div class="space-y-2">
                             <Label for="template_search">{{ t('assets.template') }} *</Label>
-                            <div class="relative">
-                                <div class="relative">
-                                    <Input
-                                        id="template_search"
-                                        v-model="templateSearchQuery"
-                                        type="text"
-                                        :placeholder="selectedTemplate ? selectedTemplate.display_name : t('assets.search_template_placeholder')"
-                                        @input="handleTemplateSearchInput"
-                                        @focus="templateSearchQuery.length >= 2 && (showTemplateSearchResults = true)"
-                                        @blur="hideTemplateSearchResults"
-                                        :class="{ 'border-red-500': form.errors.asset_template_id }"
-                                        :disabled="selectedTemplate !== null"
-                                    />
-                                    
-                                    <!-- Clear button when template is selected -->
-                                    <button
-                                        v-if="selectedTemplate"
-                                        type="button"
-                                        @click="clearTemplateSelection"
-                                        class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                                    >
-                                        <Icon name="X" class="h-4 w-4" />
-                                    </button>
-                                    
-                                    <!-- Loading spinner -->
-                                    <div
-                                        v-if="isTemplateSearching"
-                                        class="absolute right-2 top-1/2 transform -translate-y-1/2"
-                                    >
-                                        <Icon name="Loader2" class="h-4 w-4 animate-spin text-gray-400" />
+                            <div class="flex gap-2">
+                                <div class="flex-1 relative">
+                                    <div class="relative">
+                                        <Input
+                                            id="template_search"
+                                            v-model="templateSearchQuery"
+                                            type="text"
+                                            :placeholder="selectedTemplate ? selectedTemplate.display_name : t('assets.search_template_placeholder')"
+                                            @input="handleTemplateSearchInput"
+                                            @focus="templateSearchQuery.length >= 2 && (showTemplateSearchResults = true)"
+                                            @blur="hideTemplateSearchResults"
+                                            :class="{ 'border-red-500': form.errors.asset_template_id }"
+                                            :disabled="selectedTemplate !== null"
+                                        />
+                                        
+                                        <!-- Clear button when template is selected -->
+                                        <button
+                                            v-if="selectedTemplate"
+                                            type="button"
+                                            @click="clearTemplateSelection"
+                                            class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                        >
+                                            <Icon name="X" class="h-4 w-4" />
+                                        </button>
+                                        
+                                        <!-- Loading spinner -->
+                                        <div
+                                            v-if="isTemplateSearching"
+                                            class="absolute right-2 top-1/2 transform -translate-y-1/2"
+                                        >
+                                            <Icon name="Loader2" class="h-4 w-4 animate-spin text-gray-400" />
+                                        </div>
                                     </div>
-                                </div>
-                                
-                                <!-- Search Results Dropdown -->
-                                <div
-                                    v-if="showTemplateSearchResults && templateSearchResults.length > 0"
-                                    class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-y-auto"
-                                >
+                                    
+                                    <!-- Search Results Dropdown -->
                                     <div
-                                        v-for="template in templateSearchResults"
-                                        :key="template.id"
-                                        @click="selectTemplate(template)"
-                                        class="px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                                        v-if="showTemplateSearchResults && templateSearchResults.length > 0"
+                                        class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-y-auto"
                                     >
-                                        <div class="font-medium text-sm">{{ template.display_name }}</div>
-                                        <div class="text-xs text-gray-500 dark:text-gray-400">
-                                            <span v-if="template.category_name">{{ template.category_name }}</span>
-                                            <span v-if="template.category_name && (template.company?.name_en || template.is_global)"> • </span>
-                                            <span v-if="template.is_global">{{ t('asset_templates.global') }}</span>
-                                            <span v-else-if="template.company?.name_en">{{ template.company.name_en }}</span>
+                                        <div
+                                            v-for="template in templateSearchResults"
+                                            :key="template.id"
+                                            @click="selectTemplate(template)"
+                                            class="px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                                        >
+                                            <div class="font-medium text-sm">{{ template.display_name }}</div>
+                                            <div class="text-xs text-gray-500 dark:text-gray-400">
+                                                <span v-if="template.category_name">{{ template.category_name }}</span>
+                                                <span v-if="template.category_name && (template.company?.name_en || template.is_global)"> • </span>
+                                                <span v-if="template.is_global">{{ t('asset_templates.global') }}</span>
+                                                <span v-else-if="template.company?.name_en">{{ template.company.name_en }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- No results message -->
+                                    <div
+                                        v-if="showTemplateSearchResults && templateSearchResults.length === 0 && !isTemplateSearching && templateSearchQuery.length >= 2"
+                                        class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg px-3 py-2"
+                                    >
+                                        <div class="text-sm text-gray-500 dark:text-gray-400">
+                                            {{ t('assets.no_templates_found') }}
                                         </div>
                                     </div>
                                 </div>
-                                
-                                <!-- No results message -->
-                                <div
-                                    v-if="showTemplateSearchResults && templateSearchResults.length === 0 && !isTemplateSearching && templateSearchQuery.length >= 2"
-                                    class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg px-3 py-2"
-                                >
-                                    <div class="text-sm text-gray-500 dark:text-gray-400">
-                                        {{ t('assets.no_templates_found') }}
-                                    </div>
-                                </div>
+                                <Dialog v-model:open="isTemplateDialogOpen">
+                                    <DialogTrigger asChild>
+                                        <Button variant="outline" type="button">
+                                            <Icon name="Plus" class="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" />
+                                            {{ t('asset_templates.create_template') }}
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent class="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                                        <DialogHeader>
+                                            <DialogTitle>{{ t('asset_templates.create_template') }}</DialogTitle>
+                                            <DialogDescription>
+                                                {{ t('asset_templates.create_template_description') }}
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <form @submit.prevent="createAssetTemplate" class="space-y-4">
+                                            <!-- Template Name -->
+                                            <div class="space-y-2">
+                                                <Label for="template_name">{{ t('asset_templates.name') }} *</Label>
+                                                <Input
+                                                    id="template_name"
+                                                    v-model="templateForm.name"
+                                                    :error="templateForm.errors.name"
+                                                    required
+                                                />
+                                            </div>
+
+                                            <!-- Manufacturer and Model -->
+                                            <div class="grid grid-cols-2 gap-4">
+                                                <div class="space-y-2">
+                                                    <Label for="template_manufacturer">{{ t('asset_templates.manufacturer') }}</Label>
+                                                    <Input
+                                                        id="template_manufacturer"
+                                                        v-model="templateForm.manufacturer"
+                                                        :error="templateForm.errors.manufacturer"
+                                                    />
+                                                </div>
+                                                <div class="space-y-2">
+                                                    <Label for="template_model_name">{{ t('asset_templates.model_name') }}</Label>
+                                                    <Input
+                                                        id="template_model_name"
+                                                        v-model="templateForm.model_name"
+                                                        :error="templateForm.errors.model_name"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <!-- Model Number -->
+                                            <div class="space-y-2">
+                                                <Label for="template_model_number">{{ t('asset_templates.model_number') }}</Label>
+                                                <Input
+                                                    id="template_model_number"
+                                                    v-model="templateForm.model_number"
+                                                    :error="templateForm.errors.model_number"
+                                                />
+                                            </div>
+
+                                            <!-- Category Selection -->
+                                            <div class="space-y-2">
+                                                <Label for="template_category">{{ t('asset_templates.category') }} *</Label>
+                                                <select
+                                                    id="template_category"
+                                                    v-model="templateForm.asset_category_id"
+                                                    class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    :class="{ 'border-red-500': templateForm.errors.asset_category_id }"
+                                                    required
+                                                >
+                                                    <option value="">{{ t('asset_templates.select_category') }}</option>
+                                                    <option v-for="category in categories" :key="category.id" :value="category.id">
+                                                        {{ category.name }}
+                                                    </option>
+                                                </select>
+                                                <div v-if="templateForm.errors.asset_category_id" class="text-sm text-red-600 dark:text-red-400">
+                                                    {{ templateForm.errors.asset_category_id }}
+                                                </div>
+                                            </div>
+
+                                            <!-- Company Selection -->
+                                            <div class="space-y-2">
+                                                <Label for="template_company">{{ t('asset_templates.company') }} *</Label>
+                                                <select
+                                                    id="template_company"
+                                                    v-model="templateForm.company_id"
+                                                    class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    :class="{ 'border-red-500': templateForm.errors.company_id }"
+                                                    required
+                                                >
+                                                    <option value="">{{ t('asset_templates.select_company') }}</option>
+                                                    <option v-for="company in companies" :key="company.id" :value="company.id">
+                                                        {{ company.name_en }} {{ company.name_ar ? `(${company.name_ar})` : '' }}
+                                                    </option>
+                                                </select>
+                                                <div v-if="templateForm.errors.company_id" class="text-sm text-red-600 dark:text-red-400">
+                                                    {{ templateForm.errors.company_id }}
+                                                </div>
+                                            </div>
+
+                                            <!-- Global Template Option -->
+                                            <div class="flex items-center space-x-2">
+                                                <input
+                                                    id="template_is_global"
+                                                    type="checkbox"
+                                                    v-model="templateForm.is_global"
+                                                    class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                                />
+                                                <Label for="template_is_global">{{ t('asset_templates.is_global') }}</Label>
+                                            </div>
+                                            <p class="text-sm text-muted-foreground">{{ t('asset_templates.is_global_description') }}</p>
+
+                                            <!-- Template Image -->
+                                            <div class="space-y-4">
+                                                <Label for="template_image">{{ t('asset_templates.image') }}</Label>
+                                                <div class="flex items-center justify-center w-full">
+                                                    <label
+                                                        for="template_image"
+                                                        class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-gray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500"
+                                                        :class="{ 'border-red-500': templateImageError }"
+                                                    >
+                                                        <div v-if="!templateImagePreview" class="flex flex-col items-center justify-center pt-5 pb-6">
+                                                            <Icon name="Upload" class="w-8 h-8 mb-2 text-gray-400" />
+                                                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                                                                <span class="font-semibold">{{ t('assets.click_to_upload') }}</span>
+                                                            </p>
+                                                        </div>
+                                                        <div v-else class="relative w-full h-full">
+                                                            <img
+                                                                :src="templateImagePreview"
+                                                                alt="Template preview"
+                                                                class="w-full h-full object-contain rounded-lg"
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                @click.prevent="removeTemplateImage"
+                                                                class="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                                                            >
+                                                                <Icon name="X" class="h-3 w-3" />
+                                                            </button>
+                                                        </div>
+                                                        <input
+                                                            id="template_image"
+                                                            type="file"
+                                                            accept="image/*"
+                                                            @change="handleTemplateImageSelect"
+                                                            class="hidden"
+                                                        />
+                                                    </label>
+                                                </div>
+                                                <div class="flex gap-2">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        @click="templateCameraActive = true"
+                                                        class="flex-1"
+                                                    >
+                                                        <Icon name="Camera" class="h-4 w-4 mr-2" />
+                                                        {{ t('assets.take_photo') }}
+                                                    </Button>
+                                                </div>
+                                                <div v-if="templateImageError" class="text-sm text-red-600 dark:text-red-400">
+                                                    {{ templateImageError }}
+                                                </div>
+                                                <p class="text-sm text-muted-foreground">{{ t('assets.image_will_be_resized') }}</p>
+                                            </div>
+                                        </form>
+                                        <DialogFooter>
+                                            <Button variant="outline" @click="isTemplateDialogOpen = false" type="button">
+                                                {{ t('common.cancel') }}
+                                            </Button>
+                                            <Button @click="createAssetTemplate" :disabled="templateForm.processing">
+                                                <Icon v-if="templateForm.processing" name="Loader2" class="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2 animate-spin" />
+                                                {{ t('common.create') }}
+                                            </Button>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
                             </div>
                             <div v-if="form.errors.asset_template_id" class="text-sm text-red-600 dark:text-red-400">
                                 {{ form.errors.asset_template_id }}
@@ -1693,6 +2085,16 @@ onMounted(async () => {
             description="Position the barcode or QR code on the asset within the camera view to scan the serial number automatically. Supports all common barcode formats and QR codes."
             @scanned="handleBarcodeScanned"
             @cancel="showBarcodeScanner = false"
+        />
+
+        <!-- Template Camera -->
+        <BarcodeScanner
+            v-model="templateCameraActive"
+            title="Take Template Photo"
+            description="Position the asset within the camera view to take a photo for the template. The image will be automatically resized to under 1.8MB."
+            @scanned="handleTemplateCameraCapture"
+            @cancel="templateCameraActive = false"
+            :enable-camera-capture="true"
         />
     </AppLayout>
 </template> 
