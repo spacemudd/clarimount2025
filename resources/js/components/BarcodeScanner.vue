@@ -45,6 +45,11 @@
             </div>
           </div>
           
+          <!-- Samsung device tip -->
+          <div v-if="isSamsungDevice" class="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-2 rounded text-center">
+            <strong>Samsung device detected:</strong> Tap the camera view to focus if image is blurry
+          </div>
+          
           <!-- Scanning mode toggle -->
           <div class="flex gap-2 justify-center">
             <Button
@@ -128,6 +133,9 @@ let codeReader: BrowserMultiFormatReader | BrowserQRCodeReader | null = null
 let stream: MediaStream | null = null
 let isQRMode = ref(false)
 
+// Detect Samsung device
+const isSamsungDevice = ref(false)
+
 watch(() => props.modelValue, (newValue) => {
   isOpen.value = newValue
   if (newValue) {
@@ -175,39 +183,102 @@ const startScanning = async () => {
     
     status.value = 'Starting camera...'
     
-    // Start decoding from video element
+    // Detect Samsung device
+    const userAgent = navigator.userAgent.toLowerCase()
+    const isSamsung = userAgent.includes('samsung') || userAgent.includes('sm-')
+    isSamsungDevice.value = isSamsung
+    
+    // Configure video constraints optimized for Samsung devices
+    const videoConstraints = {
+      deviceId: selectedDevice.deviceId,
+      width: isSamsung ? { ideal: 1280, min: 720 } : { ideal: 1920, min: 1280 },
+      height: isSamsung ? { ideal: 720, min: 480 } : { ideal: 1080, min: 720 },
+      frameRate: { ideal: 30, min: 15 },
+      focusMode: 'continuous',
+      exposureMode: 'continuous',
+      whiteBalanceMode: 'continuous'
+    }
+    
+    // Add Samsung-specific constraints
+    if (isSamsung) {
+      Object.assign(videoConstraints, {
+        focusDistance: { ideal: 0.2, min: 0.1, max: 0.5 },
+        torch: false, // Disable torch for better focus
+        zoom: { ideal: 1.0, min: 1.0, max: 2.0 },
+        // Samsung-specific optimizations
+        aspectRatio: { ideal: 16/9 },
+        resizeMode: 'crop-and-scale'
+      })
+      status.value = 'Starting camera (Samsung S25+ optimized)...'
+    }
+
+    // Start decoding from video element with enhanced constraints
     if (videoElement.value && codeReader) {
-      const controls = await codeReader.decodeFromVideoDevice(
-        selectedDevice.deviceId,
-        videoElement.value,
-        (result: Result | undefined, error: Error | undefined) => {
-          if (result) {
-            const scannedValue = result.getText()
-            const format = result.getBarcodeFormat()
-            status.value = `Scanned ${format}: ${scannedValue.substring(0, 20)}${scannedValue.length > 20 ? '...' : ''}`
+      try {
+        // Try with advanced constraints first (for Samsung and modern devices)
+        const controls = await codeReader.decodeFromConstraints(
+          { video: videoConstraints },
+          videoElement.value,
+          (result: Result | undefined, error: Error | undefined) => {
+            if (result) {
+              const scannedValue = result.getText()
+              const format = result.getBarcodeFormat()
+              status.value = `Scanned ${format}: ${scannedValue.substring(0, 20)}${scannedValue.length > 20 ? '...' : ''}`
+              
+              // Emit the scanned value
+              emit('scanned', scannedValue)
+              
+              // Close the dialog
+              setTimeout(() => {
+                handleCancel()
+              }, 1500)
+            }
             
-            // Emit the scanned value
-            emit('scanned', scannedValue)
-            
-            // Close the dialog
-            setTimeout(() => {
-              handleCancel()
-            }, 1500)
-          }
-          
-          if (error) {
-            // Don't log common "not found" errors as they're expected during scanning
-            if (!error.message.includes('No MultiFormat Readers were able to detect the code')) {
-              console.warn('Barcode scanning error:', error)
+            if (error) {
+              // Don't log common "not found" errors as they're expected during scanning
+              if (!error.message.includes('No MultiFormat Readers were able to detect the code')) {
+                console.warn('Barcode scanning error:', error)
+              }
             }
           }
+        )
+        
+        // Store controls for stopping later
+        stream = controls as any
+        
+        status.value = 'Ready to scan. Position QR code (blue square) or barcode (red rectangle) in the frame.'
+        
+        // Apply Samsung-specific optimizations
+        if (isSamsung && videoElement.value) {
+          optimizeForSamsung(videoElement.value)
         }
-      )
-      
-      // Store controls for stopping later
-      stream = controls as any
-      
-      status.value = 'Ready to scan. Position QR code (blue square) or barcode (red rectangle) in the frame.'
+        
+      } catch (constraintError) {
+        console.warn('Advanced constraints failed, trying basic device scanning:', constraintError)
+        
+        // Fallback to basic device scanning for Samsung compatibility
+        const controls = await codeReader.decodeFromVideoDevice(
+          selectedDevice.deviceId,
+          videoElement.value,
+          (result: Result | undefined, error: Error | undefined) => {
+            if (result) {
+              const scannedValue = result.getText()
+              const format = result.getBarcodeFormat()
+              status.value = `Scanned ${format}: ${scannedValue}`
+              emit('scanned', scannedValue)
+              setTimeout(() => handleCancel(), 1500)
+            }
+          }
+        )
+        
+        stream = controls as any
+        status.value = 'Camera started (compatibility mode). Hold steady and position code in frame.'
+        
+        // Apply Samsung optimizations to fallback mode too
+        if (isSamsung && videoElement.value) {
+          optimizeForSamsung(videoElement.value)
+        }
+      }
     }
   } catch (error) {
     console.error('Failed to start barcode scanning:', error)
@@ -237,6 +308,12 @@ const stopScanning = () => {
     stream = null
   }
   
+  // Clean up Samsung optimizations
+  if (videoElement.value && (videoElement.value as any).__samsungCleanup) {
+    (videoElement.value as any).__samsungCleanup()
+    delete (videoElement.value as any).__samsungCleanup
+  }
+  
   status.value = ''
   manualInput.value = ''
 }
@@ -260,6 +337,97 @@ const restartScanning = () => {
       startScanning()
     }
   }, 100)
+}
+
+const optimizeForSamsung = (videoElement: HTMLVideoElement) => {
+  // Samsung-specific camera optimizations
+  try {
+    // Add tap-to-focus functionality for Samsung devices
+    const handleTapToFocus = async () => {
+      if (videoElement.srcObject) {
+        const stream = videoElement.srcObject as MediaStream
+        const videoTrack = stream.getVideoTracks()[0]
+        
+        if (videoTrack && videoTrack.applyConstraints) {
+          try {
+            // First try to apply enhanced constraints for Samsung
+            await videoTrack.applyConstraints({
+              width: { ideal: 1280, min: 720 },
+              height: { ideal: 720, min: 480 },
+              frameRate: { ideal: 30, min: 15 },
+              aspectRatio: { ideal: 16/9 }
+            })
+            
+            // Wait a bit then try to trigger focus
+            setTimeout(async () => {
+              try {
+                await videoTrack.applyConstraints({
+                  width: { ideal: 1280 },
+                  height: { ideal: 720 },
+                  frameRate: { ideal: 30 }
+                })
+              } catch (e) {
+                console.warn('Samsung focus retry failed:', e)
+              }
+            }, 200)
+            
+          } catch (error) {
+            console.warn('Could not apply Samsung focus constraints:', error)
+          }
+        }
+      }
+    }
+    
+    // Add click event for manual focus trigger
+    videoElement.addEventListener('click', handleTapToFocus)
+    
+    // Trigger focus every 4 seconds for Samsung devices (less frequent to avoid conflicts)
+    const focusInterval = setInterval(handleTapToFocus, 4000)
+    
+    // Set Samsung-specific video properties for better visibility
+    videoElement.style.filter = 'contrast(1.15) brightness(1.1) saturate(1.1)'
+    
+    // Add visual feedback for Samsung users
+    const addTapIndicator = () => {
+      const indicator = document.createElement('div')
+      indicator.innerHTML = '📱 Tap to focus'
+      indicator.style.cssText = `
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        z-index: 10;
+        pointer-events: none;
+      `
+      videoElement.parentElement?.appendChild(indicator)
+      
+      // Remove indicator after 5 seconds
+      setTimeout(() => {
+        indicator.remove()
+      }, 5000)
+    }
+    
+    // Show tap indicator after 2 seconds
+    setTimeout(addTapIndicator, 2000)
+    
+    // Clear interval when video ends or component unmounts
+    const cleanup = () => {
+      clearInterval(focusInterval)
+      videoElement.removeEventListener('click', handleTapToFocus)
+    }
+    
+    videoElement.addEventListener('ended', cleanup, { once: true })
+    
+    // Store cleanup function for component unmount
+    ;(videoElement as any).__samsungCleanup = cleanup
+    
+  } catch (error) {
+    console.warn('Samsung optimization failed:', error)
+  }
 }
 
 const handleCancel = () => {
