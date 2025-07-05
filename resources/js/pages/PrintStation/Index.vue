@@ -302,13 +302,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/Icon.vue';
+import { PrintService } from '@/services/PrintService';
 
 const { t } = useI18n();
 
@@ -316,11 +317,20 @@ interface PrintJob {
     id: number;
     job_id: string;
     asset: {
-        id: string;
+        id: number;
         asset_tag: string;
         serial_number: string;
         model_name: string;
         category: string;
+        // Add minimal required Asset fields for compatibility
+        asset_category_id: number;
+        location_id: number;
+        company_id: number;
+        status: 'available' | 'assigned' | 'maintenance' | 'retired';
+        condition: 'good' | 'damaged';
+        purchase_date: string;
+        created_at: string;
+        updated_at: string;
     };
     company: {
         id: number;
@@ -361,6 +371,7 @@ const loadingPrinters = ref(false);
 const selectedPrinter = ref('');
 const availablePrinters = ref<string[]>([]);
 const jsPrintManagerStatus = ref<'loading' | 'connected' | 'error' | 'not-available'>('loading');
+const printService = PrintService.getInstance();
 
 const pendingJobs = computed(() => 
     allJobs.value.filter(job => job.status === 'pending').sort((a, b) => {
@@ -467,40 +478,12 @@ const processPrintJob = async (job: PrintJob) => {
 
 const printAssetLabel = async (job: PrintJob) => {
     try {
-        if (typeof window !== 'undefined' && window.JSPM && window.JSPM.JSPrintManager) {
-            // Generate ZPL for asset label
-            const zplCode = generateAssetLabelZPL(job.asset);
-            
-            // Create print job
-            const printJob = new window.JSPM.ClientPrintJob();
-            printJob.clientPrinter = new window.JSPM.InstalledPrinter(selectedPrinter.value);
-            printJob.printerCommands = zplCode;
-            
-            // Send to printer
-            await printJob.sendToClient();
-            
-            console.log(`Printed label for asset ${job.asset.asset_tag} on printer ${selectedPrinter.value}`);
-        } else {
-            throw new Error('JSPrintManager not available');
-        }
+        await printService.printAssetLabel(job.asset as any, false, selectedPrinter.value);
+        console.log(`Printed label for asset ${job.asset.asset_tag} on printer ${selectedPrinter.value}`);
     } catch (error) {
         console.error('Failed to print label:', error);
         throw error;
     }
-};
-
-const generateAssetLabelZPL = (asset: any) => {
-    // Generate ZPL code for asset label
-    return `
-^XA
-^CF0,30
-^FO50,50^FD${asset.asset_tag}^FS
-^CF0,20
-^FO50,100^FD${asset.model_name || 'N/A'}^FS
-^FO50,130^FD${asset.serial_number || 'N/A'}^FS
-^FO50,160^FD${asset.category || 'N/A'}^FS
-^XZ
-    `.trim();
 };
 
 const completePrintJob = async (job: PrintJob) => {
@@ -578,67 +561,31 @@ const cancelPrintJob = async (job: PrintJob) => {
 const refreshPrinters = async () => {
     loadingPrinters.value = true;
     try {
-        // Wait for JSPrintManager to be available
-        await waitForJSPrintManager();
+        await printService.initializeJSPrintManager();
         
-        // Check if JSPrintManager is available
-        if (typeof window !== 'undefined' && window.JSPM && window.JSPM.JSPrintManager) {
-            // Start JSPrintManager
-            await window.JSPM.JSPrintManager.start();
-            console.log('JSPrintManager started successfully');
-            jsPrintManagerStatus.value = 'connected';
-            
-            // Get installed printers
-            const printers = await window.JSPM.JSPrintManager.getPrinters();
-            availablePrinters.value = printers;
-            console.log('Available printers:', printers);
-            
-            // Auto-select first ZDesigner printer
-            const zDesignerPrinter = printers.find((printer: string) => 
-                printer.toLowerCase().includes('zdesigner')
-            );
-            
-            if (zDesignerPrinter && !selectedPrinter.value) {
-                selectedPrinter.value = zDesignerPrinter;
-                console.log('Auto-selected ZDesigner printer:', zDesignerPrinter);
-            } else if (printers.length > 0 && !selectedPrinter.value) {
-                // If no ZDesigner found, select first available printer
-                selectedPrinter.value = printers[0];
-                console.log('Auto-selected first available printer:', printers[0]);
-            }
-        } else {
-            console.error('JSPrintManager not available after waiting');
-            jsPrintManagerStatus.value = 'not-available';
-            alert('JSPrintManager is not available. Please make sure JSPrintManager is installed and running on this computer.');
+        // Get printers after initialization
+        const printers = await printService.getAvailablePrinters();
+        availablePrinters.value = printers;
+        
+        // Auto-select first ZDesigner printer
+        const zDesignerPrinter = printers.find((printer: string) => 
+            printer.toLowerCase().includes('zdesigner')
+        );
+        
+        if (zDesignerPrinter && !selectedPrinter.value) {
+            selectedPrinter.value = zDesignerPrinter;
+            console.log('Auto-selected ZDesigner printer:', zDesignerPrinter);
+        } else if (printers.length > 0 && !selectedPrinter.value) {
+            // If no ZDesigner found, select first available printer
+            selectedPrinter.value = printers[0];
+            console.log('Auto-selected first available printer:', printers[0]);
         }
     } catch (error) {
         console.error('Failed to refresh printers:', error);
-        jsPrintManagerStatus.value = 'error';
         alert('Failed to connect to JSPrintManager: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
         loadingPrinters.value = false;
     }
-};
-
-const waitForJSPrintManager = (): Promise<void> => {
-    return new Promise((resolve, reject) => {
-        let attempts = 0;
-        const maxAttempts = 50; // 5 seconds with 100ms intervals
-        
-        const checkJSPM = () => {
-            attempts++;
-            
-            if (typeof window !== 'undefined' && window.JSPM && window.JSPM.JSPrintManager) {
-                resolve();
-            } else if (attempts >= maxAttempts) {
-                reject(new Error('JSPrintManager not loaded after 5 seconds'));
-            } else {
-                setTimeout(checkJSPM, 100);
-            }
-        };
-        
-        checkJSPM();
-    });
 };
 
 const onPrinterChange = () => {
@@ -664,6 +611,17 @@ const testJSPrintManager = () => {
     }
 };
 
+// Print service status callback
+const handlePrintServiceStatus = (status: any) => {
+    console.log('Print service status:', status);
+    if (status.isConnected) {
+        jsPrintManagerStatus.value = 'connected';
+        availablePrinters.value = status.availablePrinters;
+    } else {
+        jsPrintManagerStatus.value = 'error';
+    }
+};
+
 onMounted(() => {
     // Load saved printer selection
     const savedPrinter = localStorage.getItem('printStation_selectedPrinter');
@@ -671,22 +629,23 @@ onMounted(() => {
         selectedPrinter.value = savedPrinter;
     }
     
+    // Subscribe to print service status updates
+    printService.onStatusChange(handlePrintServiceStatus);
+    
     // Initial load
     refreshJobs();
     
-    // Debug JSPrintManager availability
-    console.log('Window object:', typeof window);
-    console.log('JSPM available:', typeof window !== 'undefined' && window.JSPM);
-    console.log('JSPrintManager available:', typeof window !== 'undefined' && window.JSPM && window.JSPM.JSPrintManager);
-    
-    // Wait a bit for scripts to load, then try to initialize
+    // Initialize printer connection
     setTimeout(() => {
-        console.log('After timeout - JSPM available:', typeof window !== 'undefined' && window.JSPM);
-        console.log('After timeout - JSPrintManager available:', typeof window !== 'undefined' && window.JSPM && window.JSPM.JSPrintManager);
         refreshPrinters();
     }, 2000);
     
     // Set up periodic refresh every 10 seconds
     setInterval(refreshJobs, 10000);
+});
+
+onUnmounted(() => {
+    // Unsubscribe from print service status updates
+    printService.offStatusChange(handlePrintServiceStatus);
 });
 </script> 

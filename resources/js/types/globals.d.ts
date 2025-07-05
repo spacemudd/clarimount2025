@@ -6,14 +6,25 @@ declare global {
         Pusher: typeof Pusher;
         JSPM: {
             JSPrintManager: {
-                start(): Promise<void>;
-                getPrinters(): Promise<string[]>;
+                auto_reconnect: boolean;
+                start: () => void;
+                websocket_status: number;
+                WS: {
+                    onStatusChanged: () => void;
+                };
+                getPrinters: () => Promise<string[]>;
+            };
+            WSStatus: {
+                Open: number;
+                Closed: number;
+                Blocked: number;
             };
             ClientPrintJob: new () => {
                 clientPrinter: any;
                 printerCommands: string;
-                sendToClient(): Promise<void>;
+                sendToClient: () => void;
             };
+            DefaultPrinter: new () => any;
             InstalledPrinter: new (printerName: string) => any;
         };
     }

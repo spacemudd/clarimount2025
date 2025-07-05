@@ -11,37 +11,12 @@ import Heading from '@/components/Heading.vue';
 import { useI18n } from 'vue-i18n';
 import { computed, ref, watch, nextTick, onMounted } from 'vue';
 import type { Asset, Company, AssetCategory, Location, BreadcrumbItem } from '@/types';
+import { PrintService } from '@/services/PrintService';
 
 const { t } = useI18n();
 
-// Type declarations for JSPrintManager
-declare global {
-  interface Window {
-    JSPM: {
-      JSPrintManager: {
-        auto_reconnect: boolean
-        start: () => void
-        websocket_status: number
-        WS: {
-          onStatusChanged: () => void
-        }
-        getPrinters: () => Promise<string[]>
-      }
-      WSStatus: {
-        Open: number
-        Closed: number
-        Blocked: number
-      }
-      ClientPrintJob: new () => {
-        clientPrinter: any
-        printerCommands: string
-        sendToClient: () => void
-      }
-      DefaultPrinter: new () => any
-      InstalledPrinter: new (printerName: string) => any
-    }
-  }
-}
+// Print service instance
+const printService = PrintService.getInstance();
 
 interface Props {
     assets: {
@@ -138,40 +113,14 @@ const handleTemplateImageError = (event: Event, asset: Asset) => {
     failedTemplateImages.value.add(asset.id);
 };
 
-// Function to dynamically load JavaScript files
-const loadScript = (src: string): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    // Check if script is already loaded
-    const existingScript = document.querySelector(`script[src="${src}"]`)
-    if (existingScript) {
-      resolve()
-      return
-    }
-
-    const script = document.createElement('script')
-    script.src = src
-    script.onload = () => resolve()
-    script.onerror = () => reject(new Error(`Failed to load script: ${src}`))
-    document.head.appendChild(script)
-  })
-}
-
-// Load all required scripts
-const loadRequiredScripts = async (): Promise<void> => {
-  try {
-    barcodeDialog.value.status = 'Loading print libraries...'
-    
-    // Load scripts in sequence
-    await loadScript('/js/bluebird.min.js')
-    await loadScript('/js/jquery-3.2.1.slim.min.js') 
-    await loadScript('/js/jsmanager/JSPrintManager.js')
-    
-    barcodeDialog.value.status = 'Print libraries loaded successfully'
-  } catch (error) {
-    console.error('Failed to load scripts:', error)
-    barcodeDialog.value.status = 'Failed to load print libraries'
+// Print service status callback
+const handlePrintServiceStatus = (status: any) => {
+  console.log('Print service status:', status);
+  barcodeDialog.value.status = status.status;
+  if (status.isConnected) {
+    barcodeDialog.value.availablePrinters = status.availablePrinters;
   }
-}
+};
 
 // Asset selection functions
 const toggleAssetSelection = (assetId: number) => {
