@@ -69,7 +69,7 @@ class PrintJobController extends Controller
             'user_id' => $user->id,
             'company_id' => $asset->company_id,
             'priority' => $validated['priority'] ?? 'normal',
-            'printer_name' => $validated['printer_name'],
+            'printer_name' => $validated['printer_name'] ?? null,
             'print_data' => $printData,
         ]);
 
