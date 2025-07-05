@@ -3,9 +3,9 @@
     <Dialog v-model:open="isOpen" @update:open="handleDialogChange">
       <DialogContent class="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{{ title || 'Scan Barcode' }}</DialogTitle>
+          <DialogTitle>{{ title || 'Scan Barcode/QR Code' }}</DialogTitle>
           <DialogDescription>
-            {{ description || 'Position the barcode within the camera view to scan it automatically.' }}
+            {{ description || 'Position the barcode or QR code within the camera view to scan it automatically. Supports 1D barcodes, QR codes, and other 2D formats.' }}
           </DialogDescription>
         </DialogHeader>
         
@@ -18,11 +18,20 @@
               autoplay
               muted
               playsinline
+              style="object-fit: cover;"
             ></video>
             
-            <!-- Scanning overlay -->
+            <!-- Scanning overlay - Square for QR codes, Rectangle for barcodes -->
             <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div class="border-2 border-red-500 w-48 h-24 rounded-lg opacity-50">
+              <!-- QR Code frame (square) -->
+              <div class="border-2 border-blue-500 w-48 h-48 rounded-lg opacity-60">
+                <div class="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-blue-500"></div>
+                <div class="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-blue-500"></div>
+                <div class="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-blue-500"></div>
+                <div class="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-blue-500"></div>
+              </div>
+              <!-- Barcode frame (rectangle) -->
+              <div class="border-2 border-red-500 w-56 h-16 rounded-lg opacity-40 absolute">
                 <div class="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-red-500"></div>
                 <div class="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-red-500"></div>
                 <div class="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-red-500"></div>
@@ -36,6 +45,27 @@
             </div>
           </div>
           
+          <!-- Scanning mode toggle -->
+          <div class="flex gap-2 justify-center">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              @click="toggleScanMode"
+              :class="{ 'bg-blue-100 border-blue-500': isQRMode }"
+            >
+              {{ isQRMode ? 'QR Code Mode' : 'All Formats' }}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              @click="restartScanning"
+            >
+              Restart Camera
+            </Button>
+          </div>
+
           <!-- Manual input fallback -->
           <div class="space-y-2">
             <Label for="manual-input">Or enter manually:</Label>
@@ -43,7 +73,7 @@
               id="manual-input"
               v-model="manualInput"
               type="text"
-              placeholder="Enter barcode value manually"
+              placeholder="Enter barcode/QR code value manually"
               @keyup.enter="handleManualInput"
             />
           </div>
@@ -71,7 +101,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { BrowserMultiFormatReader, BrowserCodeReader } from '@zxing/browser'
+import { BrowserMultiFormatReader, BrowserCodeReader, BrowserQRCodeReader } from '@zxing/browser'
 import { Result } from '@zxing/library'
 
 interface Props {
@@ -94,8 +124,9 @@ const videoElement = ref<HTMLVideoElement | null>(null)
 const status = ref('')
 const manualInput = ref('')
 
-let codeReader: BrowserMultiFormatReader | null = null
+let codeReader: BrowserMultiFormatReader | BrowserQRCodeReader | null = null
 let stream: MediaStream | null = null
+let isQRMode = ref(false)
 
 watch(() => props.modelValue, (newValue) => {
   isOpen.value = newValue
@@ -117,8 +148,14 @@ const startScanning = async () => {
   try {
     status.value = 'Initializing camera...'
     
-    // Initialize the code reader
-    codeReader = new BrowserMultiFormatReader()
+    // Initialize the appropriate code reader based on mode
+    if (isQRMode.value) {
+      codeReader = new BrowserQRCodeReader()
+      status.value = 'Initializing QR code scanner...'
+    } else {
+      codeReader = new BrowserMultiFormatReader()
+      status.value = 'Initializing multi-format scanner...'
+    }
     
     // Get available video devices
     const videoDevices = await BrowserCodeReader.listVideoInputDevices()
@@ -139,14 +176,15 @@ const startScanning = async () => {
     status.value = 'Starting camera...'
     
     // Start decoding from video element
-    if (videoElement.value) {
+    if (videoElement.value && codeReader) {
       const controls = await codeReader.decodeFromVideoDevice(
         selectedDevice.deviceId,
         videoElement.value,
         (result: Result | undefined, error: Error | undefined) => {
           if (result) {
             const scannedValue = result.getText()
-            status.value = `Scanned: ${scannedValue}`
+            const format = result.getBarcodeFormat()
+            status.value = `Scanned ${format}: ${scannedValue.substring(0, 20)}${scannedValue.length > 20 ? '...' : ''}`
             
             // Emit the scanned value
             emit('scanned', scannedValue)
@@ -154,7 +192,7 @@ const startScanning = async () => {
             // Close the dialog
             setTimeout(() => {
               handleCancel()
-            }, 1000)
+            }, 1500)
           }
           
           if (error) {
@@ -169,7 +207,7 @@ const startScanning = async () => {
       // Store controls for stopping later
       stream = controls as any
       
-      status.value = 'Ready to scan. Position barcode in the frame.'
+      status.value = 'Ready to scan. Position QR code (blue square) or barcode (red rectangle) in the frame.'
     }
   } catch (error) {
     console.error('Failed to start barcode scanning:', error)
@@ -208,6 +246,20 @@ const handleManualInput = () => {
     emit('scanned', manualInput.value.trim())
     handleCancel()
   }
+}
+
+const toggleScanMode = () => {
+  isQRMode.value = !isQRMode.value
+  restartScanning()
+}
+
+const restartScanning = () => {
+  stopScanning()
+  setTimeout(() => {
+    if (isOpen.value) {
+      startScanning()
+    }
+  }, 100)
 }
 
 const handleCancel = () => {

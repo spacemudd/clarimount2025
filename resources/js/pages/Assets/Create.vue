@@ -1322,7 +1322,7 @@ const handleBarcodeScanned = (scannedValue: string) => {
         <BarcodeScanner
             v-model="showBarcodeScanner"
             title="Scan Serial Number"
-            description="Position the barcode on the asset within the camera view to scan the serial number automatically."
+            description="Position the barcode or QR code on the asset within the camera view to scan the serial number automatically. Supports all common barcode formats and QR codes."
             @scanned="handleBarcodeScanned"
             @cancel="showBarcodeScanner = false"
         />
