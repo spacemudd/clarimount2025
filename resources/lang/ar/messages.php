@@ -395,6 +395,7 @@ return [
         'select_location' => 'اختر موقعاً',
         'search_location_placeholder' => 'البحث في المواقع بالاسم أو الرمز أو العنوان...',
         'no_locations_found' => 'لم يتم العثور على مواقع. جرب مصطلح بحث مختلف أو أنشئ موقعاً جديداً.',
+        'location_pre_selected' => 'محدد مسبقاً من الجلسة الأخيرة',
         'status' => 'الحالة',
         'notes' => 'الملاحظات',
         'created_at' => 'تاريخ الإنشاء',

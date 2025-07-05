@@ -396,6 +396,7 @@ return [
         'select_location' => 'Select a location',
         'search_location_placeholder' => 'Search locations by name, code, or address...',
         'no_locations_found' => 'No locations found. Try a different search term or create a new location.',
+        'location_pre_selected' => 'Pre-selected from last session',
         'status' => 'Status',
         'notes' => 'Notes',
         'created_at' => 'Created At',

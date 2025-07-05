@@ -20,6 +20,7 @@ class PrintJob extends Model
         'priority',
         'printer_name',
         'print_data',
+        'comment',
         'error_message',
         'requested_at',
         'processed_at',

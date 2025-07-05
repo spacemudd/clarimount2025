@@ -233,6 +233,9 @@ const selectLocation = (location: typeof searchResults.value[0]) => {
     form.location_id = location.id.toString();
     searchQuery.value = location.display_name;
     showSearchResults.value = false;
+    
+    // Save the selected location to session storage for future use
+    saveLastSelectedLocation(location);
 };
 
 const clearLocationSelection = () => {
@@ -241,6 +244,13 @@ const clearLocationSelection = () => {
     searchQuery.value = '';
     searchResults.value = [];
     showSearchResults.value = false;
+    
+    // Clear the saved location from session storage since user manually cleared it
+    try {
+        sessionStorage.removeItem('lastSelectedLocation');
+    } catch (error) {
+        console.error('Failed to clear saved location:', error);
+    }
 };
 
 const hideSearchResults = () => {
@@ -578,7 +588,7 @@ const createLocation = async () => {
                 full_address: [data.location.address, data.location.city].filter(Boolean).join(', ')
             };
             
-            // Auto-select the newly created location
+            // Auto-select the newly created location (this will also save it to session storage)
             selectLocation(newLocation);
         } else {
             // Handle validation errors
@@ -639,8 +649,67 @@ const handleBarcodeScanned = (scannedValue: string) => {
     showBarcodeScanner.value = false;
 };
 
-// Auto-select location if provided via URL parameter
+// Function to save last selected location to session storage
+const saveLastSelectedLocation = (location: typeof searchResults.value[0]) => {
+    try {
+        const locationData = {
+            id: location.id,
+            name: location.name,
+            code: location.code,
+            building: location.building,
+            office_number: location.office_number,
+            address: location.address,
+            city: location.city,
+            company_name: location.company_name,
+            display_name: location.display_name,
+            full_address: location.full_address,
+            timestamp: Date.now()
+        };
+        sessionStorage.setItem('lastSelectedLocation', JSON.stringify(locationData));
+    } catch (error) {
+        console.error('Failed to save last selected location:', error);
+    }
+};
+
+// Function to load last selected location from session storage
+const loadLastSelectedLocation = async () => {
+    try {
+        const savedLocationData = sessionStorage.getItem('lastSelectedLocation');
+        if (!savedLocationData) return null;
+        
+        const locationData = JSON.parse(savedLocationData);
+        
+        // Check if the saved location is not too old (e.g., within 24 hours)
+        const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+        if (Date.now() - locationData.timestamp > maxAge) {
+            sessionStorage.removeItem('lastSelectedLocation');
+            return null;
+        }
+        
+        // Verify the location still exists by searching for it
+        const response = await fetch(`/api/locations/search?q=${encodeURIComponent(locationData.name)}`);
+        const searchResults = await response.json();
+        const matchedLocation = searchResults.find((loc: any) => loc.id === locationData.id);
+        
+        if (matchedLocation) {
+            return matchedLocation;
+        } else {
+            // Location no longer exists, remove from storage
+            sessionStorage.removeItem('lastSelectedLocation');
+            return null;
+        }
+    } catch (error) {
+        console.error('Failed to load last selected location:', error);
+        return null;
+    }
+};
+
+// Track if location was pre-selected from session storage
+const isLocationPreSelected = ref(false);
+
+// Auto-select location if provided via URL parameter or load from session storage
 onMounted(async () => {
+    // Priority 1: URL parameter (for direct links)
     if (preSelectedLocationId) {
         try {
             // Fetch the specific location details
@@ -656,9 +725,28 @@ onMounted(async () => {
                 const newUrl = new URL(window.location.href);
                 newUrl.searchParams.delete('location_id');
                 window.history.replaceState({}, '', newUrl.toString());
+                return; // Exit early since we found a URL parameter
             }
         } catch (error) {
             console.error('Failed to load pre-selected location:', error);
+        }
+    }
+    
+    // Priority 2: Session storage (for user convenience)
+    if (form.creation_mode !== 'workstation_range') {
+        try {
+            const lastLocation = await loadLastSelectedLocation();
+            if (lastLocation) {
+                selectLocation(lastLocation);
+                isLocationPreSelected.value = true;
+                
+                // Clear the pre-selected flag after 3 seconds
+                setTimeout(() => {
+                    isLocationPreSelected.value = false;
+                }, 3000);
+            }
+        } catch (error) {
+            console.error('Failed to load last selected location from session:', error);
         }
     }
 });
@@ -971,6 +1059,10 @@ onMounted(async () => {
                             </div>
                             <div v-if="form.errors.location_id" class="text-sm text-red-600 dark:text-red-400">
                                 {{ form.errors.location_id }}
+                            </div>
+                            <div v-if="isLocationPreSelected && selectedLocation" class="text-sm text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                                <Icon name="Clock" class="h-3 w-3" />
+                                {{ t('assets.location_pre_selected') }}
                             </div>
                         </div>
 

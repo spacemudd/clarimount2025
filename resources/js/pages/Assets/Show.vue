@@ -22,7 +22,7 @@
           </Button>
           <Button
             variant="outline"
-            @click="sendToPrintMachine"
+            @click="showSendToPrintDialog"
             class="inline-flex items-center"
           >
             <Icon name="Send" class="mr-2 h-4 w-4" />
@@ -413,6 +413,59 @@
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <!-- Send to Print Machine Dialog -->
+    <Dialog v-model:open="sendToPrintDialog.show">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Send to Print Machine</DialogTitle>
+          <DialogDescription>
+            Send this asset to the print station queue.
+            <div class="mt-2 font-medium">
+              Asset: {{ asset.asset_tag }}
+            </div>
+          </DialogDescription>
+        </DialogHeader>
+        <div class="space-y-4">
+          <div class="space-y-2">
+            <Label for="priority">Priority</Label>
+            <select 
+              id="priority" 
+              v-model="sendToPrintDialog.priority"
+              class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="low">Low</option>
+              <option value="normal">Normal</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+
+          <div class="space-y-2">
+            <Label for="comment">Comment (Optional)</Label>
+            <textarea 
+              id="comment" 
+              v-model="sendToPrintDialog.comment"
+              class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              rows="3"
+              placeholder="Add a comment for the print station operator..."
+            ></textarea>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" @click="sendToPrintDialog.show = false">
+            Cancel
+          </Button>
+          <Button 
+            @click="sendToPrintMachine" 
+            :disabled="sendToPrintDialog.sending"
+          >
+            <Icon v-if="sendToPrintDialog.sending" name="Loader2" class="h-4 w-4 mr-2 animate-spin" />
+            Send to Print Machine
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </AppLayout>
 </template>
 
@@ -569,7 +622,23 @@ const handleDelete = () => {
   })
 }
 
+// Send to Print Machine Dialog
+const sendToPrintDialog = ref({
+  show: false,
+  comment: '',
+  priority: 'normal',
+  sending: false,
+});
+
+const showSendToPrintDialog = () => {
+  sendToPrintDialog.value.comment = '';
+  sendToPrintDialog.value.priority = 'normal';
+  sendToPrintDialog.value.show = true;
+};
+
 const sendToPrintMachine = async () => {
+  sendToPrintDialog.value.sending = true;
+  
   try {
     const response = await fetch('/api/print-jobs', {
       method: 'POST',
@@ -579,7 +648,8 @@ const sendToPrintMachine = async () => {
       },
       body: JSON.stringify({
         asset_id: props.asset.id,
-        priority: 'normal',
+        priority: sendToPrintDialog.value.priority,
+        comment: sendToPrintDialog.value.comment || null,
       }),
     });
 
@@ -587,6 +657,7 @@ const sendToPrintMachine = async () => {
       const result = await response.json();
       // Show success notification
       alert(`Print job ${result.print_job.job_id} sent to print machine successfully!`);
+      sendToPrintDialog.value.show = false;
     } else {
       const error = await response.json();
       alert(`Failed to send print job: ${error.error || 'Unknown error'}`);
@@ -594,6 +665,8 @@ const sendToPrintMachine = async () => {
   } catch (error) {
     console.error('Failed to send print job:', error);
     alert('Failed to send print job. Please try again.');
+  } finally {
+    sendToPrintDialog.value.sending = false;
   }
 }
 

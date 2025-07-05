@@ -289,7 +289,27 @@ onMounted(async () => {
   }
 })
 
-const sendToPrintMachine = async (asset: Asset) => {
+// Send to Print Machine Dialog
+const sendToPrintDialog = ref({
+  show: false,
+  asset: null as Asset | null,
+  comment: '',
+  priority: 'normal',
+  sending: false,
+});
+
+const showSendToPrintDialog = (asset: Asset) => {
+  sendToPrintDialog.value.asset = asset;
+  sendToPrintDialog.value.comment = '';
+  sendToPrintDialog.value.priority = 'normal';
+  sendToPrintDialog.value.show = true;
+};
+
+const sendToPrintMachine = async () => {
+  if (!sendToPrintDialog.value.asset) return;
+  
+  sendToPrintDialog.value.sending = true;
+  
   try {
     const response = await fetch('/api/print-jobs', {
       method: 'POST',
@@ -298,8 +318,9 @@ const sendToPrintMachine = async (asset: Asset) => {
         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
       },
       body: JSON.stringify({
-        asset_id: asset.id,
-        priority: 'normal',
+        asset_id: sendToPrintDialog.value.asset.id,
+        priority: sendToPrintDialog.value.priority,
+        comment: sendToPrintDialog.value.comment || null,
       }),
     });
 
@@ -307,6 +328,7 @@ const sendToPrintMachine = async (asset: Asset) => {
       const result = await response.json();
       // Show success notification
       alert(`Print job ${result.print_job.job_id} sent to print machine successfully!`);
+      sendToPrintDialog.value.show = false;
     } else {
       const error = await response.json();
       alert(`Failed to send print job: ${error.error || 'Unknown error'}`);
@@ -314,6 +336,8 @@ const sendToPrintMachine = async (asset: Asset) => {
   } catch (error) {
     console.error('Failed to send print job:', error);
     alert('Failed to send print job. Please try again.');
+  } finally {
+    sendToPrintDialog.value.sending = false;
   }
 };
 
@@ -622,7 +646,7 @@ const printBarcode = () => {
                                         <Button variant="ghost" size="sm" @click="showBarcodeDialog(asset)" title="Print Label">
                                             <Icon name="Printer" class="h-4 w-4" />
                                         </Button>
-                                        <Button variant="ghost" size="sm" @click="sendToPrintMachine(asset)" title="Send to Print Machine">
+                                        <Button variant="ghost" size="sm" @click="showSendToPrintDialog(asset)" title="Send to Print Machine">
                                             <Icon name="Send" class="h-4 w-4" />
                                         </Button>
                                         <Button variant="ghost" size="sm" asChild title="View">
@@ -710,6 +734,59 @@ const printBarcode = () => {
                     >
                         <Icon v-if="barcodeDialog.printing" name="Loader2" class="h-4 w-4 mr-2 animate-spin" />
                         Print {{ barcodeDialog.selectedAssets.length > 1 ? `${barcodeDialog.selectedAssets.length} Labels` : 'Label' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Send to Print Machine Dialog -->
+        <Dialog v-model:open="sendToPrintDialog.show">
+            <DialogContent class="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Send to Print Machine</DialogTitle>
+                    <DialogDescription>
+                        Send this asset to the print station queue.
+                        <div v-if="sendToPrintDialog.asset" class="mt-2 font-medium">
+                            Asset: {{ sendToPrintDialog.asset.asset_tag }}
+                        </div>
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="space-y-4">
+                    <div class="space-y-2">
+                        <Label for="priority">Priority</Label>
+                        <select 
+                            id="priority" 
+                            v-model="sendToPrintDialog.priority"
+                            class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                            <option value="low">Low</option>
+                            <option value="normal">Normal</option>
+                            <option value="high">High</option>
+                            <option value="urgent">Urgent</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-2">
+                        <Label for="comment">Comment (Optional)</Label>
+                        <textarea 
+                            id="comment" 
+                            v-model="sendToPrintDialog.comment"
+                            class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            rows="3"
+                            placeholder="Add a comment for the print station operator..."
+                        ></textarea>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" @click="sendToPrintDialog.show = false">
+                        Cancel
+                    </Button>
+                    <Button 
+                        @click="sendToPrintMachine" 
+                        :disabled="sendToPrintDialog.sending"
+                    >
+                        <Icon v-if="sendToPrintDialog.sending" name="Loader2" class="h-4 w-4 mr-2 animate-spin" />
+                        Send to Print Machine
                     </Button>
                 </DialogFooter>
             </DialogContent>

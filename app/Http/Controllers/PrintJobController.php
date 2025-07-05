@@ -38,6 +38,7 @@ class PrintJobController extends Controller
             'asset_id' => 'required|exists:assets,id',
             'priority' => 'sometimes|in:low,normal,high,urgent',
             'printer_name' => 'nullable|string|max:255',
+            'comment' => 'nullable|string|max:500',
         ]);
 
         // Get the asset and verify user has access
@@ -70,6 +71,7 @@ class PrintJobController extends Controller
             'company_id' => $asset->company_id,
             'priority' => $validated['priority'] ?? 'normal',
             'printer_name' => $validated['printer_name'] ?? null,
+            'comment' => $validated['comment'] ?? null,
             'print_data' => $printData,
         ]);
 
@@ -120,6 +122,7 @@ class PrintJobController extends Controller
                     'priority' => $job->priority,
                     'status' => $job->status,
                     'print_data' => $job->print_data,
+                    'comment' => $job->comment,
                     'requested_at' => $job->requested_at,
                     'created_at' => $job->created_at,
                 ];

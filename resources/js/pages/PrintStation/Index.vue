@@ -11,19 +11,6 @@
                     </p>
                 </div>
                 <div class="flex items-center gap-4">
-                    <div class="flex items-center gap-2">
-                        <div :class="[
-                            'h-3 w-3 rounded-full',
-                            isPolling ? 'bg-green-500' : 'bg-red-500'
-                        ]"></div>
-                        <span class="text-sm font-medium">
-                            {{ isPolling ? t('print_station.polling_active') : t('print_station.polling_stopped') }}
-                        </span>
-                    </div>
-                    <Button @click="togglePolling" :disabled="loading">
-                        <Icon :name="isPolling ? 'Pause' : 'Play'" class="mr-2 h-4 w-4" />
-                        {{ isPolling ? t('print_station.stop') : t('print_station.start') }}
-                    </Button>
                     <Button @click="refreshJobs" :disabled="loading">
                         <Icon name="RefreshCw" class="mr-2 h-4 w-4" />
                         {{ t('print_station.refresh') }}
@@ -34,24 +21,6 @@
 
         <div class="py-6">
             <div class="mx-auto max-w-7xl px-6 lg:px-8">
-                <!-- Auto-Print Status -->
-                <div v-if="autoPrintEnabled" class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="animate-pulse h-3 w-3 bg-blue-500 rounded-full"></div>
-                            <span class="font-medium text-blue-900 dark:text-blue-100">
-                                {{ t('print_station.auto_print_active') }}
-                            </span>
-                            <span v-if="currentlyPrinting" class="text-sm text-blue-700 dark:text-blue-300">
-                                {{ t('print_station.printing_job', { jobId: currentlyPrinting.job_id }) }}
-                            </span>
-                        </div>
-                        <Button variant="outline" size="sm" @click="toggleAutoPrint">
-                            {{ t('print_station.disable_auto_print') }}
-                        </Button>
-                    </div>
-                </div>
-
                 <!-- Statistics -->
                 <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <Card>
@@ -135,75 +104,6 @@
                     </Card>
                 </div>
 
-                <!-- Auto-Print Controls -->
-                <div class="mb-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>{{ t('print_station.auto_print_settings') }}</CardTitle>
-                        </CardHeader>
-                        <CardContent class="space-y-4">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <h3 class="font-medium">{{ t('print_station.enable_auto_print') }}</h3>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">
-                                        {{ t('print_station.auto_print_description') }}
-                                    </p>
-                                </div>
-                                <Button @click="toggleAutoPrint" :variant="autoPrintEnabled ? 'destructive' : 'default'">
-                                    {{ autoPrintEnabled ? t('print_station.disable') : t('print_station.enable') }}
-                                </Button>
-                            </div>
-                            
-                            <div v-if="!autoPrintEnabled" class="space-y-4">
-                                <div class="flex items-center space-x-2">
-                                    <input 
-                                        type="checkbox" 
-                                        id="useDefaultPrinter" 
-                                        v-model="useDefaultPrinter"
-                                        class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                                    />
-                                    <Label for="useDefaultPrinter" class="font-medium">
-                                        {{ t('print_station.use_default_printer') }}
-                                    </Label>
-                                </div>
-                                
-                                <div v-if="!useDefaultPrinter" class="space-y-2">
-                                    <div class="flex items-center justify-between">
-                                        <Label for="installedPrinterName">{{ t('print_station.select_printer') }}</Label>
-                                        <Button size="sm" variant="outline" @click="loadAvailablePrinters">
-                                            <Icon name="RefreshCw" class="h-4 w-4 mr-1" />
-                                            {{ t('print_station.refresh_printers') }}
-                                        </Button>
-                                    </div>
-                                    <select 
-                                        id="installedPrinterName" 
-                                        v-model="selectedPrinter"
-                                        class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                    >
-                                        <option value="">{{ t('print_station.select_printer_option') }}</option>
-                                        <option v-for="printer in availablePrinters" :key="printer" :value="printer">
-                                            {{ printer }}
-                                        </option>
-                                    </select>
-                                    <div v-if="availablePrinters.length === 0" class="text-sm text-gray-500">
-                                        {{ t('print_station.no_printers_found') }}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div v-if="printerStatus" class="flex items-center justify-between">
-                                <span class="text-sm text-gray-600 dark:text-gray-400">
-                                    {{ t('print_station.status') }}: {{ printerStatus }}
-                                </span>
-                                <Button size="sm" variant="outline" @click="testJSPrintManager">
-                                    <Icon name="Settings" class="h-4 w-4 mr-1" />
-                                    {{ t('print_station.test_connection') }}
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-
                 <!-- Print Queue -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <!-- Pending Jobs -->
@@ -241,9 +141,12 @@
                                                 <p class="text-xs text-gray-500 dark:text-gray-500">
                                                     {{ t('print_station.requested_by') }} {{ job.user.name }}
                                                 </p>
+                                                <p v-if="job.comment" class="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                                    💬 {{ job.comment }}
+                                                </p>
                                             </div>
                                         </div>
-                                        <div class="flex gap-2" v-if="!autoPrintEnabled">
+                                        <div class="flex gap-2">
                                             <Button size="sm" @click="processPrintJob(job)">
                                                 <Icon name="Play" class="h-4 w-4" />
                                             </Button>
@@ -293,6 +196,9 @@
                                                     <div class="animate-spin h-3 w-3 border-2 border-blue-600 border-t-transparent rounded-full"></div>
                                                     <span class="text-xs text-blue-600">{{ t('print_station.printing') }}</span>
                                                 </div>
+                                                <p v-if="job.comment" class="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                                    💬 {{ job.comment }}
+                                                </p>
                                             </div>
                                         </div>
                                         <div class="flex gap-2">
@@ -351,43 +257,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
 import Icon from '@/components/Icon.vue';
-
-// Type declarations for JSPrintManager
-declare global {
-    interface Window {
-        JSPM: {
-            JSPrintManager: {
-                auto_reconnect: boolean;
-                start: () => void;
-                websocket_status: number;
-                WS: {
-                    onStatusChanged: () => void;
-                };
-                getPrinters: () => Promise<string[]>;
-            };
-            WSStatus: {
-                Open: number;
-                Closed: number;
-                Blocked: number;
-            };
-            ClientPrintJob: new () => {
-                clientPrinter: any;
-                printerCommands: string;
-                sendToClient: () => void;
-            };
-            DefaultPrinter: new () => any;
-            InstalledPrinter: new (printerName: string) => any;
-        };
-    }
-}
 
 const { t } = useI18n();
 
@@ -412,6 +288,7 @@ interface PrintJob {
     priority: 'low' | 'normal' | 'high' | 'urgent';
     status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
     print_data: any;
+    comment?: string;
     requested_at: string;
     completed_at?: string;
     updated_at: string;
@@ -435,19 +312,6 @@ const statistics = ref<Statistics>({
 });
 
 const loading = ref(false);
-const isPolling = ref(false);
-const autoPrintEnabled = ref(false);
-const currentlyPrinting = ref<PrintJob | null>(null);
-
-// Printer settings
-const useDefaultPrinter = ref(false);
-const selectedPrinter = ref('');
-const availablePrinters = ref<string[]>([]);
-const printerStatus = ref('');
-
-// Polling interval
-let pollingInterval: number | null = null;
-let autoPrintInterval: number | null = null;
 
 const pendingJobs = computed(() => 
     allJobs.value.filter(job => job.status === 'pending').sort((a, b) => {
@@ -515,72 +379,7 @@ const refreshJobs = async () => {
     }
 };
 
-const startPolling = () => {
-    if (pollingInterval) return;
-    
-    isPolling.value = true;
-    pollingInterval = window.setInterval(refreshJobs, 2000); // Poll every 2 seconds
-    console.log('Started polling for print jobs every 2 seconds');
-};
-
-const stopPolling = () => {
-    if (pollingInterval) {
-        clearInterval(pollingInterval);
-        pollingInterval = null;
-    }
-    isPolling.value = false;
-    console.log('Stopped polling for print jobs');
-};
-
-const togglePolling = () => {
-    if (isPolling.value) {
-        stopPolling();
-    } else {
-        startPolling();
-    }
-};
-
-const toggleAutoPrint = async () => {
-    if (autoPrintEnabled.value) {
-        // Disable auto-print
-        autoPrintEnabled.value = false;
-        currentlyPrinting.value = null;
-        if (autoPrintInterval) {
-            clearInterval(autoPrintInterval);
-            autoPrintInterval = null;
-        }
-    } else {
-        // Enable auto-print
-        if (!await initializeJSPrintManager()) {
-            alert('JSPrintManager is not available. Please install and start JSPrintManager.');
-            return;
-        }
-        
-        // Validate printer selection
-        if (!useDefaultPrinter.value && !selectedPrinter.value) {
-            alert('Please select a printer or enable "Use Default Printer" before enabling auto-print.');
-            return;
-        }
-        
-        autoPrintEnabled.value = true;
-        startAutoPrint();
-    }
-};
-
-const startAutoPrint = () => {
-    if (autoPrintInterval) return;
-    
-    autoPrintInterval = window.setInterval(async () => {
-        if (currentlyPrinting.value) return; // Already printing something
-        
-        const nextJob = pendingJobs.value[0]; // Get highest priority pending job
-        if (nextJob) {
-            await processPrintJob(nextJob, true); // Auto-process
-        }
-    }, 1000); // Check every second for new jobs to print
-};
-
-const processPrintJob = async (job: PrintJob, isAutomatic = false) => {
+const processPrintJob = async (job: PrintJob) => {
     try {
         // Mark as processing
         const response = await fetch(`/api/print-jobs/${job.id}/status`, {
@@ -591,7 +390,7 @@ const processPrintJob = async (job: PrintJob, isAutomatic = false) => {
             },
             body: JSON.stringify({
                 status: 'processing',
-                print_station_id: 'AUTO_STATION_' + Date.now(),
+                print_station_id: 'MANUAL_STATION_' + Date.now(),
             }),
         });
 
@@ -601,13 +400,10 @@ const processPrintJob = async (job: PrintJob, isAutomatic = false) => {
             if (jobIndex !== -1) {
                 allJobs.value[jobIndex].status = 'processing';
             }
-
-            if (isAutomatic) {
-                currentlyPrinting.value = job;
-            }
-
-            // Start printing
-            await printAssetLabel(job);
+            
+            // Here you would integrate with your actual printing system
+            // For now, we'll just show a message
+            alert(`Print job ${job.job_id} is now processing. Please send the label to your printer.`);
         }
     } catch (error) {
         console.error('Failed to process print job:', error);
@@ -631,10 +427,6 @@ const completePrintJob = async (job: PrintJob) => {
             // Remove from active jobs
             allJobs.value = allJobs.value.filter(j => j.id !== job.id);
             statistics.value.completed_today++;
-            
-            if (currentlyPrinting.value?.id === job.id) {
-                currentlyPrinting.value = null;
-            }
             
             // Refresh recent jobs
             refreshJobs();
@@ -663,10 +455,6 @@ const failPrintJob = async (job: PrintJob) => {
             allJobs.value = allJobs.value.filter(j => j.id !== job.id);
             statistics.value.failed_today++;
             
-            if (currentlyPrinting.value?.id === job.id) {
-                currentlyPrinting.value = null;
-            }
-            
             // Refresh recent jobs
             refreshJobs();
         }
@@ -693,231 +481,11 @@ const cancelPrintJob = async (job: PrintJob) => {
     }
 };
 
-// JSPrintManager functions
-const loadScript = (src: string): Promise<void> => {
-    return new Promise((resolve, reject) => {
-        const existingScript = document.querySelector(`script[src="${src}"]`);
-        if (existingScript) {
-            resolve();
-            return;
-        }
-
-        const script = document.createElement('script');
-        script.src = src;
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
-        document.head.appendChild(script);
-    });
-};
-
-const loadRequiredScripts = async (): Promise<void> => {
-    try {
-        printerStatus.value = 'Loading print libraries...';
-        
-        await loadScript('/js/bluebird.min.js');
-        await loadScript('/js/jquery-3.2.1.slim.min.js');
-        await loadScript('/js/jsmanager/JSPrintManager.js');
-        
-        printerStatus.value = 'Print libraries loaded successfully';
-    } catch (error) {
-        console.error('Failed to load scripts:', error);
-        printerStatus.value = 'Failed to load print libraries';
-        throw error;
-    }
-};
-
-const loadAvailablePrinters = async (): Promise<void> => {
-    try {
-        if (typeof window.JSPM === 'undefined') {
-            printerStatus.value = 'JSPrintManager not loaded';
-            return;
-        }
-
-        if (window.JSPM.JSPrintManager.websocket_status !== window.JSPM.WSStatus.Open) {
-            printerStatus.value = 'JSPrintManager not connected';
-            return;
-        }
-
-        printerStatus.value = 'Loading printers...';
-        const printers = await window.JSPM.JSPrintManager.getPrinters();
-        availablePrinters.value = printers;
-        printerStatus.value = `Found ${printers.length} printer(s)`;
-        
-        console.log('Available printers:', printers);
-    } catch (error) {
-        console.error('Failed to load printers:', error);
-        printerStatus.value = 'Failed to load printers';
-        availablePrinters.value = [];
-    }
-};
-
-const testJSPrintManager = async (): Promise<void> => {
-    try {
-        console.log('Testing JSPrintManager connection...');
-        
-        if (typeof window.JSPM === 'undefined') {
-            alert('JSPrintManager not loaded. Please check if the scripts are loaded correctly.');
-            return;
-        }
-
-        const status = window.JSPM.JSPrintManager.websocket_status;
-        let statusText = 'Unknown';
-        
-        if (status === window.JSPM.WSStatus.Open) {
-            statusText = 'Connected';
-        } else if (status === window.JSPM.WSStatus.Closed) {
-            statusText = 'Disconnected';
-        } else if (status === window.JSPM.WSStatus.Blocked) {
-            statusText = 'Blocked';
-        }
-
-        console.log('JSPrintManager status:', statusText);
-        
-        if (status === window.JSPM.WSStatus.Open) {
-            await loadAvailablePrinters();
-            alert(`JSPrintManager is connected! Found ${availablePrinters.value.length} printer(s).`);
-        } else {
-            alert(`JSPrintManager status: ${statusText}. Please make sure JSPrintManager is running.`);
-        }
-    } catch (error) {
-        console.error('JSPrintManager test failed:', error);
-        alert('JSPrintManager test failed. Check the console for details.');
-    }
-};
-
-const initializeJSPrintManager = async (): Promise<boolean> => {
-    try {
-        if (typeof window.JSPM === 'undefined') {
-            await loadRequiredScripts();
-        }
-
-        if (typeof window.JSPM === 'undefined') {
-            return false;
-        }
-
-        window.JSPM.JSPrintManager.auto_reconnect = true;
-        window.JSPM.JSPrintManager.start();
-        
-        // Wait for connection
-        await new Promise<void>((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error('Connection timeout')), 10000);
-            
-            window.JSPM.JSPrintManager.WS.onStatusChanged = function () {
-                if (window.JSPM.JSPrintManager.websocket_status === window.JSPM.WSStatus.Open) {
-                    clearTimeout(timeout);
-                    printerStatus.value = 'Connected to JSPrintManager';
-                    
-                    // Load available printers after connection
-                    loadAvailablePrinters();
-                    
-                    resolve();
-                } else if (window.JSPM.JSPrintManager.websocket_status === window.JSPM.WSStatus.Closed) {
-                    clearTimeout(timeout);
-                    printerStatus.value = 'JSPrintManager not running';
-                    reject(new Error('JSPrintManager not running'));
-                } else if (window.JSPM.JSPrintManager.websocket_status === window.JSPM.WSStatus.Blocked) {
-                    clearTimeout(timeout);
-                    printerStatus.value = 'JSPrintManager blocked this website';
-                    reject(new Error('JSPrintManager blocked'));
-                }
-            };
-        });
-
-        return true;
-    } catch (error) {
-        console.error('Failed to initialize JSPrintManager:', error);
-        printerStatus.value = 'Failed to connect to JSPrintManager';
-        return false;
-    }
-};
-
-const printAssetLabel = async (job: PrintJob) => {
-    try {
-        if (typeof window.JSPM === 'undefined') {
-            throw new Error('JSPrintManager not available');
-        }
-
-        const printData = job.print_data;
-        
-        // Create print job
-        const cpj = new window.JSPM.ClientPrintJob();
-        
-        // Set printer
-        if (useDefaultPrinter.value) {
-            cpj.clientPrinter = new window.JSPM.DefaultPrinter();
-        } else {
-            cpj.clientPrinter = new window.JSPM.InstalledPrinter(selectedPrinter.value);
-        }
-        
-        // Create ZPL content for label printer
-        let cmds = "^XA";
-        cmds += "^PW406";  // Print width 406 dots (2 inches * 203 DPI)
-        cmds += "^LL203";  // Label length 203 dots (1 inch * 203 DPI)
-        cmds += "^MD30";   // Media darkness
-        cmds += "^SD15";   // Set darkness
-        
-        // Company logo
-        cmds += "^FO10,50^GFA,329,329,7,,,,,,K0F1C,J01E3E,I039F1C4,I079E10F,I07BF03E,I073E17E,00213E7FC,00607CFF8,00F87CFF,00F8F9F800C,00FCF8J08,007EF,003E6,03BEK03F,039FK07F,039FK07F,07CFK03F8,008F,I0F8I018,I07J03C,03DK03E68,07FCJ01C7,03FFJ01E7,03FF8I01F3,017FEI09F,I0FE0018F8,0043E003CF8,00F1I03C7C,00F80807C3C,0070700F838,0020F00F008,I03E00F3,I07E01F38,I07C01E78,I03801E3,L01E,L01C,L01,,,,,^FS";
-        
-        // Company name
-        cmds += "^FO70,30^A0N,18,18^FDFAHAD NAWAF ALZEER HOLDING CO.^FS";
-        
-        // Asset tag
-        cmds += `^FO70,65^A0N,24,24^FD${printData.asset_tag}^FS`;
-        
-        // Barcode
-        cmds += "^FO70,100^BY2,2,35";
-        cmds += "^BCN,35,Y,N,N";
-        cmds += `^FD${printData.serial_number || printData.asset_tag}^FS`;
-        
-        // QR Code
-        cmds += "^FO320,50^BQN,2,4";
-        cmds += `^FDMM,${printData.asset_tag}^FS`;
-        
-        // Date
-        cmds += `^FO70,175^A0N,18,18^FD${new Date().toISOString().split('T')[0]}^FS`;
-        
-        cmds += "^XZ";
-        
-        cpj.printerCommands = cmds;
-        cpj.sendToClient();
-
-        // Auto-complete after 3 seconds if auto-print is enabled
-        if (autoPrintEnabled.value) {
-            setTimeout(() => {
-                completePrintJob(job);
-            }, 3000);
-        }
-
-    } catch (error) {
-        console.error('Failed to print asset label:', error);
-        await failPrintJob(job);
-    }
-};
-
-onMounted(async () => {
+onMounted(() => {
     // Initial load
     refreshJobs();
     
-    // Start polling automatically
-    startPolling();
-    
-    // Initialize JSPrintManager and load printers
-    try {
-        await initializeJSPrintManager();
-        // Printers will be loaded automatically after JSPrintManager connects
-    } catch (error) {
-        console.error('Failed to initialize JSPrintManager on mount:', error);
-        // Try to load printers anyway in case JSPrintManager is already running
-        setTimeout(loadAvailablePrinters, 2000);
-    }
-});
-
-onUnmounted(() => {
-    // Clean up intervals
-    stopPolling();
-    if (autoPrintInterval) {
-        clearInterval(autoPrintInterval);
-    }
+    // Set up periodic refresh every 10 seconds
+    setInterval(refreshJobs, 10000);
 });
 </script> 
