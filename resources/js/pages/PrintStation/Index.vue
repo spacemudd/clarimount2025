@@ -558,34 +558,66 @@ const cancelPrintJob = async (job: PrintJob) => {
 };
 
 // Printer management functions
-const refreshPrinters = async () => {
+const refreshPrinters = async (maxRetries: number = 3, delay: number = 2000) => {
     loadingPrinters.value = true;
-    try {
-        await printService.initializeJSPrintManager();
-        
-        // Get printers after initialization
-        const printers = await printService.getAvailablePrinters();
-        availablePrinters.value = printers;
-        
-        // Auto-select first ZDesigner printer
-        const zDesignerPrinter = printers.find((printer: string) => 
-            printer.toLowerCase().includes('zdesigner')
-        );
-        
-        if (zDesignerPrinter && !selectedPrinter.value) {
-            selectedPrinter.value = zDesignerPrinter;
-            console.log('Auto-selected ZDesigner printer:', zDesignerPrinter);
-        } else if (printers.length > 0 && !selectedPrinter.value) {
-            // If no ZDesigner found, select first available printer
-            selectedPrinter.value = printers[0];
-            console.log('Auto-selected first available printer:', printers[0]);
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            console.log(`PrintStation: Printer initialization attempt ${attempt}/${maxRetries}...`);
+            jsPrintManagerStatus.value = 'loading';
+            
+            // Add delay before each attempt (except the first one)
+            if (attempt > 1) {
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+            
+            await printService.initializeJSPrintManager();
+            
+            // Get printers after initialization
+            const printers = await printService.getAvailablePrinters();
+            console.log(`PrintStation: Attempt ${attempt}: Found ${printers.length} printers:`, printers);
+            
+            if (printers.length > 0) {
+                availablePrinters.value = printers;
+                jsPrintManagerStatus.value = 'connected';
+                
+                // Auto-select first ZDesigner printer
+                const zDesignerPrinter = printers.find((printer: string) => 
+                    printer.toLowerCase().includes('zdesigner')
+                );
+                
+                if (zDesignerPrinter && !selectedPrinter.value) {
+                    selectedPrinter.value = zDesignerPrinter;
+                    console.log('Auto-selected ZDesigner printer:', zDesignerPrinter);
+                } else if (printers.length > 0 && !selectedPrinter.value) {
+                    // If no ZDesigner found, select first available printer
+                    selectedPrinter.value = printers[0];
+                    console.log('Auto-selected first available printer:', printers[0]);
+                }
+                
+                console.log('PrintStation: Printer initialization successful!');
+                loadingPrinters.value = false;
+                return; // Success, exit the retry loop
+            } else if (attempt < maxRetries) {
+                console.log(`PrintStation: Attempt ${attempt}: No printers found, retrying...`);
+            } else {
+                console.log('PrintStation: No printers found after all attempts');
+                jsPrintManagerStatus.value = 'connected'; // Connected but no printers
+            }
+            
+        } catch (error) {
+            console.error(`PrintStation: Printer initialization attempt ${attempt} failed:`, error);
+            
+            if (attempt < maxRetries) {
+                console.log(`PrintStation: Retrying in ${delay/1000} seconds... (${attempt}/${maxRetries})`);
+            } else {
+                jsPrintManagerStatus.value = 'error';
+                alert('Failed to connect to JSPrintManager: ' + (error instanceof Error ? error.message : String(error)));
+            }
         }
-    } catch (error) {
-        console.error('Failed to refresh printers:', error);
-        alert('Failed to connect to JSPrintManager: ' + (error instanceof Error ? error.message : String(error)));
-    } finally {
-        loadingPrinters.value = false;
     }
+    
+    loadingPrinters.value = false;
 };
 
 const onPrinterChange = () => {

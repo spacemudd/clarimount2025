@@ -87,6 +87,8 @@ export class PrintService {
     // Load scripts if not already loaded
     if (typeof window.JSPM === 'undefined') {
       await this.loadRequiredScripts();
+      // Add a small delay after loading scripts to ensure they're fully initialized
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
 
     return new Promise((resolve, reject) => {
@@ -94,15 +96,34 @@ export class PrintService {
         // WebSocket settings
         window.JSPM.JSPrintManager.auto_reconnect = true;
         window.JSPM.JSPrintManager.start();
+        
+        // Set up timeout for connection
+        const connectionTimeout = setTimeout(() => {
+          this.notifyStatusChange('JSPrintManager connection timeout', [], false);
+          reject(new Error('JSPrintManager connection timeout'));
+        }, 10000); // 10 second timeout
+        
         window.JSPM.JSPrintManager.WS.onStatusChanged = () => {
           if (this.jspmWSStatus()) {
+            clearTimeout(connectionTimeout);
             this.notifyStatusChange('Connected to JSPrintManager', [], true);
-            // Get client installed printers
-            window.JSPM.JSPrintManager.getPrinters().then((myPrinters: string[]) => {
-              this.notifyStatusChange('Connected to JSPrintManager', myPrinters, true);
-              resolve();
-            }).catch(reject);
+            
+            // Add a small delay before getting printers to ensure connection is stable
+            setTimeout(() => {
+              // Get client installed printers
+              window.JSPM.JSPrintManager.getPrinters().then((myPrinters: string[]) => {
+                console.log('PrintService: Retrieved printers:', myPrinters);
+                this.notifyStatusChange('Connected to JSPrintManager', myPrinters, true);
+                resolve();
+              }).catch((error) => {
+                console.error('PrintService: Failed to get printers:', error);
+                this.notifyStatusChange('Failed to get printers', [], false);
+                reject(error);
+              });
+            }, 1000); // 1 second delay before getting printers
+            
           } else {
+            clearTimeout(connectionTimeout);
             this.notifyStatusChange('JSPrintManager connection failed', [], false);
             reject(new Error('JSPrintManager connection failed'));
           }

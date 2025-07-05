@@ -166,47 +166,56 @@ const showBarcodeDialog = async (asset?: Asset) => {
   
   barcodeDialog.value.show = true
   
-  // Load scripts if not already loaded
-  if (typeof window.JSPM === 'undefined') {
-    await loadRequiredScripts()
-  }
+  // Subscribe to print service status updates
+  printService.onStatusChange(handlePrintServiceStatus);
   
-  initializeJSPrintManager()
+  // Initialize JSPrintManager with retry mechanism
+  await initializePrintersWithRetry();
 }
 
-const initializeJSPrintManager = () => {
-  nextTick(() => {
-    if (typeof window.JSPM !== 'undefined') {
-      // WebSocket settings
-      window.JSPM.JSPrintManager.auto_reconnect = true
-      window.JSPM.JSPrintManager.start()
-      window.JSPM.JSPrintManager.WS.onStatusChanged = function () {
-        if (jspmWSStatus()) {
-          barcodeDialog.value.status = 'Connected to JSPrintManager'
-          // Get client installed printers
-          window.JSPM.JSPrintManager.getPrinters().then(function (myPrinters: string[]) {
-            barcodeDialog.value.availablePrinters = myPrinters
-          })
-        }
+const initializePrintersWithRetry = async (maxRetries: number = 3, delay: number = 2000) => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`Printer initialization attempt ${attempt}/${maxRetries}...`);
+      barcodeDialog.value.status = `Connecting to JSPrintManager (attempt ${attempt}/${maxRetries})...`;
+      
+      // Add delay before each attempt (except the first one)
+      if (attempt > 1) {
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
-    } else {
-      barcodeDialog.value.status = 'JSPrintManager not loaded'
+      
+      await printService.initializeJSPrintManager();
+      
+      // Check if we actually got printers
+      const printers = await printService.getAvailablePrinters();
+      console.log(`Attempt ${attempt}: Found ${printers.length} printers:`, printers);
+      
+      if (printers.length > 0) {
+        barcodeDialog.value.availablePrinters = printers;
+        barcodeDialog.value.status = `Connected! Found ${printers.length} printer(s)`;
+        console.log('Printer initialization successful!');
+        return; // Success, exit the retry loop
+      } else if (attempt < maxRetries) {
+        console.log(`Attempt ${attempt}: No printers found, retrying...`);
+        barcodeDialog.value.status = `No printers found, retrying in ${delay/1000} seconds...`;
+      } else {
+        console.log('No printers found after all attempts');
+        barcodeDialog.value.status = 'Connected to JSPrintManager but no printers found';
+      }
+      
+    } catch (error) {
+      console.error(`Printer initialization attempt ${attempt} failed:`, error);
+      
+      if (attempt < maxRetries) {
+        barcodeDialog.value.status = `Connection failed, retrying in ${delay/1000} seconds... (${attempt}/${maxRetries})`;
+      } else {
+        barcodeDialog.value.status = 'Failed to connect to JSPrintManager: ' + (error instanceof Error ? error.message : String(error));
+      }
     }
-  })
+  }
 }
 
-const jspmWSStatus = () => {
-  if (window.JSPM.JSPrintManager.websocket_status == window.JSPM.WSStatus.Open) {
-    return true
-  } else if (window.JSPM.JSPrintManager.websocket_status == window.JSPM.WSStatus.Closed) {
-    barcodeDialog.value.status = 'JSPrintManager is not installed or not running! Download JSPM Client App from https://neodynamic.com/downloads/jspm'
-    return false
-  } else if (window.JSPM.JSPrintManager.websocket_status == window.JSPM.WSStatus.Blocked) {
-    barcodeDialog.value.status = 'JSPM has blocked this website!'
-    return false
-  }
-  return false
-}
+// These functions are now handled by the PrintService
 
 // Check for bulk print on mount
 onMounted(async () => {
@@ -290,88 +299,44 @@ const sendToPrintMachine = async () => {
   }
 };
 
-const printBarcode = () => {
+const printBarcode = async () => {
   const assetsToPrint = barcodeDialog.value.selectedAssets
   if (!assetsToPrint || assetsToPrint.length === 0) return
   
-  if (jspmWSStatus()) {
-    barcodeDialog.value.printing = true
-    barcodeDialog.value.status = `Printing ${assetsToPrint.length} label(s)...`
-    
-    try {
-      // Create a ClientPrintJob
-      const cpj = new window.JSPM.ClientPrintJob()
-      
-      // Set Printer type
-      if (barcodeDialog.value.useDefaultPrinter) {
-        cpj.clientPrinter = new window.JSPM.DefaultPrinter()
-      } else {
-        cpj.clientPrinter = new window.JSPM.InstalledPrinter(barcodeDialog.value.selectedPrinter)
-      }
-      
-      // Generate ZPL commands for all selected assets
-      let allCommands = ""
-      
-      assetsToPrint.forEach((asset, index) => {
-        // Set content to print - Create Zebra ZPL commands for 2" x 1" label (406 x 203 dots at 203 DPI)
-        let cmds = "^XA"
-        
-        // Set label dimensions for 2" x 1" at 203 DPI
-        cmds += "^PW406"  // Print width 406 dots (2 inches * 203 DPI)
-        cmds += "^LL203"  // Label length 203 dots (1 inch * 203 DPI)
-        
-        // Set print density for darker printing
-        cmds += "^MD30"   // Media darkness (0-30, higher = darker)
-        cmds += "^SD15"   // Set darkness (0-30, higher = darker)
-        
-        // Company logo on the left side (centered with top margin)
-        cmds += "^FO10,50^GFA,329,329,7,,,,,,K0F1C,J01E3E,I039F1C4,I079E10F,I07BF03E,I073E17E,00213E7FC,00607CFF8,00F87CFF,00F8F9F800C,00FCF8J08,007EF,003E6,03BEK03F,039FK07F,039FK07F,07CFK03F8,008F,I0F8I018,I07J03C,03DK03E68,07FCJ01C7,03FFJ01E7,03FF8I01F3,017FEI09F,I0FE0018F8,0043E003CF8,00F1I03C7C,00F80807C3C,0070700F838,0020F00F008,I03E00F3,I07E01F38,I07C01E78,I03801E3,L01E,L01C,L01,,,,,^FS"
-        
-        // Company name above asset tag (small text)
-        cmds += "^FO70,30^A0N,18,18^FDFAHAD NAWAF ALZEER HOLDING CO.^FS"  // Company name in English
-        
-        // Asset tag next to logo (with double margin under company name)
-        cmds += `^FO70,65^A0N,24,24^FD${asset.asset_tag}^FS`
-        
-        // Serial number or asset tag as barcode (Code 128) - centered
-        cmds += "^FO70,100^BY2,2,35"  // Adjusted position to maintain spacing
-        cmds += "^BCN,35,Y,N,N"
-        cmds += `^FD${asset.serial_number || asset.asset_tag}^FS`
-        
-        // QR Code on the right side - centered with top margin
-        cmds += "^FO320,50^BQN,2,4"  // Moved down to align with logo and title
-        cmds += `^FDMM,${asset.asset_tag}^FS`
-        
-        // Date at bottom left (below barcode)
-        cmds += `^FO70,175^A0N,18,18^FD${new Date().toISOString().split('T')[0]}^FS`
-        
-        cmds += "^XZ"
-        
-        allCommands += cmds
-      })
-      
-      cpj.printerCommands = allCommands
-      
-      // Send print job to printer!
-      cpj.sendToClient()
-      
-      barcodeDialog.value.status = `${assetsToPrint.length} label(s) sent to printer successfully!`
-      
-      // Close dialog after successful print
-      setTimeout(() => {
-        barcodeDialog.value.show = false
-        barcodeDialog.value.printing = false
-        // Clear selections after successful print
-        selectedAssets.value.clear()
-        selectAllChecked.value = false
-      }, 2000)
-      
-    } catch (error) {
-      console.error('Print error:', error)
-      barcodeDialog.value.status = 'Error occurred while printing'
-      barcodeDialog.value.printing = false
+  barcodeDialog.value.printing = true
+  barcodeDialog.value.status = `Printing ${assetsToPrint.length} label(s)...`
+  
+  try {
+    if (assetsToPrint.length === 1) {
+      // Print single asset
+      await printService.printAssetLabel(
+        assetsToPrint[0], 
+        barcodeDialog.value.useDefaultPrinter, 
+        barcodeDialog.value.selectedPrinter
+      );
+    } else {
+      // Print multiple assets
+      await printService.printMultipleAssetLabels(
+        assetsToPrint, 
+        barcodeDialog.value.useDefaultPrinter, 
+        barcodeDialog.value.selectedPrinter
+      );
     }
-  } else {
+    
+    barcodeDialog.value.status = `${assetsToPrint.length} label(s) sent to printer successfully!`
+    
+    // Close dialog after successful print
+    setTimeout(() => {
+      barcodeDialog.value.show = false
+      barcodeDialog.value.printing = false
+      // Clear selections after successful print
+      selectedAssets.value.clear()
+      selectAllChecked.value = false
+    }, 2000)
+    
+  } catch (error) {
+    console.error('Print error:', error)
+    barcodeDialog.value.status = 'Error occurred while printing: ' + (error instanceof Error ? error.message : String(error))
     barcodeDialog.value.printing = false
   }
 };
