@@ -55,12 +55,15 @@
           <div v-if="isSamsungDevice" class="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg text-center">
             <div class="flex items-center justify-center gap-2 mb-1">
               <span class="text-sm">📱</span>
-              <strong>Samsung S24+ detected</strong>
+              <strong v-if="isSamsungInternet">Samsung Internet Browser detected</strong>
+              <strong v-else>Samsung S24+ detected</strong>
             </div>
             <div class="space-y-1">
-              <div>• Tap the camera view to focus if image is blurry</div>
+              <div v-if="isSamsungInternet">• Tap the camera view to trigger autofocus</div>
+              <div v-else>• Tap the camera view to focus if image is blurry</div>
               <div>• Double-tap for enhanced focus</div>
               <div>• Hold barcode 15-20cm from camera for best results</div>
+              <div v-if="isSamsungInternet" class="text-blue-500 font-medium">• Optimized for Samsung Internet Browser</div>
             </div>
           </div>
           
@@ -161,6 +164,7 @@ let selectedCameraIndex = ref(0)
 
 // Detect Samsung device
 const isSamsungDevice = ref(false)
+const isSamsungInternet = ref(false)
 
 watch(() => props.modelValue, (newValue) => {
   isOpen.value = newValue
@@ -237,32 +241,43 @@ const startScanning = async () => {
     const isSamsung = userAgent.includes('samsung') || userAgent.includes('sm-') || userAgent.includes('galaxy')
     isSamsungDevice.value = isSamsung
     
+    // Detect Samsung Internet Browser specifically
+    const isSamsungBrowser = userAgent.includes('samsungbrowser') || userAgent.includes('samsung internet')
+    isSamsungInternet.value = isSamsungBrowser
+    
+    console.log('Browser detection:', { 
+      isSamsung, 
+      isSamsungBrowser, 
+      userAgent: userAgent.substring(0, 100) + '...' 
+    })
+    
     // Configure video constraints with proper autofocus for Samsung S24+
     const videoConstraints: any = {
       deviceId: selectedDevice.deviceId,
       width: isSamsung ? { ideal: 1920, min: 1280 } : { ideal: 1920, min: 1280 },
       height: isSamsung ? { ideal: 1080, min: 720 } : { ideal: 1080, min: 720 },
-      frameRate: { ideal: 30, min: 15 },
-      // Proper autofocus constraints for Samsung devices
-      focusMode: isSamsung ? 'continuous' : 'continuous',
-      // Advanced settings for Samsung S24+
-      ...(isSamsung && {
-        // These are the correct constraint names for Samsung devices
-        advanced: [{
-          focusMode: 'continuous',
-          exposureMode: 'continuous',
-          whiteBalanceMode: 'continuous',
-          // Samsung-specific autofocus settings
-          focusDistance: 0.3, // Optimal distance for barcode scanning
-          torch: false, // Disable torch for better autofocus
-        }]
-      })
+      frameRate: { ideal: 30, min: 15 }
     }
     
-    if (isSamsung) {
-      status.value = 'Starting camera (Samsung S24+ optimized)...'
+    // Apply Samsung Internet Browser specific constraints
+    if (isSamsungBrowser) {
+      // Samsung Internet Browser supports these specific constraints
+      videoConstraints.focusMode = 'continuous'
+      videoConstraints.exposureMode = 'continuous'
+      videoConstraints.whiteBalanceMode = 'continuous'
+      
+      status.value = 'Starting camera (Samsung Internet optimized)...'
+      console.log('Using Samsung Internet Browser constraints:', videoConstraints)
+    } else if (isSamsung) {
+      // Other Samsung browsers (like Chrome on Samsung)
+      videoConstraints.focusMode = 'continuous'
+      status.value = 'Starting camera (Samsung device optimized)...'
+      console.log('Using Samsung device constraints:', videoConstraints)
+    } else {
+      // Standard constraints for other browsers
+      console.log('Using standard constraints:', videoConstraints)
     }
-
+    
     // Start decoding from video element with enhanced constraints
     if (videoElement.value && codeReader) {
       try {
@@ -421,8 +436,13 @@ const captureCurrentFrame = () => {
 }
 
 const optimizeForSamsung = (videoElement: HTMLVideoElement) => {
-  // Samsung S24+ specific camera optimizations
+  // Samsung S24+ and Samsung Internet Browser specific optimizations
   try {
+    console.log('Applying Samsung optimizations:', { 
+      isSamsungDevice: isSamsungDevice.value, 
+      isSamsungInternet: isSamsungInternet.value 
+    })
+    
     // Enhanced tap-to-focus functionality for Samsung devices
     const handleTapToFocus = async (event?: Event) => {
       if (videoElement.srcObject) {
@@ -431,83 +451,98 @@ const optimizeForSamsung = (videoElement: HTMLVideoElement) => {
         
         if (videoTrack && videoTrack.applyConstraints) {
           try {
-            // Get current capabilities to see what's actually supported
-            const capabilities = videoTrack.getCapabilities ? videoTrack.getCapabilities() : {} as any
-            console.log('Camera capabilities:', capabilities)
+            console.log('Triggering focus for Samsung device...')
             
-            // Try to apply focus constraints that are actually supported
-            const constraints: any = {}
-            
-            // Only apply constraints that are supported
-            if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
-              constraints.focusMode = 'continuous'
-            }
-            
-            if (capabilities.exposureMode && capabilities.exposureMode.includes('continuous')) {
-              constraints.exposureMode = 'continuous'
-            }
-            
-            if (capabilities.whiteBalanceMode && capabilities.whiteBalanceMode.includes('continuous')) {
-              constraints.whiteBalanceMode = 'continuous'
-            }
-            
-            // Apply supported constraints
-            if (Object.keys(constraints).length > 0) {
-              await videoTrack.applyConstraints(constraints)
-              console.log('Applied focus constraints:', constraints)
-            }
-            
-            // Alternative approach: restart the track to trigger refocus
-            if (event) {
-              console.log('Manual focus trigger - restarting track')
+            if (isSamsungInternet.value) {
+              // Samsung Internet Browser specific focus method
+              console.log('Using Samsung Internet Browser focus method')
               
-              // Stop and restart the track to force refocus
-              const devices = await navigator.mediaDevices.enumerateDevices()
-              const videoDevices = devices.filter(device => device.kind === 'videoinput')
-              const currentDevice = videoDevices[selectedCameraIndex.value]
+              // Method 1: Apply simple constraints that Samsung Internet supports
+              await videoTrack.applyConstraints({
+                focusMode: 'continuous',
+                exposureMode: 'continuous',
+                whiteBalanceMode: 'continuous'
+              } as any)
               
-              if (currentDevice) {
-                // Get fresh stream with focus trigger
-                const newStream = await navigator.mediaDevices.getUserMedia({
-                  video: {
-                    deviceId: currentDevice.deviceId,
-                    width: { ideal: 1920, min: 1280 },
-                    height: { ideal: 1080, min: 720 },
-                    frameRate: { ideal: 30, min: 15 }
-                  }
-                })
-                
-                // Replace the video source
-                videoElement.srcObject = newStream
-                
-                // Update our stream reference
-                if (videoStream) {
-                  videoStream.getTracks().forEach(track => track.stop())
-                }
-                
-                // Update the global stream reference
-                stream = newStream as any
-                
+              // Method 2: Restart the video track to trigger autofocus
+              const settings = videoTrack.getSettings()
+              const constraints = videoTrack.getConstraints()
+              
+              // Stop current track
+              videoTrack.stop()
+              
+              // Get new stream with same constraints but fresh focus
+              const newStream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                  deviceId: settings.deviceId,
+                  width: { ideal: settings.width || 1920 },
+                  height: { ideal: settings.height || 1080 },
+                  frameRate: { ideal: 30 },
+                  focusMode: 'continuous',
+                  exposureMode: 'continuous',
+                  whiteBalanceMode: 'continuous'
+                } as any
+              })
+              
+              // Replace video source
+              videoElement.srcObject = newStream
+              
+              // Update global stream reference
+              stream = newStream as any
+              
+              status.value = 'Camera refocused (Samsung Internet)!'
+              
+            } else {
+              // Standard Samsung device focus method
+              console.log('Using standard Samsung focus method')
+              
+              // Get current capabilities
+              const capabilities = videoTrack.getCapabilities ? videoTrack.getCapabilities() : {} as any
+              console.log('Camera capabilities:', capabilities)
+              
+              // Apply supported constraints
+              const constraints: any = {}
+              
+              if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
+                constraints.focusMode = 'continuous'
+              }
+              
+              if (capabilities.exposureMode && capabilities.exposureMode.includes('continuous')) {
+                constraints.exposureMode = 'continuous'
+              }
+              
+              if (capabilities.whiteBalanceMode && capabilities.whiteBalanceMode.includes('continuous')) {
+                constraints.whiteBalanceMode = 'continuous'
+              }
+              
+              // Apply constraints
+              if (Object.keys(constraints).length > 0) {
+                await videoTrack.applyConstraints(constraints)
+                console.log('Applied focus constraints:', constraints)
                 status.value = 'Camera refocused!'
-                setTimeout(() => {
-                  status.value = 'Ready to scan. Position QR code (blue square) or barcode (red rectangle) in the frame.'
-                }, 2000)
               }
             }
             
-          } catch (error) {
-            console.warn('Focus constraints failed, trying alternative method:', error)
+            // Reset status after 2 seconds
+            setTimeout(() => {
+              status.value = 'Ready to scan. Position QR code (blue square) or barcode (red rectangle) in the frame.'
+            }, 2000)
             
-            // Fallback: try to restart the camera with basic constraints
+          } catch (error) {
+            console.warn('Focus attempt failed:', error)
+            
+            // Fallback: try to restart camera with basic constraints
             try {
               await videoTrack.applyConstraints({
                 width: { ideal: 1920 },
                 height: { ideal: 1080 },
                 frameRate: { ideal: 30 }
               })
-              console.log('Applied basic constraints for focus')
+              console.log('Applied fallback constraints')
+              status.value = 'Camera adjusted (fallback mode)'
             } catch (fallbackError) {
               console.warn('All focus methods failed:', fallbackError)
+              status.value = 'Focus adjustment failed - try moving closer/farther'
             }
           }
         }
@@ -542,6 +577,10 @@ const optimizeForSamsung = (videoElement: HTMLVideoElement) => {
     
     // Trigger focus every 5 seconds for Samsung devices (less aggressive)
     const focusInterval = setInterval(() => handleTapToFocus(), 5000)
+    
+    // For Samsung Internet Browser, trigger focus more frequently
+    const samsungInternetInterval = isSamsungInternet.value ? 
+      setInterval(() => handleTapToFocus(), 3000) : null
     
     // Set Samsung S24+ specific video properties for better barcode visibility
     videoElement.style.filter = 'contrast(1.2) brightness(1.15) saturate(1.05)'
@@ -596,6 +635,9 @@ const optimizeForSamsung = (videoElement: HTMLVideoElement) => {
     // Clear interval and event listeners when video ends or component unmounts
     const cleanup = () => {
       clearInterval(focusInterval)
+      if (samsungInternetInterval) {
+        clearInterval(samsungInternetInterval)
+      }
       videoElement.removeEventListener('click', handleTapToFocus)
       videoElement.removeEventListener('touchstart', handleTapToFocus)
       videoElement.removeEventListener('touchend', handleDoubleTap)

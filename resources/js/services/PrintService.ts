@@ -180,17 +180,19 @@ export class PrintService {
     // Asset tag next to logo (with double margin under company name)
     cmds += `^FO70,65^A0N,24,24^FD${asset.asset_tag}^FS`;
     
-    // Serial number or asset tag as barcode (Code 128) - centered
+    // Asset tag as barcode (Code 128) - always use asset_tag, not serial_number
     cmds += "^FO70,100^BY2,2,35";  // Adjusted position to maintain spacing
     cmds += "^BCN,35,Y,N,N";
-    cmds += `^FD${asset.serial_number || asset.asset_tag}^FS`;
+    cmds += `^FD${asset.asset_tag}^FS`;
     
     // QR Code on the right side - centered with top margin
     cmds += "^FO320,50^BQN,2,4";  // Moved down to align with logo and title
     cmds += `^FDMM,${asset.asset_tag}^FS`;
     
-    // Date at bottom left (below barcode)
-    cmds += `^FO70,175^A0N,18,18^FD${new Date().toISOString().split('T')[0]}^FS`;
+    // Date and category at bottom left (below barcode)
+    const currentDate = new Date().toISOString().split('T')[0];
+    const categoryName = asset.category?.name || asset.assetTemplate?.name || 'Unknown';
+    cmds += `^FO70,175^A0N,18,18^FD${currentDate} - ${categoryName}^FS`;
     
     cmds += "^XZ";
     
