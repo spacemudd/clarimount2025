@@ -96,7 +96,7 @@ class PrintJobController extends Controller
      */
     public function pending(): JsonResponse
     {
-        $printJobs = PrintJob::with(['asset.category', 'company', 'user'])
+        $printJobs = PrintJob::with(['asset.category', 'asset.assetTemplate', 'company', 'user'])
             ->pending()
             ->orderedByPriority()
             ->get()
@@ -109,7 +109,23 @@ class PrintJobController extends Controller
                         'asset_tag' => $job->asset->asset_tag,
                         'serial_number' => $job->asset->serial_number,
                         'model_name' => $job->asset->model_name,
-                        'category' => $job->asset->category->name ?? null,
+                        'model_number' => $job->asset->model_number,
+                        'manufacturer' => $job->asset->manufacturer,
+                        'condition' => $job->asset->condition,
+                        'status' => $job->asset->status,
+                        'asset_category_id' => $job->asset->asset_category_id,
+                        'location_id' => $job->asset->location_id,
+                        'company_id' => $job->asset->company_id,
+                        'created_at' => $job->asset->created_at,
+                        'updated_at' => $job->asset->updated_at,
+                        'category' => $job->asset->category ? [
+                            'id' => $job->asset->category->id,
+                            'name' => $job->asset->category->name,
+                        ] : null,
+                        'assetTemplate' => $job->asset->assetTemplate ? [
+                            'id' => $job->asset->assetTemplate->id,
+                            'name' => $job->asset->assetTemplate->name,
+                        ] : null,
                     ],
                     'company' => [
                         'id' => $job->company->id,
