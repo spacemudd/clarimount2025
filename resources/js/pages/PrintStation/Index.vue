@@ -31,6 +31,13 @@
                         >
                             <Icon name="RefreshCw" class="h-3 w-3" />
                         </Button>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            @click="debugJSPrintManager"
+                        >
+                            Debug
+                        </Button>
                     </div>
                     
                     <Button @click="refreshJobs" :disabled="loading">
@@ -416,9 +423,28 @@ const refreshJobs = async () => {
 };
 
 const processPrintJob = async (job: PrintJob) => {
-    if (!selectedPrinter.value) {
-        alert('Please select a printer first');
+    // Check if we have printers available
+    if (availablePrinters.value.length === 0) {
+        alert('No printers available. Please click the refresh button to load printers.');
         return;
+    }
+
+    if (!selectedPrinter.value) {
+        // Try to auto-select a printer if none is selected
+        const zDesignerPrinter = availablePrinters.value.find((printer: string) => 
+            printer.toLowerCase().includes('zdesigner')
+        );
+        
+        if (zDesignerPrinter) {
+            selectedPrinter.value = zDesignerPrinter;
+            console.log('PrintStation: Auto-selected ZDesigner printer for printing:', zDesignerPrinter);
+        } else if (availablePrinters.value.length > 0) {
+            selectedPrinter.value = availablePrinters.value[0];
+            console.log('PrintStation: Auto-selected first available printer for printing:', availablePrinters.value[0]);
+        } else {
+            alert('Please select a printer first');
+            return;
+        }
     }
 
     try {
@@ -541,47 +567,91 @@ const cancelPrintJob = async (job: PrintJob) => {
     }
 };
 
-// Load printers from JSPrintManager using the same method as Assets/Index.vue
-const loadPrintersFromJSPM = async () => {
+// Load printers from JSPrintManager with retry logic
+const loadPrintersFromJSPM = async (maxRetries: number = 3, delay: number = 2000) => {
     loadingPrinters.value = true;
     availablePrinters.value = [];
     
-    try {
-        console.log('PrintStation: Loading printers from JSPrintManager...');
-        
-        // Initialize JSPrintManager first
-        await printService.initializeJSPrintManager();
-        
-        // Get available printers
-        const printers = await printService.getAvailablePrinters();
-        console.log('PrintStation: Found printers:', printers);
-        
-        if (printers && printers.length > 0) {
-            availablePrinters.value = printers;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            console.log(`PrintStation: Loading printers attempt ${attempt}/${maxRetries}...`);
             
-            // Auto-select first ZDesigner printer or first available printer (same logic as Assets/Index.vue)
-            if (!selectedPrinter.value) {
-                const zDesignerPrinter = printers.find((printer: string) => 
-                    printer.toLowerCase().includes('zdesigner')
-                );
+            // Add delay before each attempt (except the first one)
+            if (attempt > 1) {
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+            
+            // Initialize JSPrintManager first
+            await printService.initializeJSPrintManager();
+            
+            // Get available printers
+            const printers = await printService.getAvailablePrinters();
+            console.log(`PrintStation: Attempt ${attempt}: Found ${printers.length} printers:`, printers);
+            
+            if (printers && printers.length > 0) {
+                availablePrinters.value = printers;
                 
-                if (zDesignerPrinter) {
-                    selectedPrinter.value = zDesignerPrinter;
-                    console.log('PrintStation: Auto-selected ZDesigner printer:', zDesignerPrinter);
-                } else if (printers.length > 0) {
-                    selectedPrinter.value = printers[0];
-                    console.log('PrintStation: Auto-selected first available printer:', printers[0]);
+                // Auto-select first ZDesigner printer or first available printer (same logic as Assets/Index.vue)
+                if (!selectedPrinter.value) {
+                    const zDesignerPrinter = printers.find((printer: string) => 
+                        printer.toLowerCase().includes('zdesigner')
+                    );
+                    
+                    if (zDesignerPrinter) {
+                        selectedPrinter.value = zDesignerPrinter;
+                        console.log('PrintStation: Auto-selected ZDesigner printer:', zDesignerPrinter);
+                    } else if (printers.length > 0) {
+                        selectedPrinter.value = printers[0];
+                        console.log('PrintStation: Auto-selected first available printer:', printers[0]);
+                    }
+                }
+                
+                console.log('PrintStation: Printer loading successful!');
+                loadingPrinters.value = false;
+                return; // Success, exit the retry loop
+            } else if (attempt < maxRetries) {
+                console.log(`PrintStation: Attempt ${attempt}: No printers found, retrying...`);
+            } else {
+                console.log('PrintStation: No printers found after all attempts');
+            }
+            
+        } catch (error) {
+            console.error(`PrintStation: Printer loading attempt ${attempt} failed:`, error);
+            
+            if (attempt < maxRetries) {
+                console.log(`PrintStation: Retrying in ${delay/1000} seconds... (${attempt}/${maxRetries})`);
+            } else {
+                console.error('PrintStation: Failed to load printers after all attempts:', error);
+                // Don't show alert on page load failure, just log it
+                if (attempt === maxRetries) {
+                    console.error('PrintStation: JSPrintManager connection failed. Please ensure JSPrintManager is installed and running.');
                 }
             }
-        } else {
-            console.warn('PrintStation: No printers found');
         }
+    }
+    
+    loadingPrinters.value = false;
+};
+
+// Debug JSPrintManager connection
+const debugJSPrintManager = () => {
+    console.log('=== PrintStation JSPrintManager Debug ===');
+    console.log('Window object:', typeof window);
+    console.log('window.JSPM:', window.JSPM);
+    console.log('window.JSPM.JSPrintManager:', window.JSPM?.JSPrintManager);
+    console.log('Available printers:', availablePrinters.value);
+    console.log('Selected printer:', selectedPrinter.value);
+    console.log('Loading printers:', loadingPrinters.value);
+    
+    if (typeof window !== 'undefined' && window.JSPM && window.JSPM.JSPrintManager) {
+        console.log('JSPrintManager websocket status:', window.JSPM.JSPrintManager.websocket_status);
+        console.log('WSStatus.Open:', window.JSPM.WSStatus?.Open);
+        console.log('WSStatus.Closed:', window.JSPM.WSStatus?.Closed);
+        console.log('WSStatus.Blocked:', window.JSPM.WSStatus?.Blocked);
         
-    } catch (error) {
-        console.error('PrintStation: Failed to load printers:', error);
-        alert('Failed to load printers: ' + error);
-    } finally {
-        loadingPrinters.value = false;
+        alert('JSPrintManager is available! Check console for details.');
+    } else {
+        alert('JSPrintManager is NOT available!\n\nPlease check:\n1. JSPrintManager is installed\n2. JSPrintManager service is running\n3. Scripts are loaded properly');
     }
 };
 
@@ -589,8 +659,10 @@ onMounted(() => {
     // Initial load
     refreshJobs();
     
-    // Load printers from JSPrintManager
-    loadPrintersFromJSPM();
+    // Load printers from JSPrintManager with delay to ensure page is fully loaded
+    setTimeout(() => {
+        loadPrintersFromJSPM();
+    }, 2000);
     
     // Set up periodic refresh every 10 seconds
     setInterval(refreshJobs, 10000);
