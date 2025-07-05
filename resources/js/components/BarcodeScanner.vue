@@ -46,8 +46,16 @@
           </div>
           
           <!-- Samsung device tip -->
-          <div v-if="isSamsungDevice" class="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-2 rounded text-center">
-            <strong>Samsung device detected:</strong> Tap the camera view to focus if image is blurry
+          <div v-if="isSamsungDevice" class="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg text-center">
+            <div class="flex items-center justify-center gap-2 mb-1">
+              <span class="text-sm">📱</span>
+              <strong>Samsung S24+ detected</strong>
+            </div>
+            <div class="space-y-1">
+              <div>• Tap the camera view to focus if image is blurry</div>
+              <div>• Double-tap for enhanced focus</div>
+              <div>• Hold barcode 15-20cm from camera for best results</div>
+            </div>
           </div>
           
           <!-- Scanning mode toggle -->
@@ -113,6 +121,7 @@ interface Props {
   modelValue: boolean
   title?: string
   description?: string
+  enableCameraCapture?: boolean
 }
 
 interface Emits {
@@ -176,40 +185,43 @@ const startScanning = async () => {
     // Prefer back camera on mobile devices
     const backCamera = videoDevices.find((device: any) => 
       device.label.toLowerCase().includes('back') || 
-      device.label.toLowerCase().includes('rear')
+      device.label.toLowerCase().includes('rear') ||
+      device.label.toLowerCase().includes('environment')
     )
     
     const selectedDevice = backCamera || videoDevices[0]
     
     status.value = 'Starting camera...'
     
-    // Detect Samsung device
+    // Detect Samsung device - improved detection
     const userAgent = navigator.userAgent.toLowerCase()
-    const isSamsung = userAgent.includes('samsung') || userAgent.includes('sm-')
+    const isSamsung = userAgent.includes('samsung') || userAgent.includes('sm-') || userAgent.includes('galaxy')
     isSamsungDevice.value = isSamsung
     
-    // Configure video constraints optimized for Samsung devices
-    const videoConstraints = {
+    // Configure video constraints with proper autofocus for Samsung S24+
+    const videoConstraints: any = {
       deviceId: selectedDevice.deviceId,
-      width: isSamsung ? { ideal: 1280, min: 720 } : { ideal: 1920, min: 1280 },
-      height: isSamsung ? { ideal: 720, min: 480 } : { ideal: 1080, min: 720 },
+      width: isSamsung ? { ideal: 1920, min: 1280 } : { ideal: 1920, min: 1280 },
+      height: isSamsung ? { ideal: 1080, min: 720 } : { ideal: 1080, min: 720 },
       frameRate: { ideal: 30, min: 15 },
-      focusMode: 'continuous',
-      exposureMode: 'continuous',
-      whiteBalanceMode: 'continuous'
+      // Proper autofocus constraints for Samsung devices
+      focusMode: isSamsung ? 'continuous' : 'continuous',
+      // Advanced settings for Samsung S24+
+      ...(isSamsung && {
+        // These are the correct constraint names for Samsung devices
+        advanced: [{
+          focusMode: 'continuous',
+          exposureMode: 'continuous',
+          whiteBalanceMode: 'continuous',
+          // Samsung-specific autofocus settings
+          focusDistance: 0.3, // Optimal distance for barcode scanning
+          torch: false, // Disable torch for better autofocus
+        }]
+      })
     }
     
-    // Add Samsung-specific constraints
     if (isSamsung) {
-      Object.assign(videoConstraints, {
-        focusDistance: { ideal: 0.2, min: 0.1, max: 0.5 },
-        torch: false, // Disable torch for better focus
-        zoom: { ideal: 1.0, min: 1.0, max: 2.0 },
-        // Samsung-specific optimizations
-        aspectRatio: { ideal: 16/9 },
-        resizeMode: 'crop-and-scale'
-      })
-      status.value = 'Starting camera (Samsung S25+ optimized)...'
+      status.value = 'Starting camera (Samsung S24+ optimized)...'
     }
 
     // Start decoding from video element with enhanced constraints
@@ -225,13 +237,18 @@ const startScanning = async () => {
               const format = result.getBarcodeFormat()
               status.value = `Scanned ${format}: ${scannedValue.substring(0, 20)}${scannedValue.length > 20 ? '...' : ''}`
               
-              // Emit the scanned value
-              emit('scanned', scannedValue)
-              
-              // Close the dialog
-              setTimeout(() => {
-                handleCancel()
-              }, 1500)
+              // For camera capture mode, emit the image data
+              if (props.enableCameraCapture) {
+                captureCurrentFrame()
+              } else {
+                // Emit the scanned value
+                emit('scanned', scannedValue)
+                
+                // Close the dialog
+                setTimeout(() => {
+                  handleCancel()
+                }, 1500)
+              }
             }
             
             if (error) {
@@ -265,8 +282,13 @@ const startScanning = async () => {
               const scannedValue = result.getText()
               const format = result.getBarcodeFormat()
               status.value = `Scanned ${format}: ${scannedValue}`
-              emit('scanned', scannedValue)
-              setTimeout(() => handleCancel(), 1500)
+              
+              if (props.enableCameraCapture) {
+                captureCurrentFrame()
+              } else {
+                emit('scanned', scannedValue)
+                setTimeout(() => handleCancel(), 1500)
+              }
             }
           }
         )
@@ -339,10 +361,30 @@ const restartScanning = () => {
   }, 100)
 }
 
+const captureCurrentFrame = () => {
+  if (videoElement.value) {
+    const canvas = document.createElement('canvas')
+    const context = canvas.getContext('2d')
+    
+    if (context) {
+      canvas.width = videoElement.value.videoWidth
+      canvas.height = videoElement.value.videoHeight
+      context.drawImage(videoElement.value, 0, 0)
+      
+      const imageData = canvas.toDataURL('image/jpeg', 0.8)
+      emit('scanned', imageData)
+      
+      setTimeout(() => {
+        handleCancel()
+      }, 1500)
+    }
+  }
+}
+
 const optimizeForSamsung = (videoElement: HTMLVideoElement) => {
-  // Samsung-specific camera optimizations
+  // Samsung S24+ specific camera optimizations
   try {
-    // Add tap-to-focus functionality for Samsung devices
+    // Enhanced tap-to-focus functionality for Samsung devices
     const handleTapToFocus = async () => {
       if (videoElement.srcObject) {
         const stream = videoElement.srcObject as MediaStream
@@ -350,29 +392,55 @@ const optimizeForSamsung = (videoElement: HTMLVideoElement) => {
         
         if (videoTrack && videoTrack.applyConstraints) {
           try {
-            // First try to apply enhanced constraints for Samsung
+            // Apply Samsung S24+ optimized constraints for barcode scanning
             await videoTrack.applyConstraints({
-              width: { ideal: 1280, min: 720 },
-              height: { ideal: 720, min: 480 },
-              frameRate: { ideal: 30, min: 15 },
-              aspectRatio: { ideal: 16/9 }
-            })
+              width: { ideal: 1920, min: 1280 },
+              height: { ideal: 1080, min: 720 },
+              frameRate: { ideal: 30, min: 20 },
+              // Force continuous autofocus for Samsung
+              focusMode: 'continuous',
+              // Advanced Samsung S24+ settings
+              advanced: [{
+                focusMode: 'continuous',
+                exposureMode: 'continuous',
+                whiteBalanceMode: 'continuous',
+                focusDistance: 0.25, // Optimal for close-up barcode scanning
+                exposureCompensation: 0.1, // Slightly brighter for better barcode reading
+                iso: 200, // Lower ISO for less noise
+                sharpness: 0.8, // Increase sharpness for better barcode detection
+              }]
+            } as any)
             
-            // Wait a bit then try to trigger focus
+            // Apply additional focus trigger after constraint application
             setTimeout(async () => {
               try {
+                // Secondary focus trigger for Samsung devices
                 await videoTrack.applyConstraints({
-                  width: { ideal: 1280 },
-                  height: { ideal: 720 },
-                  frameRate: { ideal: 30 }
-                })
+                  focusMode: 'continuous',
+                  advanced: [{
+                    focusMode: 'continuous',
+                    focusDistance: 0.3,
+                  }]
+                } as any)
               } catch (e) {
-                console.warn('Samsung focus retry failed:', e)
+                console.warn('Samsung secondary focus failed:', e)
               }
-            }, 200)
+            }, 300)
             
           } catch (error) {
-            console.warn('Could not apply Samsung focus constraints:', error)
+            console.warn('Could not apply Samsung S24+ focus constraints:', error)
+            
+            // Fallback to basic constraints
+            try {
+              await videoTrack.applyConstraints({
+                focusMode: 'continuous',
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+                frameRate: { ideal: 30 }
+              } as any)
+            } catch (fallbackError) {
+              console.warn('Samsung fallback constraints also failed:', fallbackError)
+            }
           }
         }
       }
@@ -381,43 +449,78 @@ const optimizeForSamsung = (videoElement: HTMLVideoElement) => {
     // Add click event for manual focus trigger
     videoElement.addEventListener('click', handleTapToFocus)
     
-    // Trigger focus every 4 seconds for Samsung devices (less frequent to avoid conflicts)
-    const focusInterval = setInterval(handleTapToFocus, 4000)
+    // Add double-tap for enhanced focus
+    let lastTap = 0
+    const handleDoubleTap = () => {
+      const now = Date.now()
+      if (now - lastTap < 300) {
+        // Double tap detected - trigger enhanced focus
+        handleTapToFocus()
+        setTimeout(handleTapToFocus, 200) // Second focus attempt
+      }
+      lastTap = now
+    }
     
-    // Set Samsung-specific video properties for better visibility
-    videoElement.style.filter = 'contrast(1.15) brightness(1.1) saturate(1.1)'
+    videoElement.addEventListener('touchend', handleDoubleTap)
+    
+    // Trigger focus every 3 seconds for Samsung devices (optimized interval)
+    const focusInterval = setInterval(handleTapToFocus, 3000)
+    
+    // Set Samsung S24+ specific video properties for better barcode visibility
+    videoElement.style.filter = 'contrast(1.2) brightness(1.15) saturate(1.05) sharpen(0.5)'
     
     // Add visual feedback for Samsung users
     const addTapIndicator = () => {
       const indicator = document.createElement('div')
-      indicator.innerHTML = '📱 Tap to focus'
+      indicator.innerHTML = '📱 Tap to focus • Double-tap for enhanced focus'
       indicator.style.cssText = `
         position: absolute;
         top: 10px;
+        left: 10px;
         right: 10px;
-        background: rgba(0, 0, 0, 0.7);
+        background: rgba(0, 0, 0, 0.8);
         color: white;
-        padding: 4px 8px;
-        border-radius: 4px;
+        padding: 8px 12px;
+        border-radius: 6px;
         font-size: 12px;
+        text-align: center;
         z-index: 10;
         pointer-events: none;
+        animation: fadeInOut 6s ease-in-out;
       `
+      
+      // Add CSS animation
+      const style = document.createElement('style')
+      style.textContent = `
+        @keyframes fadeInOut {
+          0% { opacity: 0; transform: translateY(-10px); }
+          10% { opacity: 1; transform: translateY(0); }
+          90% { opacity: 1; transform: translateY(0); }
+          100% { opacity: 0; transform: translateY(-10px); }
+        }
+      `
+      document.head.appendChild(style)
+      
       videoElement.parentElement?.appendChild(indicator)
       
-      // Remove indicator after 5 seconds
+      // Remove indicator after animation
       setTimeout(() => {
         indicator.remove()
-      }, 5000)
+        style.remove()
+      }, 6000)
     }
     
-    // Show tap indicator after 2 seconds
-    setTimeout(addTapIndicator, 2000)
+    // Show tap indicator after 1 second
+    setTimeout(addTapIndicator, 1000)
     
-    // Clear interval when video ends or component unmounts
+    // Initial focus trigger after 500ms
+    setTimeout(handleTapToFocus, 500)
+    
+    // Clear interval and event listeners when video ends or component unmounts
     const cleanup = () => {
       clearInterval(focusInterval)
       videoElement.removeEventListener('click', handleTapToFocus)
+      videoElement.removeEventListener('touchend', handleDoubleTap)
     }
     
     videoElement.addEventListener('ended', cleanup, { once: true })
@@ -426,7 +529,7 @@ const optimizeForSamsung = (videoElement: HTMLVideoElement) => {
     ;(videoElement as any).__samsungCleanup = cleanup
     
   } catch (error) {
-    console.warn('Samsung optimization failed:', error)
+    console.warn('Samsung S24+ optimization failed:', error)
   }
 }
 
