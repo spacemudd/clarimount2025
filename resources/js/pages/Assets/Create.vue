@@ -11,6 +11,7 @@ import Heading from '@/components/Heading.vue';
 import { useI18n } from 'vue-i18n';
 import { computed, ref } from 'vue';
 import type { AssetCategory, Location, Company, BreadcrumbItem } from '@/types';
+import BarcodeScanner from '@/components/BarcodeScanner.vue';
 
 const { t } = useI18n();
 
@@ -52,6 +53,7 @@ const getCsrfToken = (): string => {
 const currentStep = ref(1);
 const totalSteps = 3;
 const isLocationDialogOpen = ref(false);
+const showBarcodeScanner = ref(false);
 
 // Location search state
 const searchQuery = ref('');
@@ -604,6 +606,11 @@ const getStepClass = (step: number) => {
 const getStepConnectorClass = (step: number) => {
     return step < currentStep.value ? 'bg-primary' : 'bg-muted';
 };
+
+const handleBarcodeScanned = (scannedValue: string) => {
+    form.serial_number = scannedValue;
+    showBarcodeScanner.value = false;
+};
 </script>
 
 <template>
@@ -935,13 +942,25 @@ const getStepConnectorClass = (step: number) => {
                         <!-- Serial Number -->
                         <div class="space-y-2">
                             <Label for="serial_number">{{ t('assets.serial_number') }}</Label>
-                            <Input
-                                id="serial_number"
-                                v-model="form.serial_number"
-                                type="text"
-                                :placeholder="t('assets.serial_number_placeholder')"
-                                :class="{ 'border-red-500': form.errors.serial_number }"
-                            />
+                            <div class="flex gap-2">
+                                <Input
+                                    id="serial_number"
+                                    v-model="form.serial_number"
+                                    type="text"
+                                    :placeholder="t('assets.serial_number_placeholder')"
+                                    :class="{ 'border-red-500': form.errors.serial_number }"
+                                    class="flex-1"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    @click="showBarcodeScanner = true"
+                                    class="shrink-0"
+                                >
+                                    <Icon name="ScanSearch" class="h-4 w-4 mr-2" />
+                                    Scan
+                                </Button>
+                            </div>
                             <p class="text-sm text-muted-foreground">{{ t('assets.serial_number_optional') }}</p>
                             <div v-if="form.errors.serial_number" class="text-sm text-red-600 dark:text-red-400">
                                 {{ form.errors.serial_number }}
@@ -1298,5 +1317,14 @@ const getStepConnectorClass = (step: number) => {
                 </div>
             </div>
         </div>
+
+        <!-- Barcode Scanner -->
+        <BarcodeScanner
+            v-model="showBarcodeScanner"
+            title="Scan Serial Number"
+            description="Position the barcode on the asset within the camera view to scan the serial number automatically."
+            @scanned="handleBarcodeScanned"
+            @cancel="showBarcodeScanner = false"
+        />
     </AppLayout>
 </template> 

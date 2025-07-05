@@ -12,6 +12,7 @@ import InputError from '@/components/InputError.vue';
 import { useI18n } from 'vue-i18n';
 import { computed, ref } from 'vue';
 import type { Asset, AssetCategory, Location, Company, BreadcrumbItem } from '@/types';
+import BarcodeScanner from '@/components/BarcodeScanner.vue';
 
 const { t } = useI18n();
 
@@ -43,6 +44,7 @@ const form = useForm({
 // Image handling
 const imagePreview = ref<string | null>(null);
 const imageDeleted = ref(false);
+const showBarcodeScanner = ref(false);
 
 const breadcrumbs = computed((): BreadcrumbItem[] => [
     {
@@ -136,6 +138,11 @@ const handleImageError = () => {
     console.warn('Failed to load asset image');
 };
 
+const handleBarcodeScanned = (scannedValue: string) => {
+    form.serial_number = scannedValue;
+    showBarcodeScanner.value = false;
+};
+
 const submit = () => {
     form.put(route('assets.update', props.asset.id), {
         onSuccess: () => {
@@ -206,12 +213,23 @@ const submit = () => {
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
                                         <Label for="serial_number">{{ t('assets.serial_number') }}</Label>
-                                        <Input
-                                            id="serial_number"
-                                            v-model="form.serial_number"
-                                            placeholder="Enter serial number"
-                                            class="mt-1"
-                                        />
+                                        <div class="flex gap-2 mt-1">
+                                            <Input
+                                                id="serial_number"
+                                                v-model="form.serial_number"
+                                                placeholder="Enter serial number"
+                                                class="flex-1"
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                @click="showBarcodeScanner = true"
+                                                class="shrink-0"
+                                            >
+                                                <Icon name="ScanSearch" class="h-4 w-4 mr-2" />
+                                                Scan
+                                            </Button>
+                                        </div>
                                         <InputError v-if="form.errors.serial_number" :message="form.errors.serial_number" class="mt-1" />
                                     </div>
 
@@ -593,5 +611,14 @@ const submit = () => {
                 </div>
             </div>
         </div>
+
+        <!-- Barcode Scanner -->
+        <BarcodeScanner
+            v-model="showBarcodeScanner"
+            title="Scan Serial Number"
+            description="Position the barcode on the asset within the camera view to scan the serial number automatically."
+            @scanned="handleBarcodeScanned"
+            @cancel="showBarcodeScanner = false"
+        />
     </AppLayout>
 </template> 
