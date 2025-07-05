@@ -204,7 +204,7 @@ export class PrintService {
     }
 
     if (!useDefaultPrinter && !selectedPrinter) {
-      throw new Error('No printer selected');
+      throw new Error('Please select a printer first');
     }
 
     try {
@@ -239,7 +239,7 @@ export class PrintService {
     }
 
     if (!useDefaultPrinter && !selectedPrinter) {
-      throw new Error('No printer selected');
+      throw new Error('Please select a printer first');
     }
 
     try {

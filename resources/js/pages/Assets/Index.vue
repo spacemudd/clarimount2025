@@ -117,8 +117,23 @@ const handleTemplateImageError = (event: Event, asset: Asset) => {
 const handlePrintServiceStatus = (status: any) => {
   console.log('Print service status:', status);
   barcodeDialog.value.status = status.status;
-  if (status.isConnected) {
+  if (status.isConnected && status.availablePrinters.length > 0) {
     barcodeDialog.value.availablePrinters = status.availablePrinters;
+    
+    // Auto-select printer if none selected
+    if (!barcodeDialog.value.selectedPrinter) {
+      const zDesignerPrinter = status.availablePrinters.find((printer: string) => 
+        printer.toLowerCase().includes('zdesigner')
+      );
+      
+      if (zDesignerPrinter) {
+        barcodeDialog.value.selectedPrinter = zDesignerPrinter;
+        console.log('Auto-selected ZDesigner printer via callback:', zDesignerPrinter);
+      } else if (status.availablePrinters.length > 0) {
+        barcodeDialog.value.selectedPrinter = status.availablePrinters[0];
+        console.log('Auto-selected first available printer via callback:', status.availablePrinters[0]);
+      }
+    }
   }
 };
 
@@ -192,6 +207,22 @@ const initializePrintersWithRetry = async (maxRetries: number = 3, delay: number
       
       if (printers.length > 0) {
         barcodeDialog.value.availablePrinters = printers;
+        
+        // Auto-select first ZDesigner printer or first available printer
+        if (!barcodeDialog.value.selectedPrinter) {
+          const zDesignerPrinter = printers.find((printer: string) => 
+            printer.toLowerCase().includes('zdesigner')
+          );
+          
+          if (zDesignerPrinter) {
+            barcodeDialog.value.selectedPrinter = zDesignerPrinter;
+            console.log('Auto-selected ZDesigner printer:', zDesignerPrinter);
+          } else if (printers.length > 0) {
+            barcodeDialog.value.selectedPrinter = printers[0];
+            console.log('Auto-selected first available printer:', printers[0]);
+          }
+        }
+        
         barcodeDialog.value.status = `Connected! Found ${printers.length} printer(s)`;
         console.log('Printer initialization successful!');
         return; // Success, exit the retry loop
@@ -302,6 +333,12 @@ const sendToPrintMachine = async () => {
 const printBarcode = async () => {
   const assetsToPrint = barcodeDialog.value.selectedAssets
   if (!assetsToPrint || assetsToPrint.length === 0) return
+  
+  console.log('Print settings:', {
+    useDefaultPrinter: barcodeDialog.value.useDefaultPrinter,
+    selectedPrinter: barcodeDialog.value.selectedPrinter,
+    availablePrinters: barcodeDialog.value.availablePrinters
+  });
   
   barcodeDialog.value.printing = true
   barcodeDialog.value.status = `Printing ${assetsToPrint.length} label(s)...`
