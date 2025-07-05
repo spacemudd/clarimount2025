@@ -20,6 +20,14 @@
             <Icon name="Printer" class="mr-2 h-4 w-4" />
             Barcode
           </Button>
+          <Button
+            variant="outline"
+            @click="sendToPrintMachine"
+            class="inline-flex items-center"
+          >
+            <Icon name="Send" class="mr-2 h-4 w-4" />
+            Send to Print Machine
+          </Button>
           <Link 
             :href="route('assets.edit', asset.id)"
             class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
@@ -559,6 +567,34 @@ const handleDelete = () => {
       deleteDialog.value.loading = false
     }
   })
+}
+
+const sendToPrintMachine = async () => {
+  try {
+    const response = await fetch('/api/print-jobs', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+      },
+      body: JSON.stringify({
+        asset_id: props.asset.id,
+        priority: 'normal',
+      }),
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      // Show success notification
+      alert(`Print job ${result.print_job.job_id} sent to print machine successfully!`);
+    } else {
+      const error = await response.json();
+      alert(`Failed to send print job: ${error.error || 'Unknown error'}`);
+    }
+  } catch (error) {
+    console.error('Failed to send print job:', error);
+    alert('Failed to send print job. Please try again.');
+  }
 }
 
 // Function to dynamically load JavaScript files

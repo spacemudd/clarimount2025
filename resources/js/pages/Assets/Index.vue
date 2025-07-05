@@ -289,6 +289,34 @@ onMounted(async () => {
   }
 })
 
+const sendToPrintMachine = async (asset: Asset) => {
+  try {
+    const response = await fetch('/api/print-jobs', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+      },
+      body: JSON.stringify({
+        asset_id: asset.id,
+        priority: 'normal',
+      }),
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      // Show success notification
+      alert(`Print job ${result.print_job.job_id} sent to print machine successfully!`);
+    } else {
+      const error = await response.json();
+      alert(`Failed to send print job: ${error.error || 'Unknown error'}`);
+    }
+  } catch (error) {
+    console.error('Failed to send print job:', error);
+    alert('Failed to send print job. Please try again.');
+  }
+};
+
 const printBarcode = () => {
   const assetsToPrint = barcodeDialog.value.selectedAssets
   if (!assetsToPrint || assetsToPrint.length === 0) return
@@ -593,6 +621,9 @@ const printBarcode = () => {
                                     <div class="flex justify-end rtl:justify-start gap-1">
                                         <Button variant="ghost" size="sm" @click="showBarcodeDialog(asset)" title="Print Label">
                                             <Icon name="Printer" class="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="sm" @click="sendToPrintMachine(asset)" title="Send to Print Machine">
+                                            <Icon name="Send" class="h-4 w-4" />
                                         </Button>
                                         <Button variant="ghost" size="sm" asChild title="View">
                                             <Link :href="route('assets.show', asset.id)">

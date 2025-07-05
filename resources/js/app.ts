@@ -7,6 +7,7 @@ import { createApp, h } from 'vue';
 import { ZiggyVue } from 'ziggy-js';
 import { initializeTheme } from './composables/useAppearance';
 import { updateI18nMessages } from './i18n';
+import './echo';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 

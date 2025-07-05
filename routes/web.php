@@ -8,6 +8,7 @@ use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\AssetCategoryController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AssetTemplateController;
+use App\Http\Controllers\PrintJobController;
 use App\Http\Controllers\Admin\AdminTeamController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -93,6 +94,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
     // Asset Templates management
     Route::resource('asset-templates', AssetTemplateController::class);
+    
+    // Print Jobs management
+    Route::get('/print-available', [PrintJobController::class, 'printStation'])->name('print-station');
+    Route::post('api/print-jobs', [PrintJobController::class, 'create'])->name('api.print-jobs.create');
+    Route::get('api/print-jobs/pending', [PrintJobController::class, 'pending'])->name('api.print-jobs.pending');
+    Route::get('api/print-jobs/history', [PrintJobController::class, 'history'])->name('api.print-jobs.history');
+    Route::get('api/print-jobs/statistics', [PrintJobController::class, 'statistics'])->name('api.print-jobs.statistics');
+    Route::patch('api/print-jobs/{printJob}/status', [PrintJobController::class, 'updateStatus'])->name('api.print-jobs.update-status');
+    Route::delete('api/print-jobs/{printJob}', [PrintJobController::class, 'cancel'])->name('api.print-jobs.cancel');
     
     // API endpoints for async searches
     Route::get('api/locations/search', [LocationController::class, 'search'])->name('api.locations.search');
