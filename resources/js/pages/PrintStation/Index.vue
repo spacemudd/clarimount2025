@@ -11,14 +11,14 @@
                     </p>
                 </div>
                 <div class="flex items-center gap-4">
-                    <!-- Simple Printer Selection -->
+                    <!-- JSPrintManager Printer Selection -->
                     <div class="flex items-center gap-2">
                         <Icon name="Printer" class="h-4 w-4 text-gray-500" />
                         <select
                             v-model="selectedPrinter"
                             class="text-sm border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-800"
                         >
-                            <option value="">Select Printer</option>
+                            <option value="">{{ loadingPrinters ? 'Loading printers...' : 'Select Printer' }}</option>
                             <option v-for="printer in availablePrinters" :key="printer" :value="printer">
                                 {{ printer }}
                             </option>
@@ -26,11 +26,10 @@
                         <Button
                             size="sm"
                             variant="outline"
-                            @click="loadPrinters"
+                            @click="loadPrintersFromJSPM"
                             :disabled="loadingPrinters"
                         >
                             <Icon name="RefreshCw" class="h-3 w-3" />
-                            {{ loadingPrinters ? 'Loading...' : 'Load Printers' }}
                         </Button>
                     </div>
                     
@@ -539,31 +538,34 @@ const cancelPrintJob = async (job: PrintJob) => {
     }
 };
 
-// Simple printer loading function
-const loadPrinters = async () => {
+// Load printers from JSPrintManager
+const loadPrintersFromJSPM = async () => {
     loadingPrinters.value = true;
+    availablePrinters.value = [];
+    
     try {
-        // Simple hardcoded printer list - just add your printers here
-        const printers = [
-            'ZDesigner ZD220-203dpi ZPL',
-            'ZDesigner ZD420-203dpi ZPL', 
-            'ZDesigner ZD410-203dpi ZPL',
-            'Zebra ZD220-203dpi ZPL',
-            'Zebra ZD420-203dpi ZPL',
-            'Microsoft Print to PDF',
-            'Generic / Text Only'
-        ];
+        console.log('Loading printers from JSPrintManager...');
         
-        availablePrinters.value = printers;
-        console.log('Loaded printers:', printers);
+        // Check if JSPrintManager is available
+        if (!window.JSPM || !window.JSPM.JSPrintManager) {
+            throw new Error('JSPrintManager is not available');
+        }
         
-        // Auto-select first ZDesigner if available
-        const zDesignerPrinter = printers.find(printer => 
-            printer.toLowerCase().includes('zdesigner')
-        );
+        // Get installed printers
+        const printers = await window.JSPM.JSPrintManager.getPrinters();
+        console.log('Found printers:', printers);
         
-        if (zDesignerPrinter && !selectedPrinter.value) {
-            selectedPrinter.value = zDesignerPrinter;
+        if (printers && printers.length > 0) {
+            // Extract printer names
+            const printerNames = printers.map((printer: any) => printer.name || printer.toString());
+            availablePrinters.value = printerNames;
+            
+            // Auto-select first printer if none selected
+            if (!selectedPrinter.value && printerNames.length > 0) {
+                selectedPrinter.value = printerNames[0];
+            }
+        } else {
+            console.warn('No printers found');
         }
         
     } catch (error) {
@@ -578,8 +580,8 @@ onMounted(() => {
     // Initial load
     refreshJobs();
     
-    // Load printers
-    loadPrinters();
+    // Load printers from JSPrintManager
+    loadPrintersFromJSPM();
     
     // Set up periodic refresh every 10 seconds
     setInterval(refreshJobs, 10000);
