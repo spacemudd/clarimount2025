@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\PrintJobCreated;
+// Removed PrintJobCreated event - using database polling instead
 use App\Models\Asset;
 use App\Models\PrintJob;
 use Illuminate\Http\Request;
@@ -73,11 +73,8 @@ class PrintJobController extends Controller
             'print_data' => $printData,
         ]);
 
-        // Load relationships for the event
+        // Load relationships for the response
         $printJob->load(['asset.category', 'company', 'user']);
-
-        // Broadcast the print job creation
-        broadcast(new PrintJobCreated($printJob))->toOthers();
 
         return response()->json([
             'success' => true,
@@ -170,31 +167,44 @@ class PrintJobController extends Controller
     }
 
     /**
-     * Get print job history for a user.
+     * Get print job history for print station.
      */
     public function history(Request $request): JsonResponse
     {
         $user = Auth::user();
         $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
+        $limit = $request->get('limit', 50);
 
-        $printJobs = PrintJob::with(['asset', 'company'])
+        $printJobs = PrintJob::with(['asset', 'company', 'user'])
             ->whereIn('company_id', $ownedCompanyIds)
-            ->where('user_id', $user->id)
-            ->orderBy('created_at', 'desc')
-            ->paginate(20)
-            ->through(function ($job) {
+            ->whereIn('status', ['completed', 'failed', 'cancelled'])
+            ->orderBy('updated_at', 'desc')
+            ->limit($limit)
+            ->get()
+            ->map(function ($job) {
                 return [
                     'id' => $job->id,
                     'job_id' => $job->job_id,
-                    'asset_tag' => $job->asset->asset_tag,
-                    'company_name' => $job->company->name_en,
+                    'asset' => [
+                        'id' => $job->asset->id,
+                        'asset_tag' => $job->asset->asset_tag,
+                        'serial_number' => $job->asset->serial_number,
+                        'model_name' => $job->asset->model_name,
+                    ],
+                    'company' => [
+                        'id' => $job->company->id,
+                        'name' => $job->company->name_en,
+                    ],
+                    'user' => [
+                        'id' => $job->user->id,
+                        'name' => $job->user->name,
+                    ],
                     'status' => $job->status,
-                    'formatted_status' => $job->formatted_status,
-                    'status_color' => $job->status_color,
                     'priority' => $job->priority,
                     'requested_at' => $job->requested_at,
                     'completed_at' => $job->completed_at,
-                    'duration' => $job->duration,
+                    'updated_at' => $job->updated_at,
+                    'created_at' => $job->created_at,
                 ];
             });
 
@@ -249,4 +259,5 @@ class PrintJobController extends Controller
 
         return response()->json($stats);
     }
+
 }
