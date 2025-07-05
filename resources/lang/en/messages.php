@@ -245,6 +245,9 @@ return [
         'status' => 'Status',
         'recent_activity' => 'Recent Activity',
         'no_recent_activity' => 'No recent activity',
+        'refresh_printers' => 'Refresh Printers',
+        'no_printers_found' => 'No printers found. Make sure JSPrintManager is running.',
+        'test_connection' => 'Test Connection',
     ],
     'employees' => [
         'title' => 'Employees',

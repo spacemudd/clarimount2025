@@ -154,34 +154,51 @@
                                 </Button>
                             </div>
                             
-                            <div v-if="!autoPrintEnabled" class="flex items-center space-x-2">
-                                <input 
-                                    type="checkbox" 
-                                    id="useDefaultPrinter" 
-                                    v-model="useDefaultPrinter"
-                                    class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                                />
-                                <Label for="useDefaultPrinter" class="font-medium">
-                                    {{ t('print_station.use_default_printer') }}
-                                </Label>
-                            </div>
-                            
-                            <div v-if="!autoPrintEnabled && !useDefaultPrinter" class="space-y-2">
-                                <Label for="installedPrinterName">{{ t('print_station.select_printer') }}</Label>
-                                <select 
-                                    id="installedPrinterName" 
-                                    v-model="selectedPrinter"
-                                    class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                >
-                                    <option value="">{{ t('print_station.select_printer_option') }}</option>
-                                    <option v-for="printer in availablePrinters" :key="printer" :value="printer">
-                                        {{ printer }}
-                                    </option>
-                                </select>
+                            <div v-if="!autoPrintEnabled" class="space-y-4">
+                                <div class="flex items-center space-x-2">
+                                    <input 
+                                        type="checkbox" 
+                                        id="useDefaultPrinter" 
+                                        v-model="useDefaultPrinter"
+                                        class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                                    />
+                                    <Label for="useDefaultPrinter" class="font-medium">
+                                        {{ t('print_station.use_default_printer') }}
+                                    </Label>
+                                </div>
+                                
+                                <div v-if="!useDefaultPrinter" class="space-y-2">
+                                    <div class="flex items-center justify-between">
+                                        <Label for="installedPrinterName">{{ t('print_station.select_printer') }}</Label>
+                                        <Button size="sm" variant="outline" @click="loadAvailablePrinters">
+                                            <Icon name="RefreshCw" class="h-4 w-4 mr-1" />
+                                            {{ t('print_station.refresh_printers') }}
+                                        </Button>
+                                    </div>
+                                    <select 
+                                        id="installedPrinterName" 
+                                        v-model="selectedPrinter"
+                                        class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    >
+                                        <option value="">{{ t('print_station.select_printer_option') }}</option>
+                                        <option v-for="printer in availablePrinters" :key="printer" :value="printer">
+                                            {{ printer }}
+                                        </option>
+                                    </select>
+                                    <div v-if="availablePrinters.length === 0" class="text-sm text-gray-500">
+                                        {{ t('print_station.no_printers_found') }}
+                                    </div>
+                                </div>
                             </div>
 
-                            <div v-if="printerStatus" class="text-sm text-gray-600 dark:text-gray-400">
-                                {{ t('print_station.status') }}: {{ printerStatus }}
+                            <div v-if="printerStatus" class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">
+                                    {{ t('print_station.status') }}: {{ printerStatus }}
+                                </span>
+                                <Button size="sm" variant="outline" @click="testJSPrintManager">
+                                    <Icon name="Settings" class="h-4 w-4 mr-1" />
+                                    {{ t('print_station.test_connection') }}
+                                </Button>
                             </div>
                         </CardContent>
                     </Card>
@@ -421,7 +438,7 @@ const autoPrintEnabled = ref(false);
 const currentlyPrinting = ref<PrintJob | null>(null);
 
 // Printer settings
-const useDefaultPrinter = ref(true);
+const useDefaultPrinter = ref(false);
 const selectedPrinter = ref('');
 const availablePrinters = ref<string[]>([]);
 const printerStatus = ref('');
@@ -534,6 +551,12 @@ const toggleAutoPrint = async () => {
         // Enable auto-print
         if (!await initializeJSPrintManager()) {
             alert('JSPrintManager is not available. Please install and start JSPrintManager.');
+            return;
+        }
+        
+        // Validate printer selection
+        if (!useDefaultPrinter.value && !selectedPrinter.value) {
+            alert('Please select a printer or enable "Use Default Printer" before enabling auto-print.');
             return;
         }
         
@@ -701,6 +724,65 @@ const loadRequiredScripts = async (): Promise<void> => {
     }
 };
 
+const loadAvailablePrinters = async (): Promise<void> => {
+    try {
+        if (typeof window.JSPrintManager === 'undefined') {
+            printerStatus.value = 'JSPrintManager not loaded';
+            return;
+        }
+
+        if (window.JSPrintManager.websocket_status !== window.WSStatus.Open) {
+            printerStatus.value = 'JSPrintManager not connected';
+            return;
+        }
+
+        printerStatus.value = 'Loading printers...';
+        const printers = await window.JSPrintManager.getPrinters();
+        availablePrinters.value = printers;
+        printerStatus.value = `Found ${printers.length} printer(s)`;
+        
+        console.log('Available printers:', printers);
+    } catch (error) {
+        console.error('Failed to load printers:', error);
+        printerStatus.value = 'Failed to load printers';
+        availablePrinters.value = [];
+    }
+};
+
+const testJSPrintManager = async (): Promise<void> => {
+    try {
+        console.log('Testing JSPrintManager connection...');
+        
+        if (typeof window.JSPrintManager === 'undefined') {
+            alert('JSPrintManager not loaded. Please check if the scripts are loaded correctly.');
+            return;
+        }
+
+        const status = window.JSPrintManager.websocket_status;
+        let statusText = 'Unknown';
+        
+        if (status === window.WSStatus.Open) {
+            statusText = 'Connected';
+        } else if (status === window.WSStatus.Closed) {
+            statusText = 'Disconnected';
+        } else if (status === window.WSStatus.Blocked) {
+            statusText = 'Blocked';
+        }
+
+        console.log('JSPrintManager status:', statusText);
+        
+        if (status === window.WSStatus.Open) {
+            await loadAvailablePrinters();
+            alert(`JSPrintManager is connected! Found ${availablePrinters.value.length} printer(s).`);
+        } else {
+            alert(`JSPrintManager status: ${statusText}. Please make sure JSPrintManager is running.`);
+        }
+    } catch (error) {
+        console.error('JSPrintManager test failed:', error);
+        alert('JSPrintManager test failed. Check the console for details.');
+    }
+};
+
 const initializeJSPrintManager = async (): Promise<boolean> => {
     try {
         if (typeof window.JSPrintManager === 'undefined') {
@@ -716,17 +798,15 @@ const initializeJSPrintManager = async (): Promise<boolean> => {
         
         // Wait for connection
         await new Promise<void>((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error('Connection timeout')), 5000);
+            const timeout = setTimeout(() => reject(new Error('Connection timeout')), 10000);
             
             window.JSPrintManager.WS.onStatusChanged = function () {
                 if (window.JSPrintManager.websocket_status === window.WSStatus.Open) {
                     clearTimeout(timeout);
                     printerStatus.value = 'Connected to JSPrintManager';
                     
-                    // Get available printers
-                    window.JSPrintManager.getPrinters().then((printers: string[]) => {
-                        availablePrinters.value = printers;
-                    });
+                    // Load available printers after connection
+                    loadAvailablePrinters();
                     
                     resolve();
                 } else if (window.JSPrintManager.websocket_status === window.WSStatus.Closed) {
@@ -813,15 +893,22 @@ const printAssetLabel = async (job: PrintJob) => {
     }
 };
 
-onMounted(() => {
+onMounted(async () => {
     // Initial load
     refreshJobs();
     
     // Start polling automatically
     startPolling();
     
-    // Initialize JSPrintManager
-    initializeJSPrintManager();
+    // Initialize JSPrintManager and load printers
+    try {
+        await initializeJSPrintManager();
+        // Printers will be loaded automatically after JSPrintManager connects
+    } catch (error) {
+        console.error('Failed to initialize JSPrintManager on mount:', error);
+        // Try to load printers anyway in case JSPrintManager is already running
+        setTimeout(loadAvailablePrinters, 2000);
+    }
 });
 
 onUnmounted(() => {

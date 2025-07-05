@@ -245,6 +245,9 @@ return [
         'status' => 'الحالة',
         'recent_activity' => 'النشاط الأخير',
         'no_recent_activity' => 'لا يوجد نشاط حديث',
+        'refresh_printers' => 'تحديث الطابعات',
+        'no_printers_found' => 'لم يتم العثور على طابعات. تأكد من تشغيل JSPrintManager.',
+        'test_connection' => 'اختبار الاتصال',
     ],
     'employees' => [
         'title' => 'الموظفين',
