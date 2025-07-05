@@ -1,7 +1,8 @@
 <template>
     <AppLayout>
-        <template #header>
-            <div class="flex items-center justify-between">
+        <div class="space-y-6">
+            <!-- Header Section -->
+            <div class="flex items-center justify-between my-2">
                 <div>
                     <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
                         {{ t('print_station.title') }}
@@ -46,9 +47,7 @@
                     </Button>
                 </div>
             </div>
-        </template>
-
-        <div class="py-6">
+            <!-- Content Section -->
             <div class="mx-auto max-w-7xl px-6 lg:px-8">
                 <!-- Statistics -->
                 <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
