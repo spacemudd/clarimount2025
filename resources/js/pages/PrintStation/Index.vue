@@ -614,13 +614,20 @@ const loadPrintersFromJSPM = async (maxRetries: number = 3, delay: number = 1500
                     if (zDesignerPrinter) {
                         selectedPrinter.value = zDesignerPrinter;
                         console.log('PrintStation: Auto-selected ZDesigner printer:', zDesignerPrinter);
+                        printerStatus.value = `Auto-selected: ${zDesignerPrinter}`;
                     } else if (printers.length > 0) {
                         selectedPrinter.value = printers[0];
                         console.log('PrintStation: Auto-selected first available printer:', printers[0]);
+                        printerStatus.value = `Auto-selected: ${printers[0]}`;
                     }
                 }
                 
                 console.log('PrintStation: Printer loading successful!');
+                console.log('PrintStation: Final state - availablePrinters:', availablePrinters.value);
+                console.log('PrintStation: Final state - selectedPrinter:', selectedPrinter.value);
+                console.log('PrintStation: Final state - loadingPrinters:', loadingPrinters.value);
+                
+                // Ensure loading state is properly reset
                 loadingPrinters.value = false;
                 return; // Success, exit the retry loop
             } else if (attempt < maxRetries) {
@@ -652,7 +659,7 @@ const loadPrintersFromJSPM = async (maxRetries: number = 3, delay: number = 1500
 };
 
 // Debug JSPrintManager connection
-const debugJSPrintManager = () => {
+const debugJSPrintManager = async () => {
     console.log('=== PrintStation JSPrintManager Debug ===');
     console.log('Window object:', typeof window);
     console.log('window.JSPM:', window.JSPM);
@@ -660,6 +667,7 @@ const debugJSPrintManager = () => {
     console.log('Available printers:', availablePrinters.value);
     console.log('Selected printer:', selectedPrinter.value);
     console.log('Loading printers:', loadingPrinters.value);
+    console.log('Printer status:', printerStatus.value);
     
     if (typeof window !== 'undefined' && window.JSPM && window.JSPM.JSPrintManager) {
         console.log('JSPrintManager websocket status:', window.JSPM.JSPrintManager.websocket_status);
@@ -667,7 +675,44 @@ const debugJSPrintManager = () => {
         console.log('WSStatus.Closed:', window.JSPM.WSStatus?.Closed);
         console.log('WSStatus.Blocked:', window.JSPM.WSStatus?.Blocked);
         
-        alert('JSPrintManager is available! Check console for details.');
+        // If JSPrintManager is connected (status 0), try to get printers directly
+        if (window.JSPM.JSPrintManager.websocket_status === 0) {
+            console.log('JSPrintManager is connected! Trying to get printers directly...');
+            try {
+                const directPrinters = await window.JSPM.JSPrintManager.getPrinters();
+                console.log('Direct printer query result:', directPrinters);
+                
+                if (directPrinters && directPrinters.length > 0) {
+                    availablePrinters.value = directPrinters;
+                    loadingPrinters.value = false;
+                    printerStatus.value = `Direct query: Found ${directPrinters.length} printer(s)`;
+                    
+                    // Auto-select if none selected
+                    if (!selectedPrinter.value) {
+                        const zDesignerPrinter = directPrinters.find((printer: string) => 
+                            printer.toLowerCase().includes('zdesigner')
+                        );
+                        
+                        if (zDesignerPrinter) {
+                            selectedPrinter.value = zDesignerPrinter;
+                            console.log('Debug: Auto-selected ZDesigner printer:', zDesignerPrinter);
+                        } else if (directPrinters.length > 0) {
+                            selectedPrinter.value = directPrinters[0];
+                            console.log('Debug: Auto-selected first available printer:', directPrinters[0]);
+                        }
+                    }
+                    
+                    alert(`JSPrintManager is connected and working!\nFound ${directPrinters.length} printers.\nCheck console for details.`);
+                } else {
+                    alert('JSPrintManager is connected but no printers found.\nCheck console for details.');
+                }
+            } catch (error) {
+                console.error('Direct printer query failed:', error);
+                alert('JSPrintManager is connected but failed to get printers.\nError: ' + error);
+            }
+        } else {
+            alert('JSPrintManager is available but not connected!\nWebSocket status: ' + window.JSPM.JSPrintManager.websocket_status);
+        }
     } else {
         alert('JSPrintManager is NOT available!\n\nPlease check:\n1. JSPrintManager is installed\n2. JSPrintManager service is running\n3. Scripts are loaded properly');
     }
