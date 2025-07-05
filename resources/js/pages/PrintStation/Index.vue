@@ -577,35 +577,37 @@ const cancelPrintJob = async (job: PrintJob) => {
     }
 };
 
-// Load printers from JSPrintManager with retry logic
-const loadPrintersFromJSPM = async (maxRetries: number = 3, delay: number = 1500) => {
+// Simplified printer loading - direct JSPrintManager access
+const loadPrintersFromJSPM = async () => {
     loadingPrinters.value = true;
     availablePrinters.value = [];
     printerStatus.value = 'Connecting to JSPrintManager...';
     
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-            console.log(`PrintStation: Loading printers attempt ${attempt}/${maxRetries}...`);
-            printerStatus.value = `Connecting... (attempt ${attempt}/${maxRetries})`;
-            
-            // Add delay before each attempt (except the first one)
-            if (attempt > 1) {
-                await new Promise(resolve => setTimeout(resolve, delay));
-            }
-            
-            // Initialize JSPrintManager first
-            await printService.initializeJSPrintManager();
-            printerStatus.value = 'Getting available printers...';
-            
-            // Get available printers
-            const printers = await printService.getAvailablePrinters();
-            console.log(`PrintStation: Attempt ${attempt}: Found ${printers.length} printers:`, printers);
+    try {
+        console.log('PrintStation: Starting simple printer loading...');
+        
+        // Check if JSPrintManager is available in window
+        if (!window.JSPM || !window.JSPM.JSPrintManager) {
+            throw new Error('JSPrintManager not available in window object');
+        }
+        
+        printerStatus.value = 'JSPrintManager found, checking connection...';
+        
+        // Check connection status
+        const wsStatus = window.JSPM.JSPrintManager.websocket_status;
+        console.log('PrintStation: WebSocket status:', wsStatus);
+        
+        if (wsStatus === 0) {
+            // Already connected, get printers directly
+            printerStatus.value = 'Connected! Getting printers...';
+            const printers = await window.JSPM.JSPrintManager.getPrinters();
+            console.log('PrintStation: Direct query found printers:', printers);
             
             if (printers && printers.length > 0) {
                 availablePrinters.value = printers;
                 printerStatus.value = `Found ${printers.length} printer(s)`;
                 
-                // Auto-select first ZDesigner printer or first available printer (same logic as Assets/Index.vue)
+                // Auto-select ZDesigner printer
                 if (!selectedPrinter.value) {
                     const zDesignerPrinter = printers.find((printer: string) => 
                         printer.toLowerCase().includes('zdesigner')
@@ -614,48 +616,70 @@ const loadPrintersFromJSPM = async (maxRetries: number = 3, delay: number = 1500
                     if (zDesignerPrinter) {
                         selectedPrinter.value = zDesignerPrinter;
                         console.log('PrintStation: Auto-selected ZDesigner printer:', zDesignerPrinter);
-                        printerStatus.value = `Auto-selected: ${zDesignerPrinter}`;
                     } else if (printers.length > 0) {
                         selectedPrinter.value = printers[0];
-                        console.log('PrintStation: Auto-selected first available printer:', printers[0]);
-                        printerStatus.value = `Auto-selected: ${printers[0]}`;
+                        console.log('PrintStation: Auto-selected first printer:', printers[0]);
                     }
                 }
-                
-                console.log('PrintStation: Printer loading successful!');
-                console.log('PrintStation: Final state - availablePrinters:', availablePrinters.value);
-                console.log('PrintStation: Final state - selectedPrinter:', selectedPrinter.value);
-                console.log('PrintStation: Final state - loadingPrinters:', loadingPrinters.value);
-                
-                // Ensure loading state is properly reset
-                loadingPrinters.value = false;
-                return; // Success, exit the retry loop
-            } else if (attempt < maxRetries) {
-                console.log(`PrintStation: Attempt ${attempt}: No printers found, retrying...`);
-                printerStatus.value = `No printers found, retrying in ${delay/1000}s...`;
             } else {
-                console.log('PrintStation: No printers found after all attempts');
-                printerStatus.value = 'No printers found';
+                printerStatus.value = 'Connected but no printers found';
             }
+        } else {
+            // Need to connect first
+            printerStatus.value = 'Connecting...';
+            console.log('PrintStation: Need to connect, status:', wsStatus);
             
-        } catch (error) {
-            console.error(`PrintStation: Printer loading attempt ${attempt} failed:`, error);
+            // Try to start connection
+            window.JSPM.JSPrintManager.auto_reconnect = true;
+            window.JSPM.JSPrintManager.start();
             
-            if (attempt < maxRetries) {
-                console.log(`PrintStation: Retrying in ${delay/1000} seconds... (${attempt}/${maxRetries})`);
-                printerStatus.value = `Connection failed, retrying in ${delay/1000}s... (${attempt}/${maxRetries})`;
-            } else {
-                console.error('PrintStation: Failed to load printers after all attempts:', error);
-                printerStatus.value = 'JSPrintManager connection failed';
-                // Don't show alert on page load failure, just log it
-                if (attempt === maxRetries) {
-                    console.error('PrintStation: JSPrintManager connection failed. Please ensure JSPrintManager is installed and running.');
+            // Wait a bit and try again
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            const newStatus = window.JSPM.JSPrintManager.websocket_status;
+            console.log('PrintStation: After start(), new status:', newStatus);
+            
+            if (newStatus === 0) {
+                printerStatus.value = 'Connected! Getting printers...';
+                const printers = await window.JSPM.JSPrintManager.getPrinters();
+                console.log('PrintStation: After connection, found printers:', printers);
+                
+                if (printers && printers.length > 0) {
+                    availablePrinters.value = printers;
+                    printerStatus.value = `Found ${printers.length} printer(s)`;
+                    
+                    // Auto-select ZDesigner printer
+                    if (!selectedPrinter.value) {
+                        const zDesignerPrinter = printers.find((printer: string) => 
+                            printer.toLowerCase().includes('zdesigner')
+                        );
+                        
+                        if (zDesignerPrinter) {
+                            selectedPrinter.value = zDesignerPrinter;
+                            console.log('PrintStation: Auto-selected ZDesigner printer:', zDesignerPrinter);
+                        } else if (printers.length > 0) {
+                            selectedPrinter.value = printers[0];
+                            console.log('PrintStation: Auto-selected first printer:', printers[0]);
+                        }
+                    }
+                } else {
+                    printerStatus.value = 'Connected but no printers found';
                 }
+            } else {
+                throw new Error(`Failed to connect to JSPrintManager. Status: ${newStatus}`);
             }
         }
+        
+    } catch (error) {
+        console.error('PrintStation: Simple printer loading failed:', error);
+        printerStatus.value = 'Failed to load printers';
+    } finally {
+        loadingPrinters.value = false;
+        console.log('PrintStation: Loading complete. Final state:');
+        console.log('- availablePrinters:', availablePrinters.value);
+        console.log('- selectedPrinter:', selectedPrinter.value);
+        console.log('- loadingPrinters:', loadingPrinters.value);
     }
-    
-    loadingPrinters.value = false;
 };
 
 // Debug JSPrintManager connection
@@ -722,10 +746,10 @@ onMounted(() => {
     // Initial load
     refreshJobs();
     
-    // Load printers from JSPrintManager with delay to ensure page is fully loaded
+    // Load printers from JSPrintManager with delay to ensure scripts are loaded
     setTimeout(() => {
         loadPrintersFromJSPM();
-    }, 1000);
+    }, 3000);
     
     // Set up periodic refresh every 10 seconds
     setInterval(refreshJobs, 10000);
