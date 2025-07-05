@@ -286,7 +286,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/Icon.vue';
-// import { PrintService } from '@/services/PrintService'; // Not needed for simple dropdown
+import { PrintService } from '@/services/PrintService';
 
 const { t } = useI18n();
 
@@ -347,6 +347,7 @@ const loading = ref(false);
 const loadingPrinters = ref(false);
 const selectedPrinter = ref('');
 const availablePrinters = ref<string[]>([]);
+const printService = PrintService.getInstance();
 
 const pendingJobs = computed(() => 
     allJobs.value.filter(job => job.status === 'pending').sort((a, b) => {
@@ -453,16 +454,18 @@ const processPrintJob = async (job: PrintJob) => {
 
 const printAssetLabel = async (job: PrintJob) => {
     try {
-        // Simple print simulation - just log for now
-        console.log(`Printing label for asset ${job.asset.asset_tag} on printer ${selectedPrinter.value}`);
+        console.log(`PrintStation: Printing label for asset ${job.asset.asset_tag} on printer ${selectedPrinter.value}`);
         
-        // You can add actual printing logic here later
-        // For now, just simulate successful printing
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Use the exact same printing logic as Assets/Index.vue
+        await printService.printAssetLabel(
+            job.asset as any, 
+            false, // Don't use default printer
+            selectedPrinter.value
+        );
         
-        console.log(`Successfully printed label for asset ${job.asset.asset_tag}`);
+        console.log(`PrintStation: Successfully printed label for asset ${job.asset.asset_tag}`);
     } catch (error) {
-        console.error('Failed to print label:', error);
+        console.error('PrintStation: Failed to print label:', error);
         throw error;
     }
 };
@@ -538,38 +541,44 @@ const cancelPrintJob = async (job: PrintJob) => {
     }
 };
 
-// Load printers from JSPrintManager
+// Load printers from JSPrintManager using the same method as Assets/Index.vue
 const loadPrintersFromJSPM = async () => {
     loadingPrinters.value = true;
     availablePrinters.value = [];
     
     try {
-        console.log('Loading printers from JSPrintManager...');
+        console.log('PrintStation: Loading printers from JSPrintManager...');
         
-        // Check if JSPrintManager is available
-        if (!window.JSPM || !window.JSPM.JSPrintManager) {
-            throw new Error('JSPrintManager is not available');
-        }
+        // Initialize JSPrintManager first
+        await printService.initializeJSPrintManager();
         
-        // Get installed printers
-        const printers = await window.JSPM.JSPrintManager.getPrinters();
-        console.log('Found printers:', printers);
+        // Get available printers
+        const printers = await printService.getAvailablePrinters();
+        console.log('PrintStation: Found printers:', printers);
         
         if (printers && printers.length > 0) {
-            // Extract printer names
-            const printerNames = printers.map((printer: any) => printer.name || printer.toString());
-            availablePrinters.value = printerNames;
+            availablePrinters.value = printers;
             
-            // Auto-select first printer if none selected
-            if (!selectedPrinter.value && printerNames.length > 0) {
-                selectedPrinter.value = printerNames[0];
+            // Auto-select first ZDesigner printer or first available printer (same logic as Assets/Index.vue)
+            if (!selectedPrinter.value) {
+                const zDesignerPrinter = printers.find((printer: string) => 
+                    printer.toLowerCase().includes('zdesigner')
+                );
+                
+                if (zDesignerPrinter) {
+                    selectedPrinter.value = zDesignerPrinter;
+                    console.log('PrintStation: Auto-selected ZDesigner printer:', zDesignerPrinter);
+                } else if (printers.length > 0) {
+                    selectedPrinter.value = printers[0];
+                    console.log('PrintStation: Auto-selected first available printer:', printers[0]);
+                }
             }
         } else {
-            console.warn('No printers found');
+            console.warn('PrintStation: No printers found');
         }
         
     } catch (error) {
-        console.error('Failed to load printers:', error);
+        console.error('PrintStation: Failed to load printers:', error);
         alert('Failed to load printers: ' + error);
     } finally {
         loadingPrinters.value = false;
