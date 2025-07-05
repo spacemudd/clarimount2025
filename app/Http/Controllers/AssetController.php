@@ -208,7 +208,7 @@ class AssetController extends Controller
         ];
 
         // Generate asset tag based on template's company
-        $assetData['asset_tag'] = Asset::generateUniqueAssetTag($template->company_id);
+        $assetData['asset_tag'] = Asset::generateUniqueAssetTag($location->company_id);
 
         $asset = Asset::create($assetData);
 
