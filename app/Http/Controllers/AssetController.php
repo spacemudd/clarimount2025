@@ -142,6 +142,11 @@ class AssetController extends Controller
             'workstation_start' => 'nullable|integer|min:1|max:999',
             'workstation_end' => 'nullable|integer|min:1|max:999',
             'workstation_company_id' => 'nullable|exists:companies,id',
+            
+            // Print station fields
+            'send_to_print_station' => 'nullable|boolean',
+            'print_priority' => 'nullable|in:low,normal,high,urgent',
+            'print_comment' => 'nullable|string|max:500',
         ]);
 
         // Get the asset template and validate access
@@ -320,6 +325,11 @@ class AssetController extends Controller
 
         // Increment template usage count by number of assets created
         $template->increment('usage_count', count($createdAssets));
+
+        // Create print jobs if requested
+        if ($validated['send_to_print_station'] ?? false) {
+            $this->createPrintJobs($createdAssets, $validated, $user);
+        }
 
         // Store created asset IDs in session for bulk printing
         session(['bulk_created_assets' => collect($createdAssets)->pluck('id')->toArray()]);
@@ -548,6 +558,42 @@ class AssetController extends Controller
     {
         session()->forget('bulk_created_assets');
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Create print jobs for the created assets.
+     */
+    private function createPrintJobs(array $createdAssets, array $validated, $user)
+    {
+        foreach ($createdAssets as $asset) {
+            // Load relationships needed for print data
+            $asset->load(['company', 'category', 'location']);
+            
+            // Prepare print data
+            $printData = [
+                'asset_tag' => $asset->asset_tag,
+                'serial_number' => $asset->serial_number,
+                'model_name' => $asset->model_name,
+                'model_number' => $asset->model_number,
+                'category_name' => $asset->category->name ?? null,
+                'location_name' => $asset->location->name ?? null,
+                'company_name' => $asset->company->name_en,
+                'manufacturer' => $asset->manufacturer,
+                'condition' => $asset->condition,
+                'status' => $asset->status,
+            ];
+
+            // Create the print job
+            \App\Models\PrintJob::create([
+                'asset_id' => $asset->id,
+                'user_id' => $user->id,
+                'company_id' => $asset->company_id,
+                'priority' => $validated['print_priority'] ?? 'normal',
+                'printer_name' => null, // Will be set by print station
+                'comment' => $validated['print_comment'] ?? null,
+                'print_data' => $printData,
+            ]);
+        }
     }
 
     /**

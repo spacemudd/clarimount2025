@@ -157,6 +157,11 @@ const form = useForm({
     workstation_start: 1,
     workstation_end: 1,
     workstation_company_id: props.currentCompany?.id || '',
+    
+    // Print station fields
+    send_to_print_station: false,
+    print_priority: 'normal' as 'low' | 'normal' | 'high' | 'urgent',
+    print_comment: '',
 });
 
 const locationForm = useForm({
@@ -2008,6 +2013,21 @@ onMounted(async () => {
                                 </div>
                             </div>
                             
+                            <!-- Print Station Summary -->
+                            <div v-if="form.send_to_print_station" class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                <h5 class="font-medium text-blue-900 dark:text-blue-100 mb-2">🖨️ Print Station</h5>
+                                <div class="space-y-1 text-sm text-blue-700 dark:text-blue-300">
+                                    <div><strong>Status:</strong> Will be sent to print station</div>
+                                    <div><strong>Priority:</strong> 
+                                        <span v-if="form.print_priority === 'low'">🔵 Low Priority</span>
+                                        <span v-else-if="form.print_priority === 'normal'">⚪ Normal Priority</span>
+                                        <span v-else-if="form.print_priority === 'high'">🟡 High Priority</span>
+                                        <span v-else-if="form.print_priority === 'urgent'">🔴 Urgent</span>
+                                    </div>
+                                    <div v-if="form.print_comment"><strong>Comment:</strong> {{ form.print_comment }}</div>
+                                </div>
+                            </div>
+                            
                             <!-- Bulk creation notice -->
                             <div v-if="form.creation_mode === 'bulk' && form.quantity > 1" class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                                 <div class="flex items-start">
@@ -2031,6 +2051,62 @@ onMounted(async () => {
                                             start: form.workstation_start,
                                             end: form.workstation_end
                                         }) }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Print Station Options -->
+                        <div class="mt-8 p-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                            <div class="flex items-center space-x-3 mb-4">
+                                <input
+                                    id="send_to_print_station"
+                                    type="checkbox"
+                                    v-model="form.send_to_print_station"
+                                    class="h-4 w-4 rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                                />
+                                <Label for="send_to_print_station" class="font-medium text-blue-900 dark:text-blue-100">
+                                    🖨️ Send to Print Station
+                                </Label>
+                            </div>
+                            <p class="text-sm text-blue-700 dark:text-blue-300 mb-4">
+                                Automatically send this asset to the print station for label printing after creation.
+                            </p>
+
+                            <!-- Print Options (shown when checkbox is checked) -->
+                            <div v-if="form.send_to_print_station" class="space-y-4 ml-7">
+                                <!-- Priority Selection -->
+                                <div class="space-y-2">
+                                    <Label for="print_priority" class="text-sm font-medium text-blue-900 dark:text-blue-100">
+                                        Priority
+                                    </Label>
+                                    <select
+                                        id="print_priority"
+                                        v-model="form.print_priority"
+                                        class="flex h-9 w-full max-w-xs rounded-md border border-blue-300 bg-white dark:bg-blue-900/50 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                                    >
+                                        <option value="low">🔵 Low Priority</option>
+                                        <option value="normal">⚪ Normal Priority</option>
+                                        <option value="high">🟡 High Priority</option>
+                                        <option value="urgent">🔴 Urgent</option>
+                                    </select>
+                                </div>
+
+                                <!-- Comment -->
+                                <div class="space-y-2">
+                                    <Label for="print_comment" class="text-sm font-medium text-blue-900 dark:text-blue-100">
+                                        Comment (Optional)
+                                    </Label>
+                                    <textarea
+                                        id="print_comment"
+                                        v-model="form.print_comment"
+                                        rows="2"
+                                        maxlength="500"
+                                        placeholder="Add a note for the print station operator..."
+                                        class="flex w-full rounded-md border border-blue-300 bg-white dark:bg-blue-900/50 px-3 py-2 text-sm ring-offset-background placeholder:text-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 resize-none"
+                                    ></textarea>
+                                    <div class="text-xs text-blue-600 dark:text-blue-400">
+                                        {{ form.print_comment.length }}/500 characters
                                     </div>
                                 </div>
                             </div>
