@@ -139,6 +139,13 @@ const form = useForm({
     condition: 'good',
     image: null as File | null,
     quantity: 1,
+    
+    // Creation mode fields
+    creation_mode: 'single' as 'single' | 'bulk' | 'workstation_range',
+    workstation_prefix: '',
+    workstation_start: 1,
+    workstation_end: 1,
+    workstation_company_id: props.currentCompany?.id || '',
 });
 
 const locationForm = useForm({
@@ -171,7 +178,14 @@ const breadcrumbs = computed((): BreadcrumbItem[] => [
 const canGoNext = computed(() => {
     switch (currentStep.value) {
         case 1:
-            return selectedLocation.value !== null;
+            if (form.creation_mode === 'workstation_range') {
+                return form.workstation_prefix.length > 0 && 
+                       form.workstation_start > 0 && 
+                       form.workstation_end > 0 && 
+                       form.workstation_start <= form.workstation_end;
+            } else {
+                return selectedLocation.value !== null;
+            }
         case 2:
             return selectedTemplate.value !== null;
         case 3:
@@ -669,8 +683,67 @@ const handleBarcodeScanned = (scannedValue: string) => {
                 </CardHeader>
                 <CardContent class="space-y-6">
                     <!-- Step 1: Location Selection -->
-                    <div v-if="currentStep === 1" class="space-y-4">
-                        <div class="space-y-2">
+                    <div v-if="currentStep === 1" class="space-y-6">
+                        <!-- Creation Mode Selection -->
+                        <div class="space-y-3">
+                            <Label>{{ t('assets.creation_mode') }} *</Label>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div class="relative">
+                                    <input
+                                        type="radio"
+                                        id="creation_mode_single"
+                                        v-model="form.creation_mode"
+                                        value="single"
+                                        class="peer sr-only"
+                                    />
+                                    <label
+                                        for="creation_mode_single"
+                                        class="flex flex-col items-center justify-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 peer-checked:border-primary peer-checked:bg-primary/5 dark:border-gray-700 dark:hover:bg-gray-800 dark:peer-checked:bg-primary/10"
+                                    >
+                                        <Icon name="MapPin" class="h-6 w-6 mb-2 text-gray-600 dark:text-gray-400" />
+                                        <span class="font-medium text-sm">{{ t('assets.single_location') }}</span>
+                                        <span class="text-xs text-gray-500 dark:text-gray-400 text-center mt-1">{{ t('assets.single_location_desc') }}</span>
+                                    </label>
+                                </div>
+                                <div class="relative">
+                                    <input
+                                        type="radio"
+                                        id="creation_mode_bulk"
+                                        v-model="form.creation_mode"
+                                        value="bulk"
+                                        class="peer sr-only"
+                                    />
+                                    <label
+                                        for="creation_mode_bulk"
+                                        class="flex flex-col items-center justify-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 peer-checked:border-primary peer-checked:bg-primary/5 dark:border-gray-700 dark:hover:bg-gray-800 dark:peer-checked:bg-primary/10"
+                                    >
+                                        <Icon name="Package" class="h-6 w-6 mb-2 text-gray-600 dark:text-gray-400" />
+                                        <span class="font-medium text-sm">{{ t('assets.bulk_creation') }}</span>
+                                        <span class="text-xs text-gray-500 dark:text-gray-400 text-center mt-1">{{ t('assets.bulk_creation_desc') }}</span>
+                                    </label>
+                                </div>
+                                <div class="relative">
+                                    <input
+                                        type="radio"
+                                        id="creation_mode_workstation"
+                                        v-model="form.creation_mode"
+                                        value="workstation_range"
+                                        class="peer sr-only"
+                                    />
+                                    <label
+                                        for="creation_mode_workstation"
+                                        class="flex flex-col items-center justify-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 peer-checked:border-primary peer-checked:bg-primary/5 dark:border-gray-700 dark:hover:bg-gray-800 dark:peer-checked:bg-primary/10"
+                                    >
+                                        <Icon name="Monitor" class="h-6 w-6 mb-2 text-gray-600 dark:text-gray-400" />
+                                        <span class="font-medium text-sm">{{ t('assets.workstation_range') }}</span>
+                                        <span class="text-xs text-gray-500 dark:text-gray-400 text-center mt-1">{{ t('assets.workstation_range_desc') }}</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Location Selection (Single/Bulk Mode) -->
+                        <div v-if="form.creation_mode !== 'workstation_range'" class="space-y-2">
                             <Label for="location_search">{{ t('assets.location') }} *</Label>
                             <div class="flex gap-2">
                                 <div class="flex-1 relative">
@@ -872,6 +945,108 @@ const handleBarcodeScanned = (scannedValue: string) => {
                                 {{ form.errors.location_id }}
                             </div>
                         </div>
+
+                        <!-- Workstation Range Configuration -->
+                        <div v-if="form.creation_mode === 'workstation_range'" class="space-y-4">
+                            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                                <div class="flex items-start">
+                                    <Icon name="Info" class="h-5 w-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
+                                    <div>
+                                        <h4 class="font-medium text-blue-900 dark:text-blue-100">{{ t('assets.workstation_range_info') }}</h4>
+                                        <p class="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                                            {{ t('assets.workstation_range_info_desc') }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Company Selection for Workstations -->
+                            <div class="space-y-2">
+                                <Label for="workstation_company_search">{{ t('assets.workstation_company') }} *</Label>
+                                <div class="relative">
+                                    <select
+                                        id="workstation_company_search"
+                                        v-model="form.workstation_company_id"
+                                        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                        :class="{ 'border-red-500': form.errors.workstation_company_id }"
+                                        required
+                                    >
+                                        <option value="">{{ t('assets.select_company') }}</option>
+                                        <option v-for="company in companies" :key="company.id" :value="company.id">
+                                            {{ company.name_en }} {{ company.name_ar ? `(${company.name_ar})` : '' }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <p class="text-sm text-muted-foreground">{{ t('assets.workstation_company_desc') }}</p>
+                                <div v-if="form.errors.workstation_company_id" class="text-sm text-red-600 dark:text-red-400">
+                                    {{ form.errors.workstation_company_id }}
+                                </div>
+                            </div>
+
+                            <!-- Workstation Prefix -->
+                            <div class="space-y-2">
+                                <Label for="workstation_prefix">{{ t('assets.workstation_prefix') }} *</Label>
+                                <Input
+                                    id="workstation_prefix"
+                                    v-model="form.workstation_prefix"
+                                    type="text"
+                                    :placeholder="t('assets.workstation_prefix_placeholder')"
+                                    :class="{ 'border-red-500': form.errors.workstation_prefix }"
+                                    required
+                                />
+                                <p class="text-sm text-muted-foreground">{{ t('assets.workstation_prefix_desc') }}</p>
+                                <div v-if="form.errors.workstation_prefix" class="text-sm text-red-600 dark:text-red-400">
+                                    {{ form.errors.workstation_prefix }}
+                                </div>
+                            </div>
+
+                            <!-- Workstation Range -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="space-y-2">
+                                    <Label for="workstation_start">{{ t('assets.workstation_start') }} *</Label>
+                                    <Input
+                                        id="workstation_start"
+                                        v-model.number="form.workstation_start"
+                                        type="number"
+                                        min="1"
+                                        max="999"
+                                        :placeholder="t('assets.workstation_start_placeholder')"
+                                        :class="{ 'border-red-500': form.errors.workstation_start }"
+                                        required
+                                    />
+                                    <div v-if="form.errors.workstation_start" class="text-sm text-red-600 dark:text-red-400">
+                                        {{ form.errors.workstation_start }}
+                                    </div>
+                                </div>
+                                <div class="space-y-2">
+                                    <Label for="workstation_end">{{ t('assets.workstation_end') }} *</Label>
+                                    <Input
+                                        id="workstation_end"
+                                        v-model.number="form.workstation_end"
+                                        type="number"
+                                        min="1"
+                                        max="999"
+                                        :placeholder="t('assets.workstation_end_placeholder')"
+                                        :class="{ 'border-red-500': form.errors.workstation_end }"
+                                        required
+                                    />
+                                    <div v-if="form.errors.workstation_end" class="text-sm text-red-600 dark:text-red-400">
+                                        {{ form.errors.workstation_end }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Workstation Preview -->
+                            <div v-if="form.workstation_prefix && form.workstation_start && form.workstation_end && form.workstation_start <= form.workstation_end" class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                <h4 class="font-medium text-sm mb-2">{{ t('assets.workstation_preview') }}</h4>
+                                <div class="text-sm text-gray-600 dark:text-gray-400">
+                                    <strong>{{ t('assets.locations_to_create') }}:</strong> 
+                                    {{ form.workstation_prefix }}{{ form.workstation_start }} 
+                                    {{ form.workstation_end > form.workstation_start ? `to ${form.workstation_prefix}${form.workstation_end}` : '' }}
+                                    ({{ form.workstation_end - form.workstation_start + 1 }} {{ t('assets.workstations') }})
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Step 2: Template Selection and Serial Number -->
@@ -994,8 +1169,8 @@ const handleBarcodeScanned = (scannedValue: string) => {
                             </div>
                         </div>
 
-                        <!-- Quantity -->
-                        <div class="space-y-2">
+                        <!-- Quantity (Bulk Mode Only) -->
+                        <div v-if="form.creation_mode === 'bulk'" class="space-y-2">
                             <Label for="quantity">{{ t('assets.quantity') }} *</Label>
                             <Input
                                 id="quantity"
@@ -1282,8 +1457,18 @@ const handleBarcodeScanned = (scannedValue: string) => {
                             </h4>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                                 <div>
+                                    <strong>{{ t('assets.creation_mode') }}:</strong>
+                                    <span v-if="form.creation_mode === 'single'">{{ t('assets.single_location') }}</span>
+                                    <span v-else-if="form.creation_mode === 'bulk'">{{ t('assets.bulk_creation') }}</span>
+                                    <span v-else>{{ t('assets.workstation_range') }}</span>
+                                </div>
+                                <div v-if="form.creation_mode !== 'workstation_range'">
                                     <strong>{{ t('assets.location') }}:</strong>
                                     {{ selectedLocation?.display_name || '—' }}
+                                </div>
+                                <div v-if="form.creation_mode === 'workstation_range'">
+                                    <strong>{{ t('assets.workstation_range') }}:</strong>
+                                    {{ form.workstation_prefix }}{{ form.workstation_start }} to {{ form.workstation_prefix }}{{ form.workstation_end }}
                                 </div>
                                 <div>
                                     <strong>{{ t('assets.template') }}:</strong>
@@ -1297,9 +1482,13 @@ const handleBarcodeScanned = (scannedValue: string) => {
                                     <strong>{{ t('assets.condition') }}:</strong>
                                     {{ form.condition === 'good' ? t('assets.condition_good') : t('assets.condition_damaged') }}
                                 </div>
-                                <div>
+                                <div v-if="form.creation_mode === 'bulk'">
                                     <strong>{{ t('assets.quantity') }}:</strong>
                                     {{ form.quantity }} {{ form.quantity === 1 ? t('assets.asset') : t('assets.assets') }}
+                                </div>
+                                <div v-if="form.creation_mode === 'workstation_range'">
+                                    <strong>{{ t('assets.workstations') }}:</strong>
+                                    {{ form.workstation_end - form.workstation_start + 1 }} {{ t('assets.workstations') }}
                                 </div>
                                 <div>
                                     <strong>{{ t('assets.image') }}:</strong>
@@ -1308,12 +1497,28 @@ const handleBarcodeScanned = (scannedValue: string) => {
                             </div>
                             
                             <!-- Bulk creation notice -->
-                            <div v-if="form.quantity > 1" class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                            <div v-if="form.creation_mode === 'bulk' && form.quantity > 1" class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                                 <div class="flex items-start">
                                     <Icon name="Info" class="h-4 w-4 text-blue-500 mt-0.5 mr-2 flex-shrink-0" />
                                     <div class="text-sm text-blue-700 dark:text-blue-300">
                                         <p class="font-medium">{{ t('assets.bulk_creation_notice') }}</p>
                                         <p class="mt-1">{{ t('assets.bulk_creation_description', { quantity: form.quantity }) }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Workstation range notice -->
+                            <div v-if="form.creation_mode === 'workstation_range'" class="mt-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                                <div class="flex items-start">
+                                    <Icon name="Monitor" class="h-4 w-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                                    <div class="text-sm text-green-700 dark:text-green-300">
+                                        <p class="font-medium">{{ t('assets.workstation_creation_notice') }}</p>
+                                        <p class="mt-1">{{ t('assets.workstation_creation_description', { 
+                                            count: form.workstation_end - form.workstation_start + 1,
+                                            prefix: form.workstation_prefix,
+                                            start: form.workstation_start,
+                                            end: form.workstation_end
+                                        }) }}</p>
                                     </div>
                                 </div>
                             </div>

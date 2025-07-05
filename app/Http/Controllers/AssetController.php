@@ -127,7 +127,7 @@ class AssetController extends Controller
 
         $validated = $request->validate([
             'asset_template_id' => 'required|exists:asset_templates,id',
-            'location_id' => 'required|exists:locations,id',
+            'location_id' => 'nullable|exists:locations,id',
             'company_id' => 'nullable|exists:companies,id',
             'department_id' => 'nullable|exists:departments,id',
             'assigned_to' => 'nullable|exists:employees,id',
@@ -135,6 +135,13 @@ class AssetController extends Controller
             'condition' => 'required|in:good,damaged',
             'image' => 'nullable|image|max:5120', // 5MB max
             'quantity' => 'nullable|integer|min:1|max:100', // Allow bulk creation up to 100 assets
+            
+            // Workstation range fields
+            'creation_mode' => 'required|in:single,bulk,workstation_range',
+            'workstation_prefix' => 'nullable|string|max:100',
+            'workstation_start' => 'nullable|integer|min:1|max:999',
+            'workstation_end' => 'nullable|integer|min:1|max:999',
+            'workstation_company_id' => 'nullable|exists:companies,id',
         ]);
 
         // Get the asset template and validate access
@@ -162,10 +169,45 @@ class AssetController extends Controller
             return back()->withErrors(['company_id' => 'Invalid company selection.']);
         }
 
-        // Just verify that the selected location, department, and employee exist (no company restrictions)
-        $location = Location::find($validated['location_id']);
-        if (!$location) {
-            return back()->withErrors(['location_id' => 'Invalid location selection.']);
+        // Handle different creation modes
+        $creationMode = $validated['creation_mode'] ?? 'single';
+        
+        // Validate based on creation mode
+        if ($creationMode === 'workstation_range') {
+            // Validate workstation range fields
+            if (empty($validated['workstation_prefix'])) {
+                return back()->withErrors(['workstation_prefix' => 'Workstation prefix is required for workstation range creation.']);
+            }
+            if (empty($validated['workstation_start']) || empty($validated['workstation_end'])) {
+                return back()->withErrors(['workstation_start' => 'Start and end numbers are required for workstation range creation.']);
+            }
+            if ($validated['workstation_start'] > $validated['workstation_end']) {
+                return back()->withErrors(['workstation_start' => 'Start number must be less than or equal to end number.']);
+            }
+            if (($validated['workstation_end'] - $validated['workstation_start'] + 1) > 100) {
+                return back()->withErrors(['workstation_end' => 'Maximum 100 workstations can be created at once.']);
+            }
+            
+            // Use workstation company if specified
+            if (!empty($validated['workstation_company_id'])) {
+                $workstationCompany = $user->ownedCompanies()->find($validated['workstation_company_id']);
+                if (!$workstationCompany) {
+                    return back()->withErrors(['workstation_company_id' => 'Invalid workstation company selection.']);
+                }
+                $workstationCompanyId = $workstationCompany->id;
+            } else {
+                $workstationCompanyId = $targetCompanyId;
+            }
+        } else {
+            // For single/bulk creation, location is required
+            if (empty($validated['location_id'])) {
+                return back()->withErrors(['location_id' => 'Location is required for single/bulk creation.']);
+            }
+            
+            $location = Location::find($validated['location_id']);
+            if (!$location) {
+                return back()->withErrors(['location_id' => 'Invalid location selection.']);
+            }
         }
 
         // Validate department exists (if provided) - no company restriction
@@ -190,51 +232,101 @@ class AssetController extends Controller
             $imagePath = $request->file('image')->store('assets', 'public');
         }
 
-        // Get quantity (default to 1 if not specified)
-        $quantity = $validated['quantity'] ?? 1;
-        
-        // Create assets in bulk
+        // Create assets based on creation mode
         $createdAssets = [];
         
-        for ($i = 0; $i < $quantity; $i++) {
-            // Create asset with data from template
-            $assetData = [
-                'company_id' => $targetCompanyId,
-                'asset_category_id' => $template->asset_category_id,
-                'location_id' => $validated['location_id'],
-                'assigned_to' => $validated['assigned_to'],
-                'serial_number' => $validated['serial_number'],
-                'condition' => $validated['condition'],
-                'model_name' => $template->model_name,
-                'model_number' => $template->model_number,
-                'manufacturer' => $template->manufacturer,
-                'notes' => $template->default_notes,
-                'image_path' => $imagePath,
-                'asset_template_id' => $template->id,
-                'status' => !empty($validated['assigned_to']) ? 'assigned' : 'available',
-                'assigned_date' => !empty($validated['assigned_to']) ? now() : null,
-            ];
+        if ($creationMode === 'workstation_range') {
+            // Create assets for workstation range
+            $prefix = $validated['workstation_prefix'];
+            $start = $validated['workstation_start'];
+            $end = $validated['workstation_end'];
+            
+            for ($i = $start; $i <= $end; $i++) {
+                $workstationName = $prefix . $i;
+                
+                // Create or find the workstation location
+                $workstationLocation = $this->createOrFindWorkstationLocation(
+                    $workstationName,
+                    $workstationCompanyId,
+                    $prefix,
+                    $i
+                );
+                
+                if (!$workstationLocation) {
+                    continue; // Skip if location creation failed
+                }
+                
+                // Create asset with data from template
+                $assetData = [
+                    'company_id' => $targetCompanyId,
+                    'asset_category_id' => $template->asset_category_id,
+                    'location_id' => $workstationLocation->id,
+                    'assigned_to' => $validated['assigned_to'],
+                    'serial_number' => $validated['serial_number'],
+                    'condition' => $validated['condition'],
+                    'model_name' => $template->model_name,
+                    'model_number' => $template->model_number,
+                    'manufacturer' => $template->manufacturer,
+                    'notes' => $template->default_notes,
+                    'image_path' => $imagePath,
+                    'asset_template_id' => $template->id,
+                    'status' => !empty($validated['assigned_to']) ? 'assigned' : 'available',
+                    'assigned_date' => !empty($validated['assigned_to']) ? now() : null,
+                ];
 
-            // Generate unique asset tag for each asset
-            $assetData['asset_tag'] = Asset::generateUniqueAssetTag($location->company_id);
+                // Generate unique asset tag for each asset
+                $assetData['asset_tag'] = Asset::generateUniqueAssetTag($targetCompanyId);
 
-            $asset = Asset::create($assetData);
-            $createdAssets[] = $asset;
+                $asset = Asset::create($assetData);
+                $createdAssets[] = $asset;
+            }
+            
+            $totalCreated = count($createdAssets);
+            $message = "Successfully created {$totalCreated} assets for workstations {$prefix}{$start} to {$prefix}{$end}.";
+        } else {
+            // Single or bulk creation for one location
+            $quantity = $validated['quantity'] ?? 1;
+            
+            for ($i = 0; $i < $quantity; $i++) {
+                // Create asset with data from template
+                $assetData = [
+                    'company_id' => $targetCompanyId,
+                    'asset_category_id' => $template->asset_category_id,
+                    'location_id' => $validated['location_id'],
+                    'assigned_to' => $validated['assigned_to'],
+                    'serial_number' => $validated['serial_number'],
+                    'condition' => $validated['condition'],
+                    'model_name' => $template->model_name,
+                    'model_number' => $template->model_number,
+                    'manufacturer' => $template->manufacturer,
+                    'notes' => $template->default_notes,
+                    'image_path' => $imagePath,
+                    'asset_template_id' => $template->id,
+                    'status' => !empty($validated['assigned_to']) ? 'assigned' : 'available',
+                    'assigned_date' => !empty($validated['assigned_to']) ? now() : null,
+                ];
+
+                // Generate unique asset tag for each asset
+                $assetData['asset_tag'] = Asset::generateUniqueAssetTag($targetCompanyId);
+
+                $asset = Asset::create($assetData);
+                $createdAssets[] = $asset;
+            }
+            
+            $message = $quantity > 1 
+                ? "Successfully created {$quantity} assets." 
+                : 'Asset created successfully.';
         }
 
-        // Increment template usage count by quantity
-        $template->increment('usage_count', $quantity);
+        // Increment template usage count by number of assets created
+        $template->increment('usage_count', count($createdAssets));
 
         // Store created asset IDs in session for bulk printing
         session(['bulk_created_assets' => collect($createdAssets)->pluck('id')->toArray()]);
 
-        $message = $quantity > 1 
-            ? "Successfully created {$quantity} assets." 
-            : 'Asset created successfully.';
-
         return redirect()->route('assets.index')
             ->with('success', $message)
-            ->with('show_bulk_print', $quantity > 1);
+            ->with('show_bulk_print', count($createdAssets) > 1);
     }
 
 
@@ -378,6 +470,45 @@ class AssetController extends Controller
 
         return redirect()->route('assets.show', $asset)
             ->with('success', 'Asset updated successfully.');
+    }
+
+    /**
+     * Create or find a workstation location.
+     */
+    private function createOrFindWorkstationLocation($workstationName, $companyId, $prefix, $number)
+    {
+        // First try to find existing location
+        $existingLocation = Location::where('company_id', $companyId)
+            ->where('name', $workstationName)
+            ->first();
+            
+        if ($existingLocation) {
+            return $existingLocation;
+        }
+        
+        // Create new workstation location
+        try {
+            $location = Location::create([
+                'company_id' => $companyId,
+                'name' => $workstationName,
+                'building' => null,
+                'office_number' => (string) $number,
+                'address' => null,
+                'city' => null,
+                'state' => null,
+                'postal_code' => null,
+                'country' => null,
+                'is_active' => true,
+            ]);
+            
+            return $location;
+        } catch (\Exception $e) {
+            \Log::error("Failed to create workstation location: {$workstationName}", [
+                'error' => $e->getMessage(),
+                'company_id' => $companyId
+            ]);
+            return null;
+        }
     }
 
     /**
