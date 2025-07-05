@@ -15,15 +15,25 @@
                     <!-- JSPrintManager Printer Selection -->
                     <div class="flex items-center gap-2">
                         <Icon name="Printer" class="h-4 w-4 text-gray-500" />
-                        <select
-                            v-model="selectedPrinter"
-                            class="text-sm border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-800"
-                        >
-                            <option value="">{{ loadingPrinters ? 'Loading printers...' : 'Select Printer' }}</option>
-                            <option v-for="printer in availablePrinters" :key="printer" :value="printer">
-                                {{ printer }}
-                            </option>
-                        </select>
+                        <div class="flex flex-col">
+                            <select
+                                v-model="selectedPrinter"
+                                class="text-sm border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-800"
+                                :disabled="loadingPrinters"
+                            >
+                                <option value="">
+                                    {{ loadingPrinters ? 'Loading printers...' : 
+                                       availablePrinters.length === 0 ? 'No printers found' : 
+                                       'Select Printer' }}
+                                </option>
+                                <option v-for="printer in availablePrinters" :key="printer" :value="printer">
+                                    {{ printer }}
+                                </option>
+                            </select>
+                            <span v-if="loadingPrinters || printerStatus !== 'Initializing...'" class="text-xs text-gray-500 mt-1">
+                                {{ printerStatus }}
+                            </span>
+                        </div>
                         <Button
                             size="sm"
                             variant="outline"
@@ -351,6 +361,7 @@ const statistics = ref<Statistics>({
 
 const loading = ref(false);
 const loadingPrinters = ref(false);
+const printerStatus = ref('Initializing...');
 const selectedPrinter = ref('');
 const availablePrinters = ref<string[]>([]);
 const printService = PrintService.getInstance();
@@ -567,13 +578,15 @@ const cancelPrintJob = async (job: PrintJob) => {
 };
 
 // Load printers from JSPrintManager with retry logic
-const loadPrintersFromJSPM = async (maxRetries: number = 3, delay: number = 2000) => {
+const loadPrintersFromJSPM = async (maxRetries: number = 3, delay: number = 1500) => {
     loadingPrinters.value = true;
     availablePrinters.value = [];
+    printerStatus.value = 'Connecting to JSPrintManager...';
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             console.log(`PrintStation: Loading printers attempt ${attempt}/${maxRetries}...`);
+            printerStatus.value = `Connecting... (attempt ${attempt}/${maxRetries})`;
             
             // Add delay before each attempt (except the first one)
             if (attempt > 1) {
@@ -582,6 +595,7 @@ const loadPrintersFromJSPM = async (maxRetries: number = 3, delay: number = 2000
             
             // Initialize JSPrintManager first
             await printService.initializeJSPrintManager();
+            printerStatus.value = 'Getting available printers...';
             
             // Get available printers
             const printers = await printService.getAvailablePrinters();
@@ -589,6 +603,7 @@ const loadPrintersFromJSPM = async (maxRetries: number = 3, delay: number = 2000
             
             if (printers && printers.length > 0) {
                 availablePrinters.value = printers;
+                printerStatus.value = `Found ${printers.length} printer(s)`;
                 
                 // Auto-select first ZDesigner printer or first available printer (same logic as Assets/Index.vue)
                 if (!selectedPrinter.value) {
@@ -610,8 +625,10 @@ const loadPrintersFromJSPM = async (maxRetries: number = 3, delay: number = 2000
                 return; // Success, exit the retry loop
             } else if (attempt < maxRetries) {
                 console.log(`PrintStation: Attempt ${attempt}: No printers found, retrying...`);
+                printerStatus.value = `No printers found, retrying in ${delay/1000}s...`;
             } else {
                 console.log('PrintStation: No printers found after all attempts');
+                printerStatus.value = 'No printers found';
             }
             
         } catch (error) {
@@ -619,8 +636,10 @@ const loadPrintersFromJSPM = async (maxRetries: number = 3, delay: number = 2000
             
             if (attempt < maxRetries) {
                 console.log(`PrintStation: Retrying in ${delay/1000} seconds... (${attempt}/${maxRetries})`);
+                printerStatus.value = `Connection failed, retrying in ${delay/1000}s... (${attempt}/${maxRetries})`;
             } else {
                 console.error('PrintStation: Failed to load printers after all attempts:', error);
+                printerStatus.value = 'JSPrintManager connection failed';
                 // Don't show alert on page load failure, just log it
                 if (attempt === maxRetries) {
                     console.error('PrintStation: JSPrintManager connection failed. Please ensure JSPrintManager is installed and running.');
@@ -661,7 +680,7 @@ onMounted(() => {
     // Load printers from JSPrintManager with delay to ensure page is fully loaded
     setTimeout(() => {
         loadPrintersFromJSPM();
-    }, 2000);
+    }, 1000);
     
     // Set up periodic refresh every 10 seconds
     setInterval(refreshJobs, 10000);
