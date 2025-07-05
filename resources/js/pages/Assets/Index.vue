@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import Icon from '@/components/Icon.vue';
 import Heading from '@/components/Heading.vue';
 import { useI18n } from 'vue-i18n';
-import { computed, ref, watch, nextTick } from 'vue';
+import { computed, ref, watch, nextTick, onMounted } from 'vue';
 import type { Asset, Company, AssetCategory, Location, BreadcrumbItem } from '@/types';
 
 const { t } = useI18n();
@@ -258,6 +258,36 @@ const jspmWSStatus = () => {
   }
   return false
 }
+
+// Check for bulk print on mount
+onMounted(async () => {
+  const urlParams = new URLSearchParams(window.location.search)
+  if (urlParams.get('show_bulk_print') === 'true') {
+    // Fetch bulk created assets and show print dialog
+    try {
+      const response = await fetch('/api/assets/bulk-created')
+      if (response.ok) {
+        const bulkAssets = await response.json()
+        if (bulkAssets.length > 0) {
+          // Auto-select the bulk created assets
+          bulkAssets.forEach((asset: any) => {
+            selectedAssets.value.add(asset.id)
+          })
+          updateSelectAllState()
+          
+          // Show bulk print dialog automatically
+          await showBarcodeDialog()
+          
+          // Clear the query parameter
+          const newUrl = window.location.pathname
+          window.history.replaceState({}, '', newUrl)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch bulk created assets:', error)
+    }
+  }
+})
 
 const printBarcode = () => {
   const assetsToPrint = barcodeDialog.value.selectedAssets

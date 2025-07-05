@@ -138,6 +138,7 @@ const form = useForm({
     serial_number: '',
     condition: 'good',
     image: null as File | null,
+    quantity: 1,
 });
 
 const locationForm = useForm({
@@ -584,8 +585,16 @@ const createLocation = async () => {
 
 const submit = () => {
     form.post('/assets', {
-        onSuccess: () => {
-            router.visit('/assets');
+        onSuccess: (page: any) => {
+            // Check if bulk creation was successful and show bulk print option
+            const showBulkPrint = page.props?.flash?.show_bulk_print;
+            
+            if (showBulkPrint && form.quantity > 1) {
+                // Redirect to assets index with bulk print flag
+                router.visit('/assets?show_bulk_print=true');
+            } else {
+                router.visit('/assets');
+            }
         },
         onError: () => {
             // Form errors will be handled by the form
@@ -985,6 +994,25 @@ const handleBarcodeScanned = (scannedValue: string) => {
                             </div>
                         </div>
 
+                        <!-- Quantity -->
+                        <div class="space-y-2">
+                            <Label for="quantity">{{ t('assets.quantity') }} *</Label>
+                            <Input
+                                id="quantity"
+                                v-model.number="form.quantity"
+                                type="number"
+                                min="1"
+                                max="100"
+                                :placeholder="t('assets.quantity_placeholder')"
+                                :class="{ 'border-red-500': form.errors.quantity }"
+                                required
+                            />
+                            <p class="text-sm text-muted-foreground">{{ t('assets.quantity_description') }}</p>
+                            <div v-if="form.errors.quantity" class="text-sm text-red-600 dark:text-red-400">
+                                {{ form.errors.quantity }}
+                            </div>
+                        </div>
+
                         <!-- Asset Assignment Details -->
                         <div class="space-y-6 border-t pt-6">
                             <h4 class="font-medium text-gray-900 dark:text-gray-100">
@@ -1270,8 +1298,23 @@ const handleBarcodeScanned = (scannedValue: string) => {
                                     {{ form.condition === 'good' ? t('assets.condition_good') : t('assets.condition_damaged') }}
                                 </div>
                                 <div>
+                                    <strong>{{ t('assets.quantity') }}:</strong>
+                                    {{ form.quantity }} {{ form.quantity === 1 ? t('assets.asset') : t('assets.assets') }}
+                                </div>
+                                <div>
                                     <strong>{{ t('assets.image') }}:</strong>
                                     {{ selectedFile ? selectedFile.name : t('assets.not_provided') }}
+                                </div>
+                            </div>
+                            
+                            <!-- Bulk creation notice -->
+                            <div v-if="form.quantity > 1" class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                <div class="flex items-start">
+                                    <Icon name="Info" class="h-4 w-4 text-blue-500 mt-0.5 mr-2 flex-shrink-0" />
+                                    <div class="text-sm text-blue-700 dark:text-blue-300">
+                                        <p class="font-medium">{{ t('assets.bulk_creation_notice') }}</p>
+                                        <p class="mt-1">{{ t('assets.bulk_creation_description', { quantity: form.quantity }) }}</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>

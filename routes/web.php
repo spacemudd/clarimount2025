@@ -88,6 +88,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
     // Assets management
     Route::resource('assets', AssetController::class);
+    Route::get('api/assets/bulk-created', [AssetController::class, 'getBulkCreatedAssets'])->name('api.assets.bulk-created');
+    Route::delete('api/assets/bulk-created', [AssetController::class, 'clearBulkCreatedAssets'])->name('api.assets.clear-bulk-created');
     
     // Asset Templates management
     Route::resource('asset-templates', AssetTemplateController::class);

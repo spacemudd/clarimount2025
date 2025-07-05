@@ -134,6 +134,7 @@ class AssetController extends Controller
             'serial_number' => 'nullable|string|max:255',
             'condition' => 'required|in:good,damaged',
             'image' => 'nullable|image|max:5120', // 5MB max
+            'quantity' => 'nullable|integer|min:1|max:100', // Allow bulk creation up to 100 assets
         ]);
 
         // Get the asset template and validate access
@@ -189,34 +190,51 @@ class AssetController extends Controller
             $imagePath = $request->file('image')->store('assets', 'public');
         }
 
-        // Create asset with data from template
-        $assetData = [
-            'company_id' => $targetCompanyId,
-            'asset_category_id' => $template->asset_category_id,
-            'location_id' => $validated['location_id'],
-            'assigned_to' => $validated['assigned_to'],
-            'serial_number' => $validated['serial_number'],
-            'condition' => $validated['condition'],
-            'model_name' => $template->model_name,
-            'model_number' => $template->model_number,
-            'manufacturer' => $template->manufacturer,
-            'notes' => $template->default_notes,
-            'image_path' => $imagePath,
-            'asset_template_id' => $template->id,
-            'status' => !empty($validated['assigned_to']) ? 'assigned' : 'available',
-            'assigned_date' => !empty($validated['assigned_to']) ? now() : null,
-        ];
+        // Get quantity (default to 1 if not specified)
+        $quantity = $validated['quantity'] ?? 1;
+        
+        // Create assets in bulk
+        $createdAssets = [];
+        
+        for ($i = 0; $i < $quantity; $i++) {
+            // Create asset with data from template
+            $assetData = [
+                'company_id' => $targetCompanyId,
+                'asset_category_id' => $template->asset_category_id,
+                'location_id' => $validated['location_id'],
+                'assigned_to' => $validated['assigned_to'],
+                'serial_number' => $validated['serial_number'],
+                'condition' => $validated['condition'],
+                'model_name' => $template->model_name,
+                'model_number' => $template->model_number,
+                'manufacturer' => $template->manufacturer,
+                'notes' => $template->default_notes,
+                'image_path' => $imagePath,
+                'asset_template_id' => $template->id,
+                'status' => !empty($validated['assigned_to']) ? 'assigned' : 'available',
+                'assigned_date' => !empty($validated['assigned_to']) ? now() : null,
+            ];
 
-        // Generate asset tag based on template's company
-        $assetData['asset_tag'] = Asset::generateUniqueAssetTag($location->company_id);
+            // Generate unique asset tag for each asset
+            $assetData['asset_tag'] = Asset::generateUniqueAssetTag($location->company_id);
 
-        $asset = Asset::create($assetData);
+            $asset = Asset::create($assetData);
+            $createdAssets[] = $asset;
+        }
 
-        // Increment template usage count
-        $template->increment('usage_count');
+        // Increment template usage count by quantity
+        $template->increment('usage_count', $quantity);
+
+        // Store created asset IDs in session for bulk printing
+        session(['bulk_created_assets' => collect($createdAssets)->pluck('id')->toArray()]);
+
+        $message = $quantity > 1 
+            ? "Successfully created {$quantity} assets." 
+            : 'Asset created successfully.';
 
         return redirect()->route('assets.index')
-            ->with('success', 'Asset created successfully.');
+            ->with('success', $message)
+            ->with('show_bulk_print', $quantity > 1);
     }
 
 
@@ -360,6 +378,45 @@ class AssetController extends Controller
 
         return redirect()->route('assets.show', $asset)
             ->with('success', 'Asset updated successfully.');
+    }
+
+    /**
+     * Get bulk created assets for printing.
+     */
+    public function getBulkCreatedAssets(Request $request)
+    {
+        $user = Auth::user();
+        $assetIds = session('bulk_created_assets', []);
+        
+        if (empty($assetIds)) {
+            return response()->json(['error' => 'No bulk created assets found'], 404);
+        }
+        
+        $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
+        
+        $assets = Asset::whereIn('id', $assetIds)
+            ->whereIn('company_id', $ownedCompanyIds)
+            ->with(['company'])
+            ->get()
+            ->map(function ($asset) {
+                return [
+                    'id' => $asset->id,
+                    'asset_tag' => $asset->asset_tag,
+                    'serial_number' => $asset->serial_number,
+                    'company_name' => $asset->company->name_en ?? 'Unknown Company',
+                ];
+            });
+        
+        return response()->json($assets);
+    }
+    
+    /**
+     * Clear bulk created assets from session.
+     */
+    public function clearBulkCreatedAssets(Request $request)
+    {
+        session()->forget('bulk_created_assets');
+        return response()->json(['success' => true]);
     }
 
     /**
