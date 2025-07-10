@@ -3,7 +3,7 @@ import { createI18n } from 'vue-i18n';
 // Initialize with empty messages - will be populated from Laravel
 export default createI18n({
   legacy: false,
-  locale: 'en',
+  locale: 'ar',
   fallbackLocale: 'en',
   messages: {
     en: {},

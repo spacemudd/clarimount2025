@@ -1,6 +1,22 @@
 <?php
 
 return [
+    'auth' => [
+        'welcome' => 'مرحباً',
+        'welcome_message' => 'قم بتسجيل الدخول إلى حسابك',
+        'login' => 'تسجيل الدخول',
+        'email' => 'البريد الإلكتروني',
+        'email_placeholder' => 'أدخل بريدك الإلكتروني',
+        'password' => 'كلمة المرور',
+        'password_placeholder' => 'أدخل كلمة المرور',
+        'sign_in' => 'تسجيل الدخول',
+        'signing_in' => 'جارٍ تسجيل الدخول...',
+        'register' => 'إنشاء حساب',
+        'no_account' => 'لا تملك حساباً؟ سجل الآن',
+        'have_account' => 'لديك حساب؟ سجل الدخول',
+        'forgot_password' => 'نسيت كلمة المرور؟',
+        'remember_me' => 'تذكرني',
+    ],
     'nav' => [
         'dashboard' => 'لوحة التحكم',
         'companies' => 'الشركات',

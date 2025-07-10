@@ -24,7 +24,7 @@ createInertiaApp({
     resolve: (name) => resolvePageComponent(`./pages/${name}.vue`, import.meta.glob<DefineComponent>('./pages/**/*.vue')),
     setup({ el, App, props, plugin }) {
         // Get locale and translations from Laravel
-        const userLanguage = (props.initialPage.props as any).locale || 'en';
+        const userLanguage = (props.initialPage.props as any).locale || 'ar';
         const translations = (props.initialPage.props as any).translations || {};
         
         // Create i18n instance with Laravel translations

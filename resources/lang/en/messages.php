@@ -1,6 +1,22 @@
 <?php
 
 return [
+    'auth' => [
+        'welcome' => 'Welcome',
+        'welcome_message' => 'Sign in to your account',
+        'login' => 'Login',
+        'email' => 'Email',
+        'email_placeholder' => 'Enter your email',
+        'password' => 'Password',
+        'password_placeholder' => 'Enter your password',
+        'sign_in' => 'Sign In',
+        'signing_in' => 'Signing in...',
+        'register' => 'Register',
+        'no_account' => 'Don\'t have an account? Sign up',
+        'have_account' => 'Already have an account? Sign in',
+        'forgot_password' => 'Forgot your password?',
+        'remember_me' => 'Remember me',
+    ],
     'nav' => [
         'dashboard' => 'Dashboard',
         'companies' => 'Companies',
