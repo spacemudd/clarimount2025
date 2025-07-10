@@ -2,6 +2,9 @@
 import { ref, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 interface Department {
     id: string
@@ -59,12 +62,12 @@ const clearFilters = () => {
     <AppLayout>
         <div class="max-w-7xl mx-auto p-6">
             <div class="flex items-center justify-between mb-6">
-                <h1 class="text-2xl font-bold">Departments</h1>
+                <h1 class="text-2xl font-bold">{{ t('departments.title') }}</h1>
                 <a 
                     href="/departments/create" 
                     class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                 >
-                    Create Department
+                    {{ t('departments.create_department') }}
                 </a>
             </div>
 
@@ -74,7 +77,7 @@ const clearFilters = () => {
                     <input
                         v-model="search"
                         type="text"
-                        placeholder="Search departments..."
+                        :placeholder="t('departments.search_placeholder')"
                         class="w-full px-3 py-2 border border-gray-300 rounded-md"
                     >
                 </div>
@@ -83,7 +86,7 @@ const clearFilters = () => {
                     @click="clearFilters" 
                     class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                 >
-                    Clear
+                    {{ t('departments.clear') }}
                 </button>
             </div>
 
@@ -91,24 +94,24 @@ const clearFilters = () => {
             <div v-if="departments.data.length === 0" class="text-center py-12">
                 <div class="text-gray-400 text-6xl mb-4">🏢</div>
                 <h3 class="text-lg font-medium text-gray-900 mb-2">
-                    {{ search ? 'No departments found' : 'No departments yet' }}
+                    {{ search ? t('departments.no_departments_found') : t('departments.no_departments') }}
                 </h3>
                 <p class="text-gray-600 mb-6">
-                    {{ search ? 'Try adjusting your search' : companies.length > 0 ? 'Create your first department to get started' : 'Create a company first, then add departments' }}
+                    {{ search ? t('departments.try_adjusting_search') : companies.length > 0 ? t('departments.create_first_department') : t('departments.create_company_first') }}
                 </p>
                 <a 
                     v-if="!search && companies.length > 0"
                     href="/departments/create" 
                     class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                 >
-                    Create Department
+                    {{ t('departments.create_department') }}
                 </a>
                 <a 
                     v-else-if="!search && companies.length === 0"
                     href="/companies/create" 
                     class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
                 >
-                    Create Company
+                    {{ t('departments.create_company') }}
                 </a>
             </div>
 
@@ -118,16 +121,16 @@ const clearFilters = () => {
                     <thead class="bg-gray-50">
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Department
+                                {{ t('departments.department') }}
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Code
+                                {{ t('departments.code') }}
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Description
+                                {{ t('departments.description') }}
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Actions
+                                {{ t('departments.actions') }}
                             </th>
                         </tr>
                     </thead>
@@ -148,13 +151,13 @@ const clearFilters = () => {
                                         :href="`/departments/${department.id}`" 
                                         class="text-blue-600 hover:text-blue-900"
                                     >
-                                        View
+                                        {{ t('departments.view') }}
                                     </a>
                                     <a 
                                         :href="`/departments/${department.id}/edit`" 
                                         class="text-gray-600 hover:text-gray-900"
                                     >
-                                        Edit
+                                        {{ t('departments.edit') }}
                                     </a>
                                 </div>
                             </td>
@@ -166,8 +169,11 @@ const clearFilters = () => {
                 <div v-if="departments.links.length > 3" class="px-6 py-3 border-t">
                     <div class="flex justify-between items-center">
                         <div class="text-sm text-gray-700">
-                            Showing {{ departments.meta.from || 0 }} to {{ departments.meta.to || 0 }} 
-                            of {{ departments.meta.total }} results
+                            {{ t('departments.showing_results', { 
+                                from: departments.meta.from || 0, 
+                                to: departments.meta.to || 0, 
+                                total: departments.meta.total 
+                            }) }}
                         </div>
                         <div class="flex gap-1">
                             <a

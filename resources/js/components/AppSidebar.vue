@@ -24,7 +24,7 @@ const mainNavItems = computed((): NavItem[] => [
         icon: Building,
     },
     {
-        title: 'Departments',
+        title: t('nav.departments'),
         href: '/departments',
         icon: Building2,
     },
