@@ -35,6 +35,7 @@ return [
     ],
     'dashboard' => [
         'welcome' => 'Welcome to your dashboard',
+        'work-portal' => 'Work Portal',
     ],
     'settings' => [
         'title' => 'Settings',
@@ -546,7 +547,7 @@ return [
         'select_category' => 'Select a category',
         'select_company' => 'Select a company',
         'asset_details' => 'Asset Details',
-        
+
         // Creation modes
         'creation_mode' => 'Creation Mode',
         'single_location' => 'Single Location',
@@ -555,7 +556,7 @@ return [
         'bulk_creation_desc' => 'Create multiple identical assets at one location',
         'workstation_range' => 'Workstation Range',
         'workstation_range_desc' => 'Create assets for multiple workstations (e.g., WS1-WS20)',
-        
+
         // Workstation fields
         'workstation_company' => 'Company for Workstations',
         'workstation_company_desc' => 'Company where workstation locations will be created',
@@ -616,4 +617,4 @@ return [
         'image' => 'Template Image',
         'is_global_description' => 'Make this template available to all companies',
     ],
-]; 
+];

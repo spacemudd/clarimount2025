@@ -35,6 +35,7 @@ return [
     ],
     'dashboard' => [
         'welcome' => 'مرحباً بك في لوحة التحكم',
+        'work-portal' => 'بوابة العمل',
     ],
     'settings' => [
         'title' => 'الإعدادات',
@@ -545,7 +546,7 @@ return [
         'select_category' => 'اختر فئة',
         'select_company' => 'اختر شركة',
         'asset_details' => 'تفاصيل الأصل',
-        
+
         // Creation modes
         'creation_mode' => 'نمط الإنشاء',
         'single_location' => 'موقع واحد',
@@ -554,7 +555,7 @@ return [
         'bulk_creation_desc' => 'إنشاء عدة أصول متطابقة في موقع واحد',
         'workstation_range' => 'نطاق محطات العمل',
         'workstation_range_desc' => 'إنشاء أصول لعدة محطات عمل (مثل WS1-WS20)',
-        
+
         // Workstation fields
         'workstation_company' => 'شركة محطات العمل',
         'workstation_company_desc' => 'الشركة حيث سيتم إنشاء مواقع محطات العمل',
@@ -629,4 +630,4 @@ return [
         'image' => 'صورة القالب',
         'is_global_description' => 'جعل هذا القالب متاحاً لجميع الشركات',
     ],
-]; 
+];
