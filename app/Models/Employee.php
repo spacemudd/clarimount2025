@@ -14,17 +14,45 @@ class Employee extends Model
     protected $fillable = [
         'employee_id',
         'first_name',
+        'father_name',
         'last_name',
+        'nationality_id',
+        'residence_country_id',
+        'birth_date',
         'email',
+        'personal_email',
+        'work_email',
         'phone',
+        'work_phone',
         'mobile',
+        'fingerprint_device_id',
+        'work_address',
         'department',
         'department_id',
         'job_title',
         'manager',
+        'direct_manager',
+        'additional_approver_2',
+        'additional_approver_3',
         'hire_date',
+        'employment_date',
+        'probation_end_date',
         'termination_date',
+        'departure_date',
+        'departure_reason',
         'employment_status',
+        'id_number',
+        'residence_expiry_date',
+        'contract_end_date',
+        'exit_reentry_visa_expiry',
+        'passport_number',
+        'passport_expiry_date',
+        'insurance_policy',
+        'insurance_expiry_date',
+        'emergency_contact_name',
+        'emergency_contact_phone',
+        'emergency_contact_email',
+        'emergency_contact_address',
         'company_id',
         'notes',
         'settings',
@@ -33,7 +61,16 @@ class Employee extends Model
     protected $casts = [
         'settings' => 'array',
         'hire_date' => 'date',
+        'employment_date' => 'date',
+        'probation_end_date' => 'date',
         'termination_date' => 'date',
+        'departure_date' => 'date',
+        'birth_date' => 'date',
+        'residence_expiry_date' => 'date',
+        'contract_end_date' => 'date',
+        'exit_reentry_visa_expiry' => 'date',
+        'passport_expiry_date' => 'date',
+        'insurance_expiry_date' => 'date',
     ];
 
     protected $appends = [
@@ -55,6 +92,22 @@ class Employee extends Model
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    /**
+     * Get the nationality of this employee.
+     */
+    public function nationality(): BelongsTo
+    {
+        return $this->belongsTo(Nationality::class);
+    }
+
+    /**
+     * Get the residence country of this employee.
+     */
+    public function residenceCountry(): BelongsTo
+    {
+        return $this->belongsTo(Country::class, 'residence_country_id');
     }
 
     /**

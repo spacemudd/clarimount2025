@@ -47,7 +47,7 @@
                                             type="text" 
                                             :placeholder="t('employees.employee_id_placeholder')"
                                         />
-                                        <div v-if="form.errors.employee_id" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.employee_id || "") }}</div>
+                                        <div v-if="form.errors.employee_id" class="text-red-500 text-sm mt-1">{{ form.errors.employee_id }}</div>
                                     </div>
 
                                     <!-- First Name -->
@@ -60,7 +60,7 @@
                                             :placeholder="t('employees.first_name_placeholder')"
                                             required
                                         />
-                                        <div v-if="form.errors.first_name" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.first_name || "") }}</div>
+                                        <div v-if="form.errors.first_name" class="text-red-500 text-sm mt-1">{{ form.errors.first_name }}</div>
                                     </div>
 
                                     <!-- Father Name -->
@@ -72,7 +72,7 @@
                                             type="text" 
                                             :placeholder="t('employees.father_name_placeholder')"
                                         />
-                                        <div v-if="form.errors.father_name" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.father_name || "") }}</div>
+                                        <div v-if="form.errors.father_name" class="text-red-500 text-sm mt-1">{{ form.errors.father_name }}</div>
                                     </div>
 
                                     <!-- Last Name -->
@@ -85,7 +85,7 @@
                                             :placeholder="t('employees.last_name_placeholder')"
                                             required
                                         />
-                                        <div v-if="form.errors.last_name" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.last_name || "") }}</div>
+                                        <div v-if="form.errors.last_name" class="text-red-500 text-sm mt-1">{{ form.errors.last_name }}</div>
                                     </div>
 
                                     <!-- Nationality -->
@@ -101,7 +101,7 @@
                                                 {{ nationality.name }}
                                             </option>
                                         </select>
-                                        <div v-if="form.errors.nationality_id" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.nationality_id || "") }}</div>
+                                        <div v-if="form.errors.nationality_id" class="text-red-500 text-sm mt-1">{{ form.errors.nationality_id }}</div>
                                     </div>
 
                                     <!-- Residence Country -->
@@ -117,7 +117,7 @@
                                                 {{ country.name }}
                                             </option>
                                         </select>
-                                        <div v-if="form.errors.residence_country_id" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.residence_country_id || "") }}</div>
+                                        <div v-if="form.errors.residence_country_id" class="text-red-500 text-sm mt-1">{{ form.errors.residence_country_id }}</div>
                                     </div>
 
                                     <!-- Birth Date -->
@@ -128,7 +128,7 @@
                                             v-model="form.birth_date" 
                                             type="date" 
                                         />
-                                        <div v-if="form.errors.birth_date" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.birth_date || "") }}</div>
+                                        <div v-if="form.errors.birth_date" class="text-red-500 text-sm mt-1">{{ form.errors.birth_date }}</div>
                                     </div>
 
                                     <!-- Email -->
@@ -141,7 +141,7 @@
                                             :placeholder="t('employees.email_placeholder')"
                                             required
                                         />
-                                        <div v-if="form.errors.email" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.email || "") }}</div>
+                                        <div v-if="form.errors.email" class="text-red-500 text-sm mt-1">{{ form.errors.email }}</div>
                                     </div>
 
                                     <!-- Personal Email -->
@@ -153,7 +153,7 @@
                                             type="email" 
                                             placeholder="personal@email.com"
                                         />
-                                        <div v-if="form.errors.personal_email" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.personal_email || "") }}</div>
+                                        <div v-if="form.errors.personal_email" class="text-red-500 text-sm mt-1">{{ form.errors.personal_email }}</div>
                                     </div>
 
                                     <!-- Work Email -->
@@ -165,7 +165,7 @@
                                             type="email" 
                                             placeholder="work@company.com"
                                         />
-                                        <div v-if="form.errors.work_email" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.work_email || "") }}</div>
+                                        <div v-if="form.errors.work_email" class="text-red-500 text-sm mt-1">{{ form.errors.work_email }}</div>
                                     </div>
 
                                     <!-- Phone -->
@@ -177,7 +177,7 @@
                                             type="text" 
                                             :placeholder="t('employees.phone_placeholder')"
                                         />
-                                        <div v-if="form.errors.phone" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.phone || "") }}</div>
+                                        <div v-if="form.errors.phone" class="text-red-500 text-sm mt-1">{{ form.errors.phone }}</div>
                                     </div>
 
                                     <!-- Location -->
@@ -193,7 +193,7 @@
                                                 {{ location.display_name || `${location.code}: ${location.name}` }}
                                             </option>
                                         </select>
-                                        <div v-if="form.errors.location_id" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.location_id || "") }}</div>
+                                        <div v-if="form.errors.location_id" class="text-red-500 text-sm mt-1">{{ form.errors.location_id }}</div>
                                     </div>
                                 </div>
                             </CardContent>
@@ -233,7 +233,7 @@
                                                 {{ company.name }}
                                             </option>
                                         </select>
-                                        <div v-if="form.errors.company_id" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.company_id || "") }}</div>
+                                        <div v-if="form.errors.company_id" class="text-red-500 text-sm mt-1">{{ form.errors.company_id }}</div>
                                     </div>
 
                                     <!-- Employment Date -->
@@ -244,7 +244,7 @@
                                             v-model="form.employment_date" 
                                             type="date" 
                                         />
-                                        <div v-if="form.errors.employment_date" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.employment_date || "") }}</div>
+                                        <div v-if="form.errors.employment_date" class="text-red-500 text-sm mt-1">{{ form.errors.employment_date }}</div>
                                     </div>
 
                                     <!-- Probation End Date -->
@@ -255,7 +255,7 @@
                                             v-model="form.probation_end_date" 
                                             type="date" 
                                         />
-                                        <div v-if="form.errors.probation_end_date" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.probation_end_date || "") }}</div>
+                                        <div v-if="form.errors.probation_end_date" class="text-red-500 text-sm mt-1">{{ form.errors.probation_end_date }}</div>
                                     </div>
 
                                     <!-- Work Phone -->
@@ -267,7 +267,7 @@
                                             type="text" 
                                             placeholder="Work phone number"
                                         />
-                                        <div v-if="form.errors.work_phone" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.work_phone || "") }}</div>
+                                        <div v-if="form.errors.work_phone" class="text-red-500 text-sm mt-1">{{ form.errors.work_phone }}</div>
                                     </div>
 
                                     <!-- Mobile -->
@@ -279,7 +279,7 @@
                                             type="text" 
                                             :placeholder="t('employees.mobile_placeholder')"
                                         />
-                                        <div v-if="form.errors.mobile" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.mobile || "") }}</div>
+                                        <div v-if="form.errors.mobile" class="text-red-500 text-sm mt-1">{{ form.errors.mobile }}</div>
                                     </div>
 
                                     <!-- Fingerprint Device ID -->
@@ -291,7 +291,7 @@
                                             type="text" 
                                             placeholder="Fingerprint device ID"
                                         />
-                                        <div v-if="form.errors.fingerprint_device_id" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.fingerprint_device_id || "") }}</div>
+                                        <div v-if="form.errors.fingerprint_device_id" class="text-red-500 text-sm mt-1">{{ form.errors.fingerprint_device_id }}</div>
                                     </div>
 
                                     <!-- Work Address -->
@@ -304,7 +304,7 @@
                                             placeholder="Work address"
                                             class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                         ></textarea>
-                                        <div v-if="form.errors.work_address" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.work_address || "") }}</div>
+                                        <div v-if="form.errors.work_address" class="text-red-500 text-sm mt-1">{{ form.errors.work_address }}</div>
                                     </div>
 
                                     <!-- Department -->
@@ -364,7 +364,7 @@
                                                 <div class="text-xs text-blue-600">{{ selectedDepartment.company_name }}</div>
                                             </div>
                                         </div>
-                                        <div v-if="form.errors.department_id" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.department_id || "") }}</div>
+                                        <div v-if="form.errors.department_id" class="text-red-500 text-sm mt-1">{{ form.errors.department_id }}</div>
                                     </div>
 
                                     <!-- Job Title -->
@@ -376,7 +376,7 @@
                                             type="text" 
                                             :placeholder="t('employees.job_title_placeholder')"
                                         />
-                                        <div v-if="form.errors.job_title" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.job_title || "") }}</div>
+                                        <div v-if="form.errors.job_title" class="text-red-500 text-sm mt-1">{{ form.errors.job_title }}</div>
                                     </div>
                                 </div>
                             </CardContent>
@@ -411,7 +411,7 @@
                                             type="text" 
                                             placeholder="National ID number"
                                         />
-                                        <div v-if="form.errors.id_number" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.id_number || "") }}</div>
+                                        <div v-if="form.errors.id_number" class="text-red-500 text-sm mt-1">{{ form.errors.id_number }}</div>
                                     </div>
 
                                     <!-- Residence Expiry Date -->
@@ -422,7 +422,7 @@
                                             v-model="form.residence_expiry_date" 
                                             type="date" 
                                         />
-                                        <div v-if="form.errors.residence_expiry_date" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.residence_expiry_date || "") }}</div>
+                                        <div v-if="form.errors.residence_expiry_date" class="text-red-500 text-sm mt-1">{{ form.errors.residence_expiry_date }}</div>
                                     </div>
 
                                     <!-- Contract End Date -->
@@ -433,7 +433,7 @@
                                             v-model="form.contract_end_date" 
                                             type="date" 
                                         />
-                                        <div v-if="form.errors.contract_end_date" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.contract_end_date || "") }}</div>
+                                        <div v-if="form.errors.contract_end_date" class="text-red-500 text-sm mt-1">{{ form.errors.contract_end_date }}</div>
                                     </div>
 
                                     <!-- Exit Re-entry Visa Expiry -->
@@ -444,7 +444,7 @@
                                             v-model="form.exit_reentry_visa_expiry" 
                                             type="date" 
                                         />
-                                        <div v-if="form.errors.exit_reentry_visa_expiry" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.exit_reentry_visa_expiry || "") }}</div>
+                                        <div v-if="form.errors.exit_reentry_visa_expiry" class="text-red-500 text-sm mt-1">{{ form.errors.exit_reentry_visa_expiry }}</div>
                                     </div>
 
                                     <!-- Passport Number -->
@@ -456,7 +456,7 @@
                                             type="text" 
                                             placeholder="Passport number"
                                         />
-                                        <div v-if="form.errors.passport_number" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.passport_number || "") }}</div>
+                                        <div v-if="form.errors.passport_number" class="text-red-500 text-sm mt-1">{{ form.errors.passport_number }}</div>
                                     </div>
 
                                     <!-- Passport Expiry Date -->
@@ -467,7 +467,7 @@
                                             v-model="form.passport_expiry_date" 
                                             type="date" 
                                         />
-                                        <div v-if="form.errors.passport_expiry_date" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.passport_expiry_date || "") }}</div>
+                                        <div v-if="form.errors.passport_expiry_date" class="text-red-500 text-sm mt-1">{{ form.errors.passport_expiry_date }}</div>
                                     </div>
                                 </div>
                             </CardContent>
@@ -502,7 +502,7 @@
                                             type="text" 
                                             placeholder="Insurance policy number"
                                         />
-                                        <div v-if="form.errors.insurance_policy" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.insurance_policy || "") }}</div>
+                                        <div v-if="form.errors.insurance_policy" class="text-red-500 text-sm mt-1">{{ form.errors.insurance_policy }}</div>
                                     </div>
 
                                     <!-- Insurance Expiry Date -->
@@ -513,7 +513,7 @@
                                             v-model="form.insurance_expiry_date" 
                                             type="date" 
                                         />
-                                        <div v-if="form.errors.insurance_expiry_date" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.insurance_expiry_date || "") }}</div>
+                                        <div v-if="form.errors.insurance_expiry_date" class="text-red-500 text-sm mt-1">{{ form.errors.insurance_expiry_date }}</div>
                                     </div>
                                 </div>
                             </CardContent>
@@ -547,7 +547,7 @@
                                             v-model="form.hire_date" 
                                             type="date" 
                                         />
-                                        <div v-if="form.errors.hire_date" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.hire_date || "") }}</div>
+                                        <div v-if="form.errors.hire_date" class="text-red-500 text-sm mt-1">{{ form.errors.hire_date }}</div>
                                     </div>
 
                                     <!-- Employment Status -->
@@ -562,7 +562,7 @@
                                                 {{ status.label }}
                                             </option>
                                         </select>
-                                        <div v-if="form.errors.employment_status" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.employment_status || "") }}</div>
+                                        <div v-if="form.errors.employment_status" class="text-red-500 text-sm mt-1">{{ form.errors.employment_status }}</div>
                                     </div>
 
                                     <!-- Termination Date -->
@@ -573,7 +573,7 @@
                                             v-model="form.termination_date" 
                                             type="date" 
                                         />
-                                        <div v-if="form.errors.termination_date" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.termination_date || "") }}</div>
+                                        <div v-if="form.errors.termination_date" class="text-red-500 text-sm mt-1">{{ form.errors.termination_date }}</div>
                                     </div>
 
                                     <!-- Departure Date -->
@@ -584,7 +584,7 @@
                                             v-model="form.departure_date" 
                                             type="date" 
                                         />
-                                        <div v-if="form.errors.departure_date" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.departure_date || "") }}</div>
+                                        <div v-if="form.errors.departure_date" class="text-red-500 text-sm mt-1">{{ form.errors.departure_date }}</div>
                                     </div>
 
                                     <!-- Departure Reason -->
@@ -596,7 +596,7 @@
                                             type="text" 
                                             placeholder="Reason for departure"
                                         />
-                                        <div v-if="form.errors.departure_reason" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.departure_reason || "") }}</div>
+                                        <div v-if="form.errors.departure_reason" class="text-red-500 text-sm mt-1">{{ form.errors.departure_reason }}</div>
                                     </div>
                                 </div>
                             </CardContent>
@@ -631,7 +631,7 @@
                                             type="text" 
                                             :placeholder="t('employees.manager_placeholder')"
                                         />
-                                        <div v-if="form.errors.manager" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.manager || "") }}</div>
+                                        <div v-if="form.errors.manager" class="text-red-500 text-sm mt-1">{{ form.errors.manager }}</div>
                                     </div>
 
                                     <!-- Direct Manager -->
@@ -643,7 +643,7 @@
                                             type="text" 
                                             placeholder="Direct manager name"
                                         />
-                                        <div v-if="form.errors.direct_manager" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.direct_manager || "") }}</div>
+                                        <div v-if="form.errors.direct_manager" class="text-red-500 text-sm mt-1">{{ form.errors.direct_manager }}</div>
                                     </div>
 
                                     <!-- Additional Approver 2 -->
@@ -702,7 +702,7 @@
                                             type="text" 
                                             placeholder="Emergency contact name"
                                         />
-                                        <div v-if="form.errors.emergency_contact_name" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.emergency_contact_name || "") }}</div>
+                                        <div v-if="form.errors.emergency_contact_name" class="text-red-500 text-sm mt-1">{{ form.errors.emergency_contact_name }}</div>
                                     </div>
 
                                     <!-- Emergency Contact Phone -->
@@ -714,7 +714,7 @@
                                             type="text" 
                                             placeholder="Emergency contact phone"
                                         />
-                                        <div v-if="form.errors.emergency_contact_phone" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.emergency_contact_phone || "") }}</div>
+                                        <div v-if="form.errors.emergency_contact_phone" class="text-red-500 text-sm mt-1">{{ form.errors.emergency_contact_phone }}</div>
                                     </div>
 
                                     <!-- Emergency Contact Email -->
@@ -726,7 +726,7 @@
                                             type="email" 
                                             placeholder="emergency@contact.com"
                                         />
-                                        <div v-if="form.errors.emergency_contact_email" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.emergency_contact_email || "") }}</div>
+                                        <div v-if="form.errors.emergency_contact_email" class="text-red-500 text-sm mt-1">{{ form.errors.emergency_contact_email }}</div>
                                     </div>
 
                                     <!-- Emergency Contact Address -->
@@ -739,7 +739,7 @@
                                             placeholder="Emergency contact address"
                                             class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                         ></textarea>
-                                        <div v-if="form.errors.emergency_contact_address" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.emergency_contact_address || "") }}</div>
+                                        <div v-if="form.errors.emergency_contact_address" class="text-red-500 text-sm mt-1">{{ form.errors.emergency_contact_address }}</div>
                                     </div>
                                 </div>
                             </CardContent>
@@ -773,7 +773,7 @@
                                         :placeholder="t('employees.notes_placeholder')"
                                         class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                     ></textarea>
-                                    <div v-if="form.errors.notes" class="text-red-500 text-sm mt-1">{{ translateValidationError(form.errors.notes || "") }}</div>
+                                    <div v-if="form.errors.notes" class="text-red-500 text-sm mt-1">{{ form.errors.notes }}</div>
                                 </div>
                             </CardContent>
                         </CollapsibleContent>
@@ -1038,240 +1038,11 @@ const submit = () => {
     form.put(`/employees/${props.employee.id}`)
 }
 
-const translateValidationError = (error: string) => {
-    // Handle empty or undefined errors
-    if (!error || error.trim() === '') {
-        return t('validation.required')
-    }
-    
-    // First, check for the most common Laravel validation patterns
-    const lowerError = error.toLowerCase().trim()
-    
-    // Handle unique constraint violations first (most specific)
-    // Check for various patterns that indicate uniqueness violations
-    if (lowerError.includes('has already been taken') || 
-        lowerError.includes('already exists') ||
-        lowerError.includes('already been taken') ||
-        lowerError.includes('duplicate') ||
-        lowerError.includes('unique') ||
-        lowerError.includes('not unique') ||
-        lowerError.includes('already in use') ||
-        lowerError.includes('already registered') ||
-        lowerError.includes('email already exists') ||
-        lowerError.includes('must be unique') ||
-        lowerError.includes('is not unique') ||
-        lowerError.includes('constraint') ||
-        lowerError.includes('integrity') ||
-        // Sometimes Laravel returns database constraint messages
-        lowerError.includes('duplicate entry') ||
-        lowerError.includes('duplicate key') ||
-        lowerError.includes('violates unique constraint') ||
-        // Check if it's specifically about email uniqueness
-        (lowerError.includes('email') && (lowerError.includes('taken') || lowerError.includes('exists') || lowerError.includes('duplicate')))) {
-        return t('validation.unique')
-    }
-    
-    // Handle required field errors
-    if (lowerError.includes('required') || 
-        lowerError.includes('is required') || 
-        lowerError.includes('field is required') ||
-        lowerError.includes('this field is required') ||
-        lowerError.includes('cannot be empty') ||
-        lowerError.includes('must not be empty')) {
-        return t('validation.required')
-    }
-    
-    // Handle email validation errors
-    if (lowerError.includes('email') && 
-        (lowerError.includes('valid') || lowerError.includes('format') || lowerError.includes('invalid'))) {
-        return t('validation.email')
-    }
-    
-    // Handle numeric validation errors
-    if (lowerError.includes('must be a number') || 
-        lowerError.includes('numeric') ||
-        lowerError.includes('must be numeric')) {
-        return t('validation.numeric')
-    }
-    
-    // Handle string validation errors
-    if (lowerError.includes('must be a string') || 
-        lowerError.includes('string')) {
-        return t('validation.string')
-    }
-    
-    // Handle date validation errors
-    if (lowerError.includes('must be a date') || 
-        lowerError.includes('valid date') ||
-        lowerError.includes('date format')) {
-        return t('validation.date')
-    }
-    
-    // Handle integer validation errors
-    if (lowerError.includes('must be an integer') || 
-        lowerError.includes('integer')) {
-        return t('validation.integer')
-    }
-    
-    // Handle boolean validation errors
-    if (lowerError.includes('must be a boolean') || 
-        lowerError.includes('boolean') ||
-        lowerError.includes('true or false')) {
-        return t('validation.boolean')
-    }
-    
-    // Handle minimum length errors
-    if (lowerError.includes('minimum') || 
-        lowerError.includes('at least') ||
-        (lowerError.includes('min') && lowerError.includes('character'))) {
-        return t('validation.min')
-    }
-    
-    // Handle maximum length errors
-    if (lowerError.includes('maximum') || 
-        lowerError.includes('no more than') ||
-        (lowerError.includes('max') && lowerError.includes('character'))) {
-        return t('validation.max')
-    }
-    
-    // Handle file upload errors
-    if (lowerError.includes('must be an image') || 
-        lowerError.includes('image')) {
-        return t('validation.image')
-    }
-    
-    if (lowerError.includes('must be a file') || 
-        lowerError.includes('file')) {
-        return t('validation.file')
-    }
-    
-    // Handle URL validation errors
-    if (lowerError.includes('must be a valid url') || 
-        lowerError.includes('url') ||
-        lowerError.includes('valid url')) {
-        return t('validation.url')
-    }
-    
-    // Handle confirmed field errors (password confirmation, etc.)
-    if (lowerError.includes('confirmation') || 
-        lowerError.includes('confirmed') ||
-        lowerError.includes('does not match')) {
-        return t('validation.confirmed')
-    }
-    
-    // Handle selection/exists errors
-    if (lowerError.includes('selected') && lowerError.includes('invalid') || 
-        lowerError.includes('does not exist') ||
-        lowerError.includes('invalid selection')) {
-        return t('validation.exists')
-    }
-    
-    // Handle accepted field errors (terms, privacy, etc.)
-    if (lowerError.includes('must be accepted') || 
-        lowerError.includes('accepted')) {
-        return t('validation.accepted')
-    }
-    
-    // Handle array validation errors
-    if (lowerError.includes('must be an array') || 
-        lowerError.includes('array')) {
-        return t('validation.array')
-    }
-    
-    // Handle phone number validation errors
-    if (lowerError.includes('phone') || 
-        lowerError.includes('telephone')) {
-        return t('validation.phone')
-    }
-    
-    // Handle password validation errors
-    if (lowerError.includes('password')) {
-        return t('validation.password')
-    }
-    
-    // Handle file upload errors
-    if (lowerError.includes('uploaded') || 
-        lowerError.includes('upload failed')) {
-        return t('validation.uploaded')
-    }
-    
-    // Handle between validation errors
-    if (lowerError.includes('between')) {
-        return t('validation.between')
-    }
-    
-    // Handle size validation errors
-    if (lowerError.includes('size')) {
-        return t('validation.size')
-    }
-    
-    // Handle regex/format validation errors
-    if (lowerError.includes('format') || 
-        lowerError.includes('regex') ||
-        lowerError.includes('pattern')) {
-        return t('validation.regex')
-    }
-    
-    // Handle alpha validation errors
-    if (lowerError.includes('only contain letters') || 
-        (lowerError.includes('alpha') && !lowerError.includes('numeric'))) {
-        return t('validation.alpha')
-    }
-    
-    // Handle alphanumeric validation errors
-    if (lowerError.includes('letters and numbers') || 
-        lowerError.includes('alphanumeric') ||
-        lowerError.includes('alpha_num')) {
-        return t('validation.alpha_num')
-    }
-    
-    // Handle JSON validation errors
-    if (lowerError.includes('json')) {
-        return t('validation.json')
-    }
-    
-    // Handle MIME type validation errors
-    if (lowerError.includes('type') && lowerError.includes('file') || 
-        lowerError.includes('mime')) {
-        return t('validation.mimes')
-    }
-    
-    // Handle digits validation errors
-    if (lowerError.includes('digits')) {
-        return t('validation.digits')
-    }
-    
-    // Handle before/after date validation errors
-    if (lowerError.includes('before')) {
-        return t('validation.before')
-    }
-    
-    if (lowerError.includes('after')) {
-        return t('validation.after')
-    }
-    
-    // Handle timezone validation errors
-    if (lowerError.includes('timezone')) {
-        return t('validation.timezone')
-    }
-    
-    // Handle IP address validation errors
-    if (lowerError.includes('ip')) {
-        return t('validation.ip')
-    }
-    
-    // Handle UUID validation errors
-    if (lowerError.includes('uuid')) {
-        return t('validation.uuid')
-    }
-    
-    // If no pattern matches, return the original error
-    return error
-}
 
-const employmentStatuses = [
-    { value: 'active', label: 'Active' },
-    { value: 'inactive', label: 'Inactive' },
-    { value: 'terminated', label: 'Terminated' }
-]
+
+ const employmentStatuses = [
+     { value: 'active', label: 'Active' },
+     { value: 'inactive', label: 'Inactive' },
+     { value: 'terminated', label: 'Terminated' }
+ ]
 </script> 

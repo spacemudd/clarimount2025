@@ -12,6 +12,7 @@ use App\Http\Controllers\PrintJobController;
 use App\Http\Controllers\Admin\AdminTeamController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -78,6 +79,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 // IT Asset Management & Ticketing System routes
 Route::middleware(['auth', 'verified'])->group(function () {
+    // Debug route for employee creation
+    Route::get('/debug/employee-create', function () {
+        $user = Auth::user();
+        $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
+        
+        return response()->json([
+            'user_id' => $user->id,
+            'owned_companies_count' => $user->ownedCompanies()->count(),
+            'owned_company_ids' => $ownedCompanyIds->toArray(),
+            'current_company' => $user->currentCompany()?->id,
+        ]);
+    });
+    
     // Locations management
     Route::resource('locations', LocationController::class);
     

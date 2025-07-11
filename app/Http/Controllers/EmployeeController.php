@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Employee;
+use App\Models\Country;
+use App\Models\Nationality;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Validation\Rule;
 
 class EmployeeController extends Controller
 {
@@ -72,16 +75,25 @@ class EmployeeController extends Controller
     public function create(): Response|RedirectResponse
     {
         $user = Auth::user();
-        $company = $user->currentCompany();
+        $companies = $user->ownedCompanies()->get();
+        $currentCompany = $user->currentCompany();
         
-        // If user doesn't have a company, redirect to create one
-        if (!$company) {
+        // If user doesn't have any companies, redirect to create one
+        if ($companies->isEmpty()) {
             return redirect()->route('companies.create')
                 ->with('info', 'Please create a company first to manage employees.');
         }
 
+        // Get Saudi Arabia as default residence country
+        $saudiArabia = Country::where('code', 'SA')->first();
+
         return Inertia::render('Employees/Create', [
-            'company' => $company,
+            'companies' => $companies,
+            'currentCompany' => $currentCompany,
+            'defaultCompanyId' => $currentCompany?->id,
+            'countries' => Country::active()->orderByName()->get(),
+            'nationalities' => Nationality::active()->orderByName()->get(),
+            'defaultResidenceCountryId' => $saudiArabia?->id,
         ]);
     }
 
@@ -91,44 +103,105 @@ class EmployeeController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $user = Auth::user();
-        $company = $user->currentCompany();
+        $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
         
-        // If user doesn't have a company, redirect to create one
-        if (!$company) {
+        // Debug logging
+        \Log::info('Employee creation debug', [
+            'user_id' => $user->id,
+            'owned_company_ids' => $ownedCompanyIds->toArray(),
+            'request_company_id' => $request->input('company_id'),
+            'request_data' => $request->all()
+        ]);
+        
+        // If user doesn't have any companies, redirect to create one
+        if ($ownedCompanyIds->isEmpty()) {
             return redirect()->route('companies.create')
                 ->with('info', 'Please create a company first to manage employees.');
         }
 
+        \Log::info('Starting validation...');
+        
         $validated = $request->validate([
+            'company_id' => ['required', 'integer', Rule::in($ownedCompanyIds)],
             'employee_id' => 'nullable|string|max:50|unique:employees,employee_id',
             'first_name' => 'required|string|max:255',
+            'father_name' => 'nullable|string|max:255',
             'last_name' => 'required|string|max:255',
+            'nationality_id' => 'nullable|exists:nationalities,id',
+            'residence_country_id' => 'nullable|exists:countries,id',
+            'birth_date' => 'nullable|date',
             'email' => 'required|email|max:255|unique:employees,email',
+            'personal_email' => 'nullable|email|max:255',
+            'work_email' => 'nullable|email|max:255',
             'phone' => 'nullable|string|max:20',
+            'work_phone' => 'nullable|string|max:20',
             'mobile' => 'nullable|string|max:20',
+            'fingerprint_device_id' => 'nullable|string|max:50',
+            'work_address' => 'nullable|string|max:500',
             'department' => 'nullable|string|max:255',
             'department_id' => 'nullable|exists:departments,id',
             'job_title' => 'nullable|string|max:255',
             'manager' => 'nullable|string|max:255',
+            'direct_manager' => 'nullable|string|max:255',
+            'additional_approver_2' => 'nullable|string|max:255',
+            'additional_approver_3' => 'nullable|string|max:255',
             'hire_date' => 'nullable|date',
+            'employment_date' => 'nullable|date',
+            'probation_end_date' => 'nullable|date',
+            'employment_status' => 'nullable|in:active,inactive,terminated',
+            'termination_date' => 'nullable|date',
+            'departure_date' => 'nullable|date',
+            'departure_reason' => 'nullable|string|max:500',
+            'id_number' => 'nullable|string|max:50',
+            'residence_expiry_date' => 'nullable|date',
+            'contract_end_date' => 'nullable|date',
+            'exit_reentry_visa_expiry' => 'nullable|date',
+            'passport_number' => 'nullable|string|max:50',
+            'passport_expiry_date' => 'nullable|date',
+            'insurance_policy' => 'nullable|string|max:255',
+            'insurance_expiry_date' => 'nullable|date',
+            'emergency_contact_name' => 'nullable|string|max:255',
+            'emergency_contact_phone' => 'nullable|string|max:20',
+            'emergency_contact_email' => 'nullable|email|max:255',
+            'emergency_contact_address' => 'nullable|string|max:500',
             'notes' => 'nullable|string',
         ]);
 
-        // Just validate department exists (no company restriction)
+        \Log::info('Validation passed, checking department...');
+
+        // Validate department belongs to selected company if specified
         if (!empty($validated['department_id'])) {
-            $department = \App\Models\Department::find($validated['department_id']);
+            $department = \App\Models\Department::where('id', $validated['department_id'])
+                ->where('company_id', $validated['company_id'])
+                ->first();
             
             if (!$department) {
-                return back()->withErrors(['department_id' => 'Invalid department selection.']);
+                return back()->withErrors(['department_id' => 'Invalid department selection for the chosen company.']);
             }
         }
+        
+        \Log::info('Department check passed, setting defaults...');
+        
+        // Set default employment status if not provided
+        if (empty($validated['employment_status'])) {
+            $validated['employment_status'] = 'active';
+        }
 
-        $validated['company_id'] = $company->id;
+        try {
+            \Log::info('Creating employee...');
+            $employee = Employee::create($validated);
+            \Log::info('Employee created successfully', ['employee_id' => $employee->id]);
 
-        $employee = Employee::create($validated);
-
-        return redirect()->route('employees.show', $employee)
-            ->with('success', 'Employee created successfully.');
+            return redirect()->route('employees.show', $employee)
+                ->with('success', 'Employee created successfully.');
+        } catch (\Exception $e) {
+            \Log::error('Employee creation failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return back()->withErrors(['error' => 'Employee creation failed: ' . $e->getMessage()]);
+        }
     }
 
     /**
@@ -152,6 +225,8 @@ class EmployeeController extends Controller
 
         $employee->load([
             'company', 
+            'nationality',
+            'residenceCountry',
             'assets.assetCategory',
             'assetAssignments.asset.assetCategory',
             'reportedTickets.ticketCategory'
@@ -169,21 +244,30 @@ class EmployeeController extends Controller
     public function edit(Employee $employee): Response|RedirectResponse
     {
         $user = Auth::user();
-        $company = $user->currentCompany();
+        $companies = $user->ownedCompanies()->get();
+        $ownedCompanyIds = $companies->pluck('id');
         
-        // If user doesn't have a company, redirect to create one
-        if (!$company) {
+        // If user doesn't have any companies, redirect to create one
+        if ($companies->isEmpty()) {
             return redirect()->route('companies.create')
                 ->with('info', 'Please create a company first to manage employees.');
         }
         
-        // Check if user has access to this employee
-        if ($employee->company_id !== $company->id) {
+        // Check if user has access to this employee (owns the employee's company)
+        if (!$ownedCompanyIds->contains($employee->company_id)) {
             abort(403);
         }
 
+        // Get Saudi Arabia as default residence country
+        $saudiArabia = Country::where('code', 'SA')->first();
+
         return Inertia::render('Employees/Edit', [
             'employee' => $employee,
+            'companies' => $companies,
+            'defaultCompanyId' => $employee->company_id,
+            'countries' => Country::active()->orderByName()->get(),
+            'nationalities' => Nationality::active()->orderByName()->get(),
+            'defaultResidenceCountryId' => $saudiArabia?->id,
         ]);
     }
 
@@ -193,42 +277,73 @@ class EmployeeController extends Controller
     public function update(Request $request, Employee $employee): RedirectResponse
     {
         $user = Auth::user();
-        $company = $user->currentCompany();
+        $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
         
-        // If user doesn't have a company, redirect to create one
-        if (!$company) {
+        // If user doesn't have any companies, redirect to create one
+        if ($ownedCompanyIds->isEmpty()) {
             return redirect()->route('companies.create')
                 ->with('info', 'Please create a company first to manage employees.');
         }
         
-        // Check if user has access to this employee
-        if ($employee->company_id !== $company->id) {
+        // Check if user has access to this employee (owns the employee's current company)
+        if (!$ownedCompanyIds->contains($employee->company_id)) {
             abort(403);
         }
 
         $validated = $request->validate([
+            'company_id' => ['required', 'integer', Rule::in($ownedCompanyIds)],
             'employee_id' => 'nullable|string|max:50|unique:employees,employee_id,' . $employee->id,
             'first_name' => 'required|string|max:255',
+            'father_name' => 'nullable|string|max:255',
             'last_name' => 'required|string|max:255',
+            'nationality_id' => 'nullable|exists:nationalities,id',
+            'residence_country_id' => 'nullable|exists:countries,id',
+            'birth_date' => 'nullable|date',
             'email' => 'required|email|max:255|unique:employees,email,' . $employee->id,
+            'personal_email' => 'nullable|email|max:255',
+            'work_email' => 'nullable|email|max:255',
             'phone' => 'nullable|string|max:20',
+            'work_phone' => 'nullable|string|max:20',
             'mobile' => 'nullable|string|max:20',
+            'fingerprint_device_id' => 'nullable|string|max:50',
+            'work_address' => 'nullable|string|max:500',
             'department' => 'nullable|string|max:255',
             'department_id' => 'nullable|exists:departments,id',
             'job_title' => 'nullable|string|max:255',
             'manager' => 'nullable|string|max:255',
+            'direct_manager' => 'nullable|string|max:255',
+            'additional_approver_2' => 'nullable|string|max:255',
+            'additional_approver_3' => 'nullable|string|max:255',
             'hire_date' => 'nullable|date',
+            'employment_date' => 'nullable|date',
+            'probation_end_date' => 'nullable|date',
             'termination_date' => 'nullable|date',
+            'departure_date' => 'nullable|date',
+            'departure_reason' => 'nullable|string|max:500',
             'employment_status' => 'required|in:active,inactive,terminated',
+            'id_number' => 'nullable|string|max:50',
+            'residence_expiry_date' => 'nullable|date',
+            'contract_end_date' => 'nullable|date',
+            'exit_reentry_visa_expiry' => 'nullable|date',
+            'passport_number' => 'nullable|string|max:50',
+            'passport_expiry_date' => 'nullable|date',
+            'insurance_policy' => 'nullable|string|max:255',
+            'insurance_expiry_date' => 'nullable|date',
+            'emergency_contact_name' => 'nullable|string|max:255',
+            'emergency_contact_phone' => 'nullable|string|max:20',
+            'emergency_contact_email' => 'nullable|email|max:255',
+            'emergency_contact_address' => 'nullable|string|max:500',
             'notes' => 'nullable|string',
         ]);
 
-        // Just validate department exists (no company restriction)
+        // Validate department belongs to selected company if specified
         if (!empty($validated['department_id'])) {
-            $department = \App\Models\Department::find($validated['department_id']);
+            $department = \App\Models\Department::where('id', $validated['department_id'])
+                ->where('company_id', $validated['company_id'])
+                ->first();
             
             if (!$department) {
-                return back()->withErrors(['department_id' => 'Invalid department selection.']);
+                return back()->withErrors(['department_id' => 'Invalid department selection for the chosen company.']);
             }
         }
 

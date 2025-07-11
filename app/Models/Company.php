@@ -31,6 +31,13 @@ class Company extends Model
         'is_active' => 'boolean',
     ];
 
+    /**
+     * The accessors to append to the model's array form.
+     */
+    protected $appends = [
+        'name',
+    ];
+
     protected static function boot()
     {
         parent::boot();
@@ -111,6 +118,14 @@ class Company extends Model
     {
         $locale = $locale ?? app()->getLocale();
         return $locale === 'ar' ? $this->name_ar : $this->name_en;
+    }
+
+    /**
+     * Get localized name attribute for JSON serialization.
+     */
+    public function getNameAttribute(): string
+    {
+        return $this->getName();
     }
 
     /**

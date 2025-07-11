@@ -106,21 +106,52 @@ export interface Employee {
     employee_id?: string;
     first_name: string;
     last_name: string;
+    father_name?: string;
+    nationality?: string;
+    residence_country?: string;
+    birth_date?: string;
     email: string;
+    personal_email?: string;
+    work_email?: string;
     phone?: string;
     mobile?: string;
+    work_phone?: string;
     department?: string;
+    department_id?: number;
     job_title?: string;
     manager?: string;
+    direct_manager?: string;
+    additional_approver_2?: string;
+    additional_approver_3?: string;
     hire_date?: string;
+    employment_date?: string;
+    probation_end_date?: string;
     termination_date?: string;
+    departure_date?: string;
+    departure_reason?: string;
     employment_status: 'active' | 'inactive' | 'terminated';
+    location_id?: number;
+    work_address?: string;
+    fingerprint_device_id?: string;
+    id_number?: string;
+    residence_expiry_date?: string;
+    contract_end_date?: string;
+    exit_reentry_visa_expiry?: string;
+    passport_number?: string;
+    passport_expiry_date?: string;
+    insurance_policy?: string;
+    insurance_expiry_date?: string;
+    emergency_contact_name?: string;
+    emergency_contact_phone?: string;
+    emergency_contact_email?: string;
+    emergency_contact_address?: string;
     company_id: number;
     notes?: string;
     settings?: Record<string, any>;
     created_at: string;
     updated_at: string;
     company?: Company;
+    location?: Location;
     assets?: Asset[];
     asset_assignments?: AssetAssignment[];
     reported_tickets?: Ticket[];
@@ -128,6 +159,20 @@ export interface Employee {
     reported_tickets_count?: number;
     full_name?: string;
     display_name?: string;
+}
+
+export interface Department {
+    id: number;
+    name: string;
+    code?: string;
+    description?: string;
+    company_id: number;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+    company?: Company;
+    employees?: Employee[];
+    employees_count?: number;
 }
 
 export interface AssetCategory {

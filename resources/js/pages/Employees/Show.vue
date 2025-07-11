@@ -28,89 +28,286 @@
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <!-- Employee Details -->
                     <div class="lg:col-span-2 space-y-6">
+                        <!-- General Information -->
                         <Card>
                             <CardHeader>
-                                <CardTitle>{{ t('employees.basic_information') }}</CardTitle>
+                                <CardTitle class="flex items-center gap-2">
+                                    <Icon name="User" class="h-5 w-5 text-blue-600" />
+                                    {{ t('employees.general_information') }}
+                                </CardTitle>
                             </CardHeader>
                             <CardContent class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <Label class="text-sm font-medium text-muted-foreground">{{ t('employees.employee_id') }}</Label>
+                                <div v-if="employee.employee_id">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.employee_id') }}</Label>
                                     <p class="text-sm font-mono">{{ employee.employee_id }}</p>
                                 </div>
                                 
                                 <div>
-                                    <Label class="text-sm font-medium text-muted-foreground">{{ t('employees.full_name') }}</Label>
-                                    <p class="text-sm">{{ employee.full_name }}</p>
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.full_name') }}</Label>
+                                    <p class="text-sm">{{ employee.first_name }} {{ employee.father_name ? employee.father_name + ' ' : '' }}{{ employee.last_name }}</p>
+                                </div>
+                                
+                                <div v-if="employee.nationality">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.nationality') }}</Label>
+                                    <p class="text-sm">{{ employee.nationality.name }}</p>
+                                </div>
+                                
+                                <div v-if="employee.residence_country">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.residence_country') }}</Label>
+                                    <p class="text-sm">{{ employee.residence_country.name }}</p>
+                                </div>
+                                
+                                <div v-if="employee.birth_date">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.birth_date') }}</Label>
+                                    <p class="text-sm">{{ new Date(employee.birth_date).toLocaleDateString() }}</p>
                                 </div>
                                 
                                 <div>
-                                    <Label class="text-sm font-medium text-muted-foreground">{{ t('employees.email') }}</Label>
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.email') }}</Label>
                                     <p class="text-sm">{{ employee.email }}</p>
                                 </div>
                                 
+                                <div v-if="employee.personal_email">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.personal_email') }}</Label>
+                                    <p class="text-sm">{{ employee.personal_email }}</p>
+                                </div>
+                                
+                                <div v-if="employee.work_email">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.work_email') }}</Label>
+                                    <p class="text-sm">{{ employee.work_email }}</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <!-- Work Details -->
+                        <Card>
+                            <CardHeader>
+                                <CardTitle class="flex items-center gap-2">
+                                    <Icon name="Briefcase" class="h-5 w-5 text-green-600" />
+                                    {{ t('employees.work_details') }}
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div v-if="employee.job_title">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.job_title') }}</Label>
+                                    <p class="text-sm">{{ employee.job_title }}</p>
+                                </div>
+                                
+                                <div v-if="employee.department">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.department') }}</Label>
+                                    <p class="text-sm">{{ employee.department }}</p>
+                                </div>
+                                
+                                <div v-if="employee.employment_date">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.employment_date') }}</Label>
+                                    <p class="text-sm">{{ new Date(employee.employment_date).toLocaleDateString() }}</p>
+                                </div>
+                                
+                                <div v-if="employee.probation_end_date">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.probation_end_date') }}</Label>
+                                    <p class="text-sm">{{ new Date(employee.probation_end_date).toLocaleDateString() }}</p>
+                                </div>
+                                
+                                <div v-if="employee.work_phone">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.work_phone') }}</Label>
+                                    <p class="text-sm">{{ employee.work_phone }}</p>
+                                </div>
+                                
+                                <div v-if="employee.phone">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.phone') }}</Label>
+                                    <p class="text-sm">{{ employee.phone }}</p>
+                                </div>
+                                
+                                <div v-if="employee.mobile">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.mobile') }}</Label>
+                                    <p class="text-sm">{{ employee.mobile }}</p>
+                                </div>
+                                
+                                <div v-if="employee.fingerprint_device_id">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.fingerprint_device_id') }}</Label>
+                                    <p class="text-sm font-mono">{{ employee.fingerprint_device_id }}</p>
+                                </div>
+                                
+                                <div v-if="employee.work_address" class="md:col-span-2">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.work_address') }}</Label>
+                                    <p class="text-sm">{{ employee.work_address }}</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <!-- Legal Information -->
+                        <Card v-if="employee.id_number || employee.passport_number || employee.residence_expiry_date || employee.contract_end_date">
+                            <CardHeader>
+                                <CardTitle class="flex items-center gap-2">
+                                    <Icon name="FileText" class="h-5 w-5 text-orange-600" />
+                                    {{ t('employees.legal_information') }}
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div v-if="employee.id_number">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.id_number') }}</Label>
+                                    <p class="text-sm font-mono">{{ employee.id_number }}</p>
+                                </div>
+                                
+                                <div v-if="employee.residence_expiry_date">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.residence_expiry_date') }}</Label>
+                                    <p class="text-sm">{{ new Date(employee.residence_expiry_date).toLocaleDateString() }}</p>
+                                </div>
+                                
+                                <div v-if="employee.contract_end_date">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.contract_end_date') }}</Label>
+                                    <p class="text-sm">{{ new Date(employee.contract_end_date).toLocaleDateString() }}</p>
+                                </div>
+                                
+                                <div v-if="employee.exit_reentry_visa_expiry">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.exit_reentry_visa_expiry') }}</Label>
+                                    <p class="text-sm">{{ new Date(employee.exit_reentry_visa_expiry).toLocaleDateString() }}</p>
+                                </div>
+                                
+                                <div v-if="employee.passport_number">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.passport_number') }}</Label>
+                                    <p class="text-sm font-mono">{{ employee.passport_number }}</p>
+                                </div>
+                                
+                                <div v-if="employee.passport_expiry_date">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.passport_expiry_date') }}</Label>
+                                    <p class="text-sm">{{ new Date(employee.passport_expiry_date).toLocaleDateString() }}</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <!-- Insurance -->
+                        <Card v-if="employee.insurance_policy || employee.insurance_expiry_date">
+                            <CardHeader>
+                                <CardTitle class="flex items-center gap-2">
+                                    <Icon name="Shield" class="h-5 w-5 text-purple-600" />
+                                    {{ t('employees.insurance') }}
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div v-if="employee.insurance_policy">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.insurance_policy') }}</Label>
+                                    <p class="text-sm">{{ employee.insurance_policy }}</p>
+                                </div>
+                                
+                                <div v-if="employee.insurance_expiry_date">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.insurance_expiry_date') }}</Label>
+                                    <p class="text-sm">{{ new Date(employee.insurance_expiry_date).toLocaleDateString() }}</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <!-- Employment Status -->
+                        <Card>
+                            <CardHeader>
+                                <CardTitle class="flex items-center gap-2">
+                                    <Icon name="Calendar" class="h-5 w-5 text-indigo-600" />
+                                    {{ t('employees.employment_status') }}
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <Label class="text-sm font-medium text-muted-foreground">{{ t('employees.employment_status') }}</Label>
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.employment_status') }}</Label>
                                     <Badge :class="getStatusBadgeClass(employee.employment_status)" class="text-xs">
                                         {{ t(`employees.status_${employee.employment_status}`) }}
                                     </Badge>
                                 </div>
                                 
-                                <div v-if="employee.phone">
-                                    <Label class="text-sm font-medium text-muted-foreground">{{ t('employees.phone') }}</Label>
-                                    <p class="text-sm">{{ employee.phone }}</p>
-                                </div>
-                                
-                                <div v-if="employee.mobile">
-                                    <Label class="text-sm font-medium text-muted-foreground">{{ t('employees.mobile') }}</Label>
-                                    <p class="text-sm">{{ employee.mobile }}</p>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>{{ t('employees.job_information') }}</CardTitle>
-                            </CardHeader>
-                            <CardContent class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div v-if="employee.job_title">
-                                    <Label class="text-sm font-medium text-muted-foreground">{{ t('employees.job_title') }}</Label>
-                                    <p class="text-sm">{{ employee.job_title }}</p>
-                                </div>
-                                
-                                <div v-if="employee.department">
-                                    <Label class="text-sm font-medium text-muted-foreground">{{ t('employees.department') }}</Label>
-                                    <p class="text-sm">{{ employee.department }}</p>
-                                </div>
-                                
-                                <div v-if="employee.manager">
-                                    <Label class="text-sm font-medium text-muted-foreground">{{ t('employees.manager') }}</Label>
-                                    <p class="text-sm">{{ employee.manager }}</p>
-                                </div>
-                                
-                                <div v-if="employee.location">
-                                    <Label class="text-sm font-medium text-muted-foreground">{{ t('employees.location') }}</Label>
-                                    <p class="text-sm">{{ employee.location.display_name || `${employee.location.code}: ${employee.location.name}` }}</p>
-                                </div>
-                                
                                 <div v-if="employee.hire_date">
-                                    <Label class="text-sm font-medium text-muted-foreground">{{ t('employees.hire_date') }}</Label>
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.hire_date') }}</Label>
                                     <p class="text-sm">{{ new Date(employee.hire_date).toLocaleDateString() }}</p>
                                 </div>
                                 
                                 <div v-if="employee.termination_date">
-                                    <Label class="text-sm font-medium text-muted-foreground">{{ t('employees.termination_date') }}</Label>
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.termination_date') }}</Label>
                                     <p class="text-sm">{{ new Date(employee.termination_date).toLocaleDateString() }}</p>
+                                </div>
+                                
+                                <div v-if="employee.departure_date">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.departure_date') }}</Label>
+                                    <p class="text-sm">{{ new Date(employee.departure_date).toLocaleDateString() }}</p>
+                                </div>
+                                
+                                <div v-if="employee.departure_reason" class="md:col-span-2">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.departure_reason') }}</Label>
+                                    <p class="text-sm">{{ employee.departure_reason }}</p>
                                 </div>
                             </CardContent>
                         </Card>
 
+                        <!-- Managers / Workflow -->
+                        <Card v-if="employee.manager || employee.direct_manager || employee.additional_approver_2 || employee.additional_approver_3">
+                            <CardHeader>
+                                <CardTitle class="flex items-center gap-2">
+                                    <Icon name="Users" class="h-5 w-5 text-cyan-600" />
+                                    {{ t('employees.managers_workflow') }}
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div v-if="employee.manager">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.manager') }}</Label>
+                                    <p class="text-sm">{{ employee.manager }}</p>
+                                </div>
+                                
+                                <div v-if="employee.direct_manager">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.direct_manager') }}</Label>
+                                    <p class="text-sm">{{ employee.direct_manager }}</p>
+                                </div>
+                                
+                                <div v-if="employee.additional_approver_2">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.additional_approver_2') }}</Label>
+                                    <p class="text-sm">{{ employee.additional_approver_2 }}</p>
+                                </div>
+                                
+                                <div v-if="employee.additional_approver_3">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.additional_approver_3') }}</Label>
+                                    <p class="text-sm">{{ employee.additional_approver_3 }}</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <!-- Emergency Contact -->
+                        <Card v-if="employee.emergency_contact_name || employee.emergency_contact_phone || employee.emergency_contact_email">
+                            <CardHeader>
+                                <CardTitle class="flex items-center gap-2">
+                                    <Icon name="Phone" class="h-5 w-5 text-red-600" />
+                                    {{ t('employees.emergency_contact') }}
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div v-if="employee.emergency_contact_name">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.emergency_contact_name') }}</Label>
+                                    <p class="text-sm">{{ employee.emergency_contact_name }}</p>
+                                </div>
+                                
+                                <div v-if="employee.emergency_contact_phone">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.emergency_contact_phone') }}</Label>
+                                    <p class="text-sm">{{ employee.emergency_contact_phone }}</p>
+                                </div>
+                                
+                                <div v-if="employee.emergency_contact_email">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.emergency_contact_email') }}</Label>
+                                    <p class="text-sm">{{ employee.emergency_contact_email }}</p>
+                                </div>
+                                
+                                <div v-if="employee.emergency_contact_address" class="md:col-span-2">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.emergency_contact_address') }}</Label>
+                                    <p class="text-sm whitespace-pre-wrap">{{ employee.emergency_contact_address }}</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <!-- Additional Information -->
                         <Card v-if="employee.notes">
                             <CardHeader>
-                                <CardTitle>{{ t('employees.additional_information') }}</CardTitle>
+                                <CardTitle class="flex items-center gap-2">
+                                    <Icon name="FileText" class="h-5 w-5 text-gray-600" />
+                                    {{ t('employees.additional_information') }}
+                                </CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <div>
-                                    <Label class="text-sm font-medium text-muted-foreground">{{ t('employees.notes') }}</Label>
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.notes') }}</Label>
                                     <p class="text-sm mt-1 whitespace-pre-wrap">{{ employee.notes }}</p>
                                 </div>
                             </CardContent>

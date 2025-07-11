@@ -325,8 +325,6 @@ const getFieldLabel = (field: string) => {
             return t('employees.emergency_contact_address')
         case 'notes':
             return t('employees.notes')
-        case 'error':
-            return t('common.error') // Handle generic error key
         default:
             return field // Fallback to the field name if not found
     }
@@ -337,230 +335,219 @@ const hasErrorsInSection = (fields: string[]) => {
 }
 
 const translateValidationError = (error: string) => {
-    // Handle empty or undefined errors
-    if (!error || error.trim() === '') {
-        return t('validation.required')
+    // Common Laravel validation error patterns
+    const validationRules = {
+        'required': 'validation.required',
+        'unique': 'validation.unique',
+        'email': 'validation.email',
+        'min': 'validation.min',
+        'max': 'validation.max',
+        'numeric': 'validation.numeric',
+        'string': 'validation.string',
+        'date': 'validation.date',
+        'date_format': 'validation.date_format',
+        'before': 'validation.before',
+        'after': 'validation.after',
+        'confirmed': 'validation.confirmed',
+        'different': 'validation.different',
+        'same': 'validation.same',
+        'size': 'validation.size',
+        'in': 'validation.in',
+        'not_in': 'validation.not_in',
+        'regex': 'validation.regex',
+        'alpha': 'validation.alpha',
+        'alpha_num': 'validation.alpha_num',
+        'alpha_dash': 'validation.alpha_dash',
+        'boolean': 'validation.boolean',
+        'integer': 'validation.integer',
+        'json': 'validation.json',
+        'mimes': 'validation.mimes',
+        'image': 'validation.image',
+        'exists': 'validation.exists',
+        'digits': 'validation.digits',
+        'digits_between': 'validation.digits_between',
+        'phone': 'validation.phone',
+        'url': 'validation.url',
+        'ip': 'validation.ip',
+        'timezone': 'validation.timezone',
+        'accepted': 'validation.accepted',
+        'active_url': 'validation.active_url',
+        'array': 'validation.array',
+        'before_or_equal': 'validation.before_or_equal',
+        'after_or_equal': 'validation.after_or_equal',
+        'between': 'validation.between',
+        'file': 'validation.file',
+        'filled': 'validation.filled',
+        'gt': 'validation.gt',
+        'gte': 'validation.gte',
+        'in_array': 'validation.in_array',
+        'lt': 'validation.lt',
+        'lte': 'validation.lte',
+        'max_digits': 'validation.max_digits',
+        'min_digits': 'validation.min_digits',
+        'multiple_of': 'validation.multiple_of',
+        'not_regex': 'validation.not_regex',
+        'nullable': 'validation.nullable',
+        'present': 'validation.present',
+        'prohibited': 'validation.prohibited',
+        'prohibited_if': 'validation.prohibited_if',
+        'prohibited_unless': 'validation.prohibited_unless',
+        'prohibits': 'validation.prohibits',
+        'required_if': 'validation.required_if',
+        'required_unless': 'validation.required_unless',
+        'required_with': 'validation.required_with',
+        'required_with_all': 'validation.required_with_all',
+        'required_without': 'validation.required_without',
+        'required_without_all': 'validation.required_without_all',
+        'starts_with': 'validation.starts_with',
+        'ends_with': 'validation.ends_with',
+        'uuid': 'validation.uuid',
+        'uploaded': 'validation.uploaded',
+        'password': 'validation.password',
+        'current_password': 'validation.current_password',
+        'new_password_different': 'validation.new_password_different',
+        'mixed': 'validation.mixed',
+        'letters': 'validation.letters',
+        'numbers': 'validation.numbers',
+        'symbols': 'validation.symbols',
+        'uncompromised': 'validation.uncompromised',
     }
     
-    // First, check for the most common Laravel validation patterns
-    const lowerError = error.toLowerCase().trim()
+    // Check for specific validation error patterns
+    for (const [rule, translationKey] of Object.entries(validationRules)) {
+        // Check if the error message contains the rule pattern
+        if (error.toLowerCase().includes(rule) || 
+            error.toLowerCase().includes('is required') || 
+            error.toLowerCase().includes('must be') || 
+            error.toLowerCase().includes('has already been taken') ||
+            error.toLowerCase().includes('format is invalid') ||
+            error.toLowerCase().includes('field is required')) {
+            
+            // Handle specific cases
+            if (error.toLowerCase().includes('required') || error.toLowerCase().includes('is required') || error.toLowerCase().includes('field is required')) {
+                return t('validation.required')
+            } else if (error.toLowerCase().includes('unique') || error.toLowerCase().includes('has already been taken')) {
+                return t('validation.unique')
+            } else if (error.toLowerCase().includes('email') || error.toLowerCase().includes('must be a valid email')) {
+                return t('validation.email')
+            } else if (error.toLowerCase().includes('format is invalid')) {
+                return t('validation.date_format')
+            } else if (error.toLowerCase().includes('must be a number')) {
+                return t('validation.numeric')
+            } else if (error.toLowerCase().includes('must be a string')) {
+                return t('validation.string')
+            } else if (error.toLowerCase().includes('must be a date')) {
+                return t('validation.date')
+            } else if (error.toLowerCase().includes('must be an integer')) {
+                return t('validation.integer')
+            } else if (error.toLowerCase().includes('must be a boolean')) {
+                return t('validation.boolean')
+            } else if (error.toLowerCase().includes('must be accepted')) {
+                return t('validation.accepted')
+            } else {
+                return t(translationKey)
+            }
+        }
+    }
     
-    // Handle unique constraint violations first (most specific)
-    // Check for various patterns that indicate uniqueness violations
-    if (lowerError.includes('has already been taken') || 
-        lowerError.includes('already exists') ||
-        lowerError.includes('already been taken') ||
-        lowerError.includes('duplicate') ||
-        lowerError.includes('unique') ||
-        lowerError.includes('not unique') ||
-        lowerError.includes('already in use') ||
-        lowerError.includes('already registered') ||
-        lowerError.includes('email already exists') ||
-        lowerError.includes('must be unique') ||
-        lowerError.includes('is not unique') ||
-        lowerError.includes('constraint') ||
-        lowerError.includes('integrity') ||
-        // Sometimes Laravel returns database constraint messages
-        lowerError.includes('duplicate entry') ||
-        lowerError.includes('duplicate key') ||
-        lowerError.includes('violates unique constraint') ||
-        // Check if it's specifically about email uniqueness
-        (lowerError.includes('email') && (lowerError.includes('taken') || lowerError.includes('exists') || lowerError.includes('duplicate')))) {
+    // If no specific pattern found, try common patterns
+    const lowerError = error.toLowerCase()
+    if (lowerError.includes('required') || lowerError.includes('is required') || lowerError.includes('field is required')) {
+        return t('validation.required')
+    } else if (lowerError.includes('unique') || lowerError.includes('has already been taken')) {
         return t('validation.unique')
-    }
-    
-    // Handle required field errors
-    if (lowerError.includes('required') || 
-        lowerError.includes('is required') || 
-        lowerError.includes('field is required') ||
-        lowerError.includes('this field is required') ||
-        lowerError.includes('cannot be empty') ||
-        lowerError.includes('must not be empty')) {
-        return t('validation.required')
-    }
-    
-    // Handle email validation errors
-    if (lowerError.includes('email') && 
-        (lowerError.includes('valid') || lowerError.includes('format') || lowerError.includes('invalid'))) {
+    } else if (lowerError.includes('email') || lowerError.includes('must be a valid email')) {
         return t('validation.email')
-    }
-    
-    // Handle numeric validation errors
-    if (lowerError.includes('must be a number') || 
-        lowerError.includes('numeric') ||
-        lowerError.includes('must be numeric')) {
-        return t('validation.numeric')
-    }
-    
-    // Handle string validation errors
-    if (lowerError.includes('must be a string') || 
-        lowerError.includes('string')) {
-        return t('validation.string')
-    }
-    
-    // Handle date validation errors
-    if (lowerError.includes('must be a date') || 
-        lowerError.includes('valid date') ||
-        lowerError.includes('date format')) {
-        return t('validation.date')
-    }
-    
-    // Handle integer validation errors
-    if (lowerError.includes('must be an integer') || 
-        lowerError.includes('integer')) {
-        return t('validation.integer')
-    }
-    
-    // Handle boolean validation errors
-    if (lowerError.includes('must be a boolean') || 
-        lowerError.includes('boolean') ||
-        lowerError.includes('true or false')) {
-        return t('validation.boolean')
-    }
-    
-    // Handle minimum length errors
-    if (lowerError.includes('minimum') || 
-        lowerError.includes('at least') ||
-        (lowerError.includes('min') && lowerError.includes('character'))) {
+    } else if (lowerError.includes('min') || lowerError.includes('minimum')) {
         return t('validation.min')
-    }
-    
-    // Handle maximum length errors
-    if (lowerError.includes('maximum') || 
-        lowerError.includes('no more than') ||
-        (lowerError.includes('max') && lowerError.includes('character'))) {
+    } else if (lowerError.includes('max') || lowerError.includes('maximum')) {
         return t('validation.max')
-    }
-    
-    // Handle file upload errors
-    if (lowerError.includes('must be an image') || 
-        lowerError.includes('image')) {
-        return t('validation.image')
-    }
-    
-    if (lowerError.includes('must be a file') || 
-        lowerError.includes('file')) {
-        return t('validation.file')
-    }
-    
-    // Handle URL validation errors
-    if (lowerError.includes('must be a valid url') || 
-        lowerError.includes('url') ||
-        lowerError.includes('valid url')) {
-        return t('validation.url')
-    }
-    
-    // Handle confirmed field errors (password confirmation, etc.)
-    if (lowerError.includes('confirmation') || 
-        lowerError.includes('confirmed') ||
-        lowerError.includes('does not match')) {
-        return t('validation.confirmed')
-    }
-    
-    // Handle selection/exists errors
-    if (lowerError.includes('selected') && lowerError.includes('invalid') || 
-        lowerError.includes('does not exist') ||
-        lowerError.includes('invalid selection')) {
-        return t('validation.exists')
-    }
-    
-    // Handle accepted field errors (terms, privacy, etc.)
-    if (lowerError.includes('must be accepted') || 
-        lowerError.includes('accepted')) {
+    } else if (lowerError.includes('numeric') || lowerError.includes('must be a number')) {
+        return t('validation.numeric')
+    } else if (lowerError.includes('string') || lowerError.includes('must be a string')) {
+        return t('validation.string')
+    } else if (lowerError.includes('date') || lowerError.includes('must be a date')) {
+        return t('validation.date')
+    } else if (lowerError.includes('integer') || lowerError.includes('must be an integer')) {
+        return t('validation.integer')
+    } else if (lowerError.includes('boolean') || lowerError.includes('must be a boolean')) {
+        return t('validation.boolean')
+    } else if (lowerError.includes('accepted') || lowerError.includes('must be accepted')) {
         return t('validation.accepted')
-    }
-    
-    // Handle array validation errors
-    if (lowerError.includes('must be an array') || 
-        lowerError.includes('array')) {
-        return t('validation.array')
-    }
-    
-    // Handle phone number validation errors
-    if (lowerError.includes('phone') || 
-        lowerError.includes('telephone')) {
-        return t('validation.phone')
-    }
-    
-    // Handle password validation errors
-    if (lowerError.includes('password')) {
-        return t('validation.password')
-    }
-    
-    // Handle file upload errors
-    if (lowerError.includes('uploaded') || 
-        lowerError.includes('upload failed')) {
-        return t('validation.uploaded')
-    }
-    
-    // Handle between validation errors
-    if (lowerError.includes('between')) {
-        return t('validation.between')
-    }
-    
-    // Handle size validation errors
-    if (lowerError.includes('size')) {
-        return t('validation.size')
-    }
-    
-    // Handle regex/format validation errors
-    if (lowerError.includes('format') || 
-        lowerError.includes('regex') ||
-        lowerError.includes('pattern')) {
-        return t('validation.regex')
-    }
-    
-    // Handle alpha validation errors
-    if (lowerError.includes('only contain letters') || 
-        (lowerError.includes('alpha') && !lowerError.includes('numeric'))) {
+    } else if (lowerError.includes('image') || lowerError.includes('must be an image')) {
+        return t('validation.image')
+    } else if (lowerError.includes('exists') || lowerError.includes('selected') && lowerError.includes('invalid')) {
+        return t('validation.exists')
+    } else if (lowerError.includes('file') || lowerError.includes('must be a file')) {
+        return t('validation.file')
+    } else if (lowerError.includes('url') || lowerError.includes('must be a valid url')) {
+        return t('validation.url')
+    } else if (lowerError.includes('confirmed') || lowerError.includes('confirmation')) {
+        return t('validation.confirmed')
+    } else if (lowerError.includes('alpha') && lowerError.includes('only contain letters')) {
         return t('validation.alpha')
-    }
-    
-    // Handle alphanumeric validation errors
-    if (lowerError.includes('letters and numbers') || 
-        lowerError.includes('alphanumeric') ||
-        lowerError.includes('alpha_num')) {
+    } else if (lowerError.includes('alpha') && lowerError.includes('numbers')) {
         return t('validation.alpha_num')
-    }
-    
-    // Handle JSON validation errors
-    if (lowerError.includes('json')) {
+    } else if (lowerError.includes('regex') || lowerError.includes('format')) {
+        return t('validation.regex')
+    } else if (lowerError.includes('between')) {
+        return t('validation.between')
+    } else if (lowerError.includes('size')) {
+        return t('validation.size')
+    } else if (lowerError.includes('in') && lowerError.includes('selected')) {
+        return t('validation.in')
+    } else if (lowerError.includes('json')) {
         return t('validation.json')
-    }
-    
-    // Handle MIME type validation errors
-    if (lowerError.includes('type') && lowerError.includes('file') || 
-        lowerError.includes('mime')) {
+    } else if (lowerError.includes('mimes') || lowerError.includes('type')) {
         return t('validation.mimes')
-    }
-    
-    // Handle digits validation errors
-    if (lowerError.includes('digits')) {
+    } else if (lowerError.includes('digits')) {
         return t('validation.digits')
-    }
-    
-    // Handle before/after date validation errors
-    if (lowerError.includes('before')) {
+    } else if (lowerError.includes('before')) {
         return t('validation.before')
-    }
-    
-    if (lowerError.includes('after')) {
+    } else if (lowerError.includes('after')) {
         return t('validation.after')
-    }
-    
-    // Handle timezone validation errors
-    if (lowerError.includes('timezone')) {
+    } else if (lowerError.includes('timezone')) {
         return t('validation.timezone')
-    }
-    
-    // Handle IP address validation errors
-    if (lowerError.includes('ip')) {
+    } else if (lowerError.includes('ip')) {
         return t('validation.ip')
-    }
-    
-    // Handle UUID validation errors
-    if (lowerError.includes('uuid')) {
+    } else if (lowerError.includes('uuid')) {
         return t('validation.uuid')
+    } else if (lowerError.includes('array')) {
+        return t('validation.array')
+    } else if (lowerError.includes('phone')) {
+        return t('validation.phone')
+    } else if (lowerError.includes('password')) {
+        return t('validation.password')
+    } else if (lowerError.includes('uploaded')) {
+        return t('validation.uploaded')
+    } else if (lowerError.includes('different')) {
+        return t('validation.different')
+    } else if (lowerError.includes('same')) {
+        return t('validation.same')
+    } else if (lowerError.includes('prohibited')) {
+        return t('validation.prohibited')
+    } else if (lowerError.includes('present')) {
+        return t('validation.present')
+    } else if (lowerError.includes('nullable')) {
+        return t('validation.nullable')
+    } else if (lowerError.includes('filled')) {
+        return t('validation.filled')
+    } else if (lowerError.includes('starts_with')) {
+        return t('validation.starts_with')
+    } else if (lowerError.includes('ends_with')) {
+        return t('validation.ends_with')
+    } else if (lowerError.includes('multiple_of')) {
+        return t('validation.multiple_of')
+    } else if (lowerError.includes('mixed')) {
+        return t('validation.mixed')
+    } else if (lowerError.includes('letters')) {
+        return t('validation.letters')
+    } else if (lowerError.includes('numbers')) {
+        return t('validation.numbers')
+    } else if (lowerError.includes('symbols')) {
+        return t('validation.symbols')
+    } else if (lowerError.includes('uncompromised')) {
+        return t('validation.uncompromised')
     }
     
     // If no pattern matches, return the original error
@@ -588,18 +575,18 @@ const translateValidationError = (error: string) => {
             </div>
 
             <form @submit.prevent="submit" class="space-y-6">
-                                <!-- Error Summary -->
+                <!-- Error Summary -->
                 <div v-if="Object.keys(form.errors).length > 0" class="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
                     <div class="flex items-center gap-2 mb-3">
                         <Icon name="AlertCircle" class="h-5 w-5 text-red-600" />
-                        <h3 class="text-red-800 font-medium">{{ t('validation.please_fix_errors') }}</h3>
+                        <h3 class="text-red-800 font-medium">Please fix the following errors:</h3>
                     </div>
                     <ul class="space-y-1">
                         <li v-for="(error, field) in form.errors" :key="field" class="text-red-700 text-sm">
                             <strong>{{ getFieldLabel(field) }}:</strong> {{ translateValidationError(error || '') }}
                         </li>
                     </ul>
-                    </div>
+                </div>
 
                 <!-- General Information Section -->
                 <Card>
@@ -694,7 +681,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.last_name" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.last_name || "") }}
+                                            {{ form.errors.last_name }}
                                         </div>
                                     </div>
 
@@ -719,7 +706,7 @@ const translateValidationError = (error: string) => {
                                         </select>
                                         <div v-if="form.errors.nationality_id" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.nationality_id || "") }}
+                                            {{ form.errors.nationality_id }}
                                         </div>
                                     </div>
 
@@ -744,7 +731,7 @@ const translateValidationError = (error: string) => {
                                         </select>
                                         <div v-if="form.errors.residence_country_id" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.residence_country_id || "") }}
+                                            {{ form.errors.residence_country_id }}
                                         </div>
                                     </div>
 
@@ -762,7 +749,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.birth_date" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.birth_date || "") }}
+                                            {{ form.errors.birth_date }}
                                         </div>
                                     </div>
 
@@ -781,7 +768,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.work_email" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.work_email || "") }}
+                                            {{ form.errors.work_email }}
                                         </div>
                                     </div>
 
@@ -801,7 +788,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.email" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.email || "") }}
+                                            {{ form.errors.email }}
                                         </div>
                                     </div>
 
@@ -820,7 +807,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.personal_email" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.personal_email || "") }}
+                                            {{ form.errors.personal_email }}
                                         </div>
                                     </div>
                                 </div>
@@ -862,7 +849,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.employment_date" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.employment_date || "") }}
+                                            {{ form.errors.employment_date }}
                                         </div>
                                     </div>
 
@@ -880,7 +867,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.probation_end_date" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.probation_end_date || "") }}
+                                            {{ form.errors.probation_end_date }}
                                         </div>
                                         <div v-if="form.employment_date" class="mt-2 flex gap-2 text-xs">
                                             <span class="text-gray-500">Quick select:</span>
@@ -923,7 +910,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.job_title" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.job_title || "") }}
+                                            {{ form.errors.job_title }}
                                         </div>
                                     </div>
 
@@ -942,7 +929,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.work_phone" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.work_phone || "") }}
+                                            {{ form.errors.work_phone }}
                                         </div>
                                     </div>
 
@@ -961,7 +948,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.phone" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.phone || "") }}
+                                            {{ form.errors.phone }}
                                         </div>
                                     </div>
 
@@ -980,7 +967,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.mobile" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.mobile || "") }}
+                                            {{ form.errors.mobile }}
                                         </div>
                                     </div>
 
@@ -999,7 +986,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.fingerprint_device_id" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.fingerprint_device_id || "") }}
+                                            {{ form.errors.fingerprint_device_id }}
                                         </div>
                                     </div>
 
@@ -1018,7 +1005,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.work_address" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.work_address || "") }}
+                                            {{ form.errors.work_address }}
                                         </div>
                                     </div>
 
@@ -1044,7 +1031,7 @@ const translateValidationError = (error: string) => {
                                         </select>
                                         <div v-if="form.errors.company_id" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.company_id || "") }}
+                                            {{ form.errors.company_id }}
                                         </div>
                                     </div>
 
@@ -1110,7 +1097,7 @@ const translateValidationError = (error: string) => {
                                         </div>
                                         <div v-if="form.errors.department_id" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.department_id || "") }}
+                                            {{ form.errors.department_id }}
                                         </div>
                                     </div>
                                 </div>
@@ -1153,7 +1140,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.id_number" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.id_number || "") }}
+                                            {{ form.errors.id_number }}
                                         </div>
                                     </div>
 
@@ -1171,7 +1158,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.residence_expiry_date" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.residence_expiry_date || "") }}
+                                            {{ form.errors.residence_expiry_date }}
                                         </div>
                                     </div>
 
@@ -1189,7 +1176,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.contract_end_date" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.contract_end_date || "") }}
+                                            {{ form.errors.contract_end_date }}
                                         </div>
                                     </div>
 
@@ -1207,7 +1194,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.exit_reentry_visa_expiry" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.exit_reentry_visa_expiry || "") }}
+                                            {{ form.errors.exit_reentry_visa_expiry }}
                                         </div>
                                     </div>
 
@@ -1226,7 +1213,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.passport_number" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.passport_number || "") }}
+                                            {{ form.errors.passport_number }}
                                         </div>
                                     </div>
 
@@ -1244,7 +1231,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.passport_expiry_date" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.passport_expiry_date || "") }}
+                                            {{ form.errors.passport_expiry_date }}
                                         </div>
                                     </div>
                                 </div>
@@ -1287,7 +1274,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.insurance_policy" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.insurance_policy || "") }}
+                                            {{ form.errors.insurance_policy }}
                                         </div>
                                     </div>
 
@@ -1305,7 +1292,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.insurance_expiry_date" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.insurance_expiry_date || "") }}
+                                            {{ form.errors.insurance_expiry_date }}
                                         </div>
                                     </div>
                                 </div>
@@ -1347,7 +1334,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.hire_date" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.hire_date || "") }}
+                                            {{ form.errors.hire_date }}
                                         </div>
                                     </div>
 
@@ -1371,7 +1358,7 @@ const translateValidationError = (error: string) => {
                                         </select>
                                         <div v-if="form.errors.employment_status" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.employment_status || "") }}
+                                            {{ form.errors.employment_status }}
                                         </div>
                                     </div>
 
@@ -1389,7 +1376,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.termination_date" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.termination_date || "") }}
+                                            {{ form.errors.termination_date }}
                                         </div>
                                     </div>
 
@@ -1407,7 +1394,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.departure_date" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.departure_date || "") }}
+                                            {{ form.errors.departure_date }}
                                         </div>
                                     </div>
 
@@ -1426,7 +1413,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.departure_reason" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.departure_reason || "") }}
+                                            {{ form.errors.departure_reason }}
                                         </div>
                                     </div>
                                 </div>
@@ -1469,7 +1456,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.manager" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.manager || "") }}
+                                            {{ form.errors.manager }}
                                         </div>
                                     </div>
 
@@ -1488,7 +1475,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.direct_manager" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.direct_manager || "") }}
+                                            {{ form.errors.direct_manager }}
                                         </div>
                                     </div>
 
@@ -1569,7 +1556,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.emergency_contact_name" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.emergency_contact_name || "") }}
+                                            {{ form.errors.emergency_contact_name }}
                                         </div>
                                     </div>
 
@@ -1588,7 +1575,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.emergency_contact_phone" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.emergency_contact_phone || "") }}
+                                            {{ form.errors.emergency_contact_phone }}
                                         </div>
                                     </div>
 
@@ -1607,7 +1594,7 @@ const translateValidationError = (error: string) => {
                                         />
                                         <div v-if="form.errors.emergency_contact_email" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.emergency_contact_email || "") }}
+                                            {{ form.errors.emergency_contact_email }}
                                         </div>
                                     </div>
 
@@ -1627,7 +1614,7 @@ const translateValidationError = (error: string) => {
                                         ></textarea>
                                         <div v-if="form.errors.emergency_contact_address" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.emergency_contact_address || "") }}
+                                            {{ form.errors.emergency_contact_address }}
                                         </div>
                                     </div>
                                 </div>
@@ -1669,7 +1656,7 @@ const translateValidationError = (error: string) => {
                                     ></textarea>
                                     <div v-if="form.errors.notes" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                         <Icon name="AlertCircle" class="h-4 w-4" />
-                                        {{ translateValidationError(form.errors.notes || "") }}
+                                        {{ form.errors.notes }}
                                     </div>
                                 </div>
                             </CardContent>
