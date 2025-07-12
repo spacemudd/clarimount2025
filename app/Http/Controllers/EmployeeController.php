@@ -21,16 +21,16 @@ class EmployeeController extends Controller
     public function index(Request $request): Response|RedirectResponse
     {
         $user = Auth::user();
-        $company = $user->currentCompany();
-        
+        $companies = $user->ownedCompanies()->pluck('id');
+
         // If user doesn't have a company, redirect to create one
-        if (!$company) {
+        if (!$companies) {
             return redirect()->route('companies.create')
                 ->with('info', 'Please create a company first to manage employees.');
         }
-        
-        $query = Employee::where('company_id', $company->id)
-            ->with(['assets'])
+
+        $query = Employee::whereIn('company_id', $companies)
+            ->with(['assets', 'company'])
             ->withCount(['assets', 'reportedTickets']);
 
         // Apply search filter
@@ -60,7 +60,6 @@ class EmployeeController extends Controller
 
         return Inertia::render('Employees/Index', [
             'employees' => $employees,
-            'company' => $company,
             'filters' => [
                 'search' => $request->input('search'),
                 'status' => $request->input('status'),
@@ -77,7 +76,7 @@ class EmployeeController extends Controller
         $user = Auth::user();
         $companies = $user->ownedCompanies()->get();
         $currentCompany = $user->currentCompany();
-        
+
         // If user doesn't have any companies, redirect to create one
         if ($companies->isEmpty()) {
             return redirect()->route('companies.create')
@@ -104,7 +103,7 @@ class EmployeeController extends Controller
     {
         $user = Auth::user();
         $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
-        
+
         // Debug logging
         \Log::info('Employee creation debug', [
             'user_id' => $user->id,
@@ -112,7 +111,7 @@ class EmployeeController extends Controller
             'request_company_id' => $request->input('company_id'),
             'request_data' => $request->all()
         ]);
-        
+
         // If user doesn't have any companies, redirect to create one
         if ($ownedCompanyIds->isEmpty()) {
             return redirect()->route('companies.create')
@@ -120,7 +119,7 @@ class EmployeeController extends Controller
         }
 
         \Log::info('Starting validation...');
-        
+
         $validated = $request->validate([
             'company_id' => ['required', 'integer', Rule::in($ownedCompanyIds)],
             'employee_id' => 'nullable|string|max:50|unique:employees,employee_id',
@@ -174,14 +173,14 @@ class EmployeeController extends Controller
             $department = \App\Models\Department::where('id', $validated['department_id'])
                 ->where('company_id', $validated['company_id'])
                 ->first();
-            
+
             if (!$department) {
                 return back()->withErrors(['department_id' => 'Invalid department selection for the chosen company.']);
             }
         }
-        
+
         \Log::info('Department check passed, setting defaults...');
-        
+
         // Set default employment status if not provided
         if (empty($validated['employment_status'])) {
             $validated['employment_status'] = 'active';
@@ -199,7 +198,7 @@ class EmployeeController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return back()->withErrors(['error' => 'Employee creation failed: ' . $e->getMessage()]);
         }
     }
@@ -210,21 +209,21 @@ class EmployeeController extends Controller
     public function show(Employee $employee): Response|RedirectResponse
     {
         $user = Auth::user();
-        $company = $user->currentCompany();
-        
+        $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
+
         // If user doesn't have a company, redirect to create one
-        if (!$company) {
+        if (!$ownedCompanyIds) {
             return redirect()->route('companies.create')
                 ->with('info', 'Please create a company first to manage employees.');
         }
-        
+
         // Check if user has access to this employee
-        if ($employee->company_id !== $company->id) {
+        if (!$ownedCompanyIds->contains($employee->company_id)) {
             abort(403);
         }
 
         $employee->load([
-            'company', 
+            'company',
             'nationality',
             'residenceCountry',
             'assets.assetCategory',
@@ -246,13 +245,13 @@ class EmployeeController extends Controller
         $user = Auth::user();
         $companies = $user->ownedCompanies()->get();
         $ownedCompanyIds = $companies->pluck('id');
-        
+
         // If user doesn't have any companies, redirect to create one
         if ($companies->isEmpty()) {
             return redirect()->route('companies.create')
                 ->with('info', 'Please create a company first to manage employees.');
         }
-        
+
         // Check if user has access to this employee (owns the employee's company)
         if (!$ownedCompanyIds->contains($employee->company_id)) {
             abort(403);
@@ -278,13 +277,13 @@ class EmployeeController extends Controller
     {
         $user = Auth::user();
         $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
-        
+
         // If user doesn't have any companies, redirect to create one
         if ($ownedCompanyIds->isEmpty()) {
             return redirect()->route('companies.create')
                 ->with('info', 'Please create a company first to manage employees.');
         }
-        
+
         // Check if user has access to this employee (owns the employee's current company)
         if (!$ownedCompanyIds->contains($employee->company_id)) {
             abort(403);
@@ -341,7 +340,7 @@ class EmployeeController extends Controller
             $department = \App\Models\Department::where('id', $validated['department_id'])
                 ->where('company_id', $validated['company_id'])
                 ->first();
-            
+
             if (!$department) {
                 return back()->withErrors(['department_id' => 'Invalid department selection for the chosen company.']);
             }
@@ -360,13 +359,13 @@ class EmployeeController extends Controller
     {
         $user = Auth::user();
         $company = $user->currentCompany();
-        
+
         // If user doesn't have a company, redirect to create one
         if (!$company) {
             return redirect()->route('companies.create')
                 ->with('info', 'Please create a company first to manage employees.');
         }
-        
+
         // Check if user has access to this employee
         if ($employee->company_id !== $company->id) {
             abort(403);
@@ -395,13 +394,30 @@ class EmployeeController extends Controller
      */
     public function search(Request $request): JsonResponse
     {
+        $user = Auth::user();
         $query = $request->get('q', '');
         $companyId = $request->get('company_id');
         $departmentId = $request->get('department_id');
-        
+
+        // Get all companies the user owns
+        $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
+
+        // If user doesn't have any companies, return empty results
+        if ($ownedCompanyIds->isEmpty()) {
+            return response()->json([]);
+        }
+
         $employees = Employee::query()
-            ->when($companyId, function ($q) use ($companyId) {
-                return $q->where('company_id', $companyId);
+            ->when($companyId, function ($q) use ($companyId, $ownedCompanyIds) {
+                // If a specific company is requested, use it (but only if user owns it)
+                if ($ownedCompanyIds->contains($companyId)) {
+                    return $q->where('company_id', $companyId);
+                }
+                // Otherwise, search across all owned companies
+                return $q->whereIn('company_id', $ownedCompanyIds);
+            }, function ($q) use ($ownedCompanyIds) {
+                // If no specific company requested, search across all owned companies
+                return $q->whereIn('company_id', $ownedCompanyIds);
             })
             ->when($departmentId, function ($q) use ($departmentId) {
                 return $q->where('department', $departmentId);
@@ -431,9 +447,10 @@ class EmployeeController extends Controller
                     'job_title' => $employee->job_title,
                     'department' => $employee->department,
                     'company_name' => $employee->company->name_en,
-                    'display_name' => ($employee->employee_id ? "{$employee->employee_id}: " : '') . 
+                    'display_name' => ($employee->employee_id ? "{$employee->employee_id}: " : '') .
                         "{$employee->first_name} {$employee->last_name}" .
-                        ($employee->job_title ? " - {$employee->job_title}" : ''),
+                        ($employee->job_title ? " - {$employee->job_title}" : '') .
+                        " ({$employee->company->name_en})",
                 ];
             });
 

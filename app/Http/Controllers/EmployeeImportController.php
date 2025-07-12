@@ -1,0 +1,351 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Employee;
+use App\Models\Company;
+use App\Models\Country;
+use App\Models\Nationality;
+use App\Models\Department;
+use App\Services\EmployeeImportService;
+use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class EmployeeImportController extends Controller
+{
+    protected $importService;
+
+    public function __construct(EmployeeImportService $importService)
+    {
+        $this->importService = $importService;
+    }
+
+    /**
+     * Show the import instructions page.
+     */
+    public function instructions(): Response|RedirectResponse
+    {
+        $user = Auth::user();
+        $companies = $user->ownedCompanies()->get();
+
+        if ($companies->isEmpty()) {
+            return redirect()->route('companies.create')
+                ->with('info', 'Please create a company first to import employees.');
+        }
+
+        return Inertia::render('Employees/Import/Instructions', [
+            'companies' => $companies,
+            'currentCompany' => $user->currentCompany(), // Keep for backwards compatibility
+            'requiredFields' => $this->getRequiredFields(),
+            'optionalFields' => $this->getOptionalFields(),
+        ]);
+    }
+
+    /**
+     * Show the upload page.
+     */
+    public function upload(): Response|RedirectResponse
+    {
+        $user = Auth::user();
+        $companies = $user->ownedCompanies()->get();
+
+        if ($companies->isEmpty()) {
+            return redirect()->route('companies.create')
+                ->with('info', 'Please create a company first to import employees.');
+        }
+
+        return Inertia::render('Employees/Import/Upload', [
+            'companies' => $companies,
+            'currentCompany' => $user->currentCompany(), // Keep for backwards compatibility
+        ]);
+    }
+
+    /**
+     * Download sample CSV file.
+     */
+    public function sampleCsv(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $user = Auth::user();
+        $companies = $user->ownedCompanies();
+
+        if ($companies->count() === 0) {
+            abort(403, 'No companies associated with user.');
+        }
+
+        // Get company ID from request, or use first company as default
+        $companyId = $request->query('company_id');
+        $company = $companyId ? $companies->find($companyId) : $companies->first();
+
+        if (!$company) {
+            abort(403, 'Invalid company selection.');
+        }
+
+        $csv = $this->importService->generateSampleCsv($company);
+        $filename = 'employees-sample-' . $company->slug . '-' . date('Y-m-d') . '.csv';
+        
+        return response()->streamDownload(function () use ($csv) {
+            echo $csv;
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    /**
+     * Export existing employees to CSV.
+     */
+    public function exportCsv(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $user = Auth::user();
+        $companies = $user->ownedCompanies();
+
+        if ($companies->count() === 0) {
+            abort(403, 'No companies associated with user.');
+        }
+
+        // Get company ID from request, or use first company as default
+        $companyId = $request->query('company_id');
+        $company = $companyId ? $companies->find($companyId) : $companies->first();
+
+        if (!$company) {
+            abort(403, 'Invalid company selection.');
+        }
+
+        $employees = Employee::where('company_id', $company->id)
+            ->with(['nationality', 'residenceCountry', 'department'])
+            ->get();
+
+        $csv = $this->importService->exportEmployeesToCsv($employees);
+        $filename = 'employees-export-' . $company->slug . '-' . date('Y-m-d') . '.csv';
+        
+        return response()->streamDownload(function () use ($csv) {
+            echo $csv;
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    /**
+     * Process uploaded CSV file for validation.
+     */
+    public function processUpload(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
+
+        if ($ownedCompanyIds->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No companies associated with user.',
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'file' => 'required|file|mimes:csv,txt|max:10240', // 10MB max
+            'company_id' => 'required|integer|in:' . $ownedCompanyIds->implode(','),
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid file or company selection.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            $company = Company::findOrFail($request->input('company_id'));
+            
+            // Double-check user owns this company
+            if (!$ownedCompanyIds->contains($company->id)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid company selection.',
+                ], 403);
+            }
+
+            $file = $request->file('file');
+            $filename = 'import_' . uniqid() . '_' . $file->getClientOriginalName();
+            $path = $file->storeAs('imports', $filename, 'local');
+
+            // Process and validate the CSV
+            $result = $this->importService->validateCsv($path, $company);
+
+            if ($result['success']) {
+                // Store the validated data temporarily
+                $importId = uniqid();
+                $validatedDataPath = 'imports/validated_' . $importId . '.json';
+                Storage::disk('local')->put($validatedDataPath, json_encode([
+                    'data' => $result['data'],
+                    'company_id' => $company->id,
+                ]));
+
+                return response()->json([
+                    'success' => true,
+                    'import_id' => $importId,
+                    'summary' => $result['summary'],
+                    'data' => $result['data'],
+                    'company' => [
+                        'id' => $company->id,
+                        'name' => $company->name,
+                    ],
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'CSV validation failed.',
+                    'errors' => $result['errors'],
+                ], 422);
+            }
+        } catch (\Exception $e) {
+            Log::error('CSV upload processing failed: ' . $e->getMessage(), [
+                'user_id' => $user->id,
+                'company_id' => $request->input('company_id'),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to process CSV file. Please check the format and try again.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Execute the import process.
+     */
+    public function executeImport(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
+
+        if ($ownedCompanyIds->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No companies associated with user.',
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'import_id' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid import ID.',
+            ], 422);
+        }
+
+        try {
+            $importId = $request->input('import_id');
+            $validatedDataPath = 'imports/validated_' . $importId . '.json';
+
+            if (!Storage::disk('local')->exists($validatedDataPath)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Import data not found or expired. Please re-upload your CSV file.',
+                ], 404);
+            }
+
+            $validatedDataWithCompany = json_decode(Storage::disk('local')->get($validatedDataPath), true);
+            $validatedData = $validatedDataWithCompany['data'];
+            $companyId = $validatedDataWithCompany['company_id'];
+
+            // Verify user still owns this company
+            if (!$ownedCompanyIds->contains($companyId)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid company access.',
+                ], 403);
+            }
+
+            $company = Company::findOrFail($companyId);
+
+            // Execute the import
+            $result = $this->importService->importEmployees($validatedData, $company, $user);
+
+            // Clean up temporary files
+            Storage::disk('local')->delete($validatedDataPath);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Import completed successfully.',
+                'summary' => $result,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('CSV import execution failed: ' . $e->getMessage(), [
+                'user_id' => $user->id,
+                'import_id' => $request->input('import_id'),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Import execution failed. Please try again.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Get required fields for CSV import.
+     */
+    protected function getRequiredFields(): array
+    {
+        return [
+            'first_name' => 'First Name',
+            'last_name' => 'Last Name',
+            'email' => 'Email Address',
+        ];
+    }
+
+    /**
+     * Get optional fields for CSV import.
+     */
+    protected function getOptionalFields(): array
+    {
+        return [
+            'id' => 'Employee ID (for updates)',
+            'employee_id' => 'Employee ID Number',
+            'father_name' => 'Father Name',
+            'nationality' => 'Nationality',
+            'residence_country' => 'Residence Country',
+            'birth_date' => 'Birth Date (YYYY-MM-DD)',
+            'personal_email' => 'Personal Email',
+            'work_email' => 'Work Email',
+            'phone' => 'Phone Number',
+            'work_phone' => 'Work Phone',
+            'mobile' => 'Mobile Number',
+            'fingerprint_device_id' => 'Fingerprint Device ID',
+            'work_address' => 'Work Address',
+            'department' => 'Department',
+            'job_title' => 'Job Title',
+            'manager' => 'Manager',
+            'direct_manager' => 'Direct Manager',
+            'additional_approver_2' => 'Additional Approver 2',
+            'additional_approver_3' => 'Additional Approver 3',
+            'hire_date' => 'Hire Date (YYYY-MM-DD)',
+            'employment_date' => 'Employment Date (YYYY-MM-DD)',
+            'probation_end_date' => 'Probation End Date (YYYY-MM-DD)',
+            'employment_status' => 'Employment Status (active/inactive/terminated)',
+            'termination_date' => 'Termination Date (YYYY-MM-DD)',
+            'departure_date' => 'Departure Date (YYYY-MM-DD)',
+            'departure_reason' => 'Departure Reason',
+            'id_number' => 'ID Number',
+            'residence_expiry_date' => 'Residence Expiry Date (YYYY-MM-DD)',
+            'contract_end_date' => 'Contract End Date (YYYY-MM-DD)',
+            'exit_reentry_visa_expiry' => 'Exit/Re-entry Visa Expiry (YYYY-MM-DD)',
+            'passport_number' => 'Passport Number',
+            'passport_expiry_date' => 'Passport Expiry Date (YYYY-MM-DD)',
+            'insurance_policy' => 'Insurance Policy',
+            'insurance_expiry_date' => 'Insurance Expiry Date (YYYY-MM-DD)',
+            'emergency_contact_name' => 'Emergency Contact Name',
+            'emergency_contact_phone' => 'Emergency Contact Phone',
+            'emergency_contact_email' => 'Emergency Contact Email',
+            'emergency_contact_address' => 'Emergency Contact Address',
+            'notes' => 'Notes',
+        ];
+    }
+} 

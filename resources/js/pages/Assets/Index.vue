@@ -68,19 +68,253 @@ const breadcrumbs = computed((): BreadcrumbItem[] => [
     },
 ]);
 
-const getStatusVariant = (status: string) => {
-    switch (status) {
-        case 'available':
-            return 'default';
-        case 'assigned':
-            return 'secondary';
-        case 'maintenance':
-            return 'destructive';
-        case 'retired':
-            return 'outline';
-        default:
-            return 'secondary';
+const sendToPrintDialog = ref({
+  show: false,
+  asset: null as Asset | null,
+  comment: '',
+  priority: 'normal',
+  sending: false,
+});
+
+const showSendToPrintDialog = (asset: Asset) => {
+  sendToPrintDialog.value.asset = asset;
+  sendToPrintDialog.value.comment = '';
+  sendToPrintDialog.value.priority = 'normal';
+  sendToPrintDialog.value.show = true;
+};
+
+const sendToPrintMachine = async () => {
+  if (!sendToPrintDialog.value.asset) return;
+  
+  sendToPrintDialog.value.sending = true;
+  
+  try {
+    const response = await fetch('/api/print-jobs', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+      },
+      body: JSON.stringify({
+        asset_id: sendToPrintDialog.value.asset.id,
+        priority: sendToPrintDialog.value.priority,
+        comment: sendToPrintDialog.value.comment || null,
+      }),
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      // Show success notification
+      alert(`Print job ${result.print_job.job_id} sent to print machine successfully!`);
+      sendToPrintDialog.value.show = false;
+    } else {
+      const error = await response.json();
+      alert(`Failed to send print job: ${error.error || 'Unknown error'}`);
     }
+  } catch (error) {
+    console.error('Failed to send print job:', error);
+    alert('Failed to send print job. Please try again.');
+  } finally {
+    sendToPrintDialog.value.sending = false;
+  }
+};
+
+// Assignment tracking functionality
+const assignmentDialog = ref({
+  show: false,
+  asset: null as Asset | null,
+  assignments: [] as any[],
+  loading: false,
+  currentAction: null as string | null,
+  uploadingDocument: false,
+  selectedAssignmentId: null as number | null,
+});
+
+const showAssignmentDialog = async (asset: Asset) => {
+  assignmentDialog.value.asset = asset;
+  assignmentDialog.value.show = true;
+  assignmentDialog.value.loading = true;
+  
+  try {
+    const response = await fetch(`/api/assets/${asset.id}/assignments`);
+    if (response.ok) {
+      const data = await response.json();
+      assignmentDialog.value.assignments = data.assignments || [];
+    } else {
+      console.error('Failed to fetch assignments');
+      assignmentDialog.value.assignments = [];
+    }
+  } catch (error) {
+    console.error('Error fetching assignments:', error);
+    assignmentDialog.value.assignments = [];
+  } finally {
+    assignmentDialog.value.loading = false;
+  }
+};
+
+const printAssignmentDocument = async (assignmentId: number, type: 'assignment' | 'return') => {
+  if (!assignmentDialog.value.asset) return;
+  
+  try {
+    assignmentDialog.value.currentAction = `printing_${type}_${assignmentId}`;
+    
+    const response = await fetch(`/api/assets/${assignmentDialog.value.asset.id}/assignments/${assignmentId}/print-document`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+      },
+      body: JSON.stringify({
+        type: type,
+        asset_id: assignmentDialog.value.asset.id,
+        assignment_id: assignmentId,
+      }),
+    });
+
+    if (response.ok) {
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${type}_document_${assignmentDialog.value.asset.asset_tag}_${assignmentId}.html`;
+      document.body.appendChild(link);
+      link.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+      
+      // Also open in new tab for printing
+      const printWindow = window.open(url, '_blank');
+      if (printWindow) {
+        printWindow.onload = () => {
+          printWindow.print();
+        };
+      }
+    } else {
+      const error = await response.json();
+      alert(`Failed to generate document: ${error.error || 'Unknown error'}`);
+    }
+  } catch (error) {
+    console.error('Error printing document:', error);
+    alert('Failed to generate document. Please try again.');
+  } finally {
+    assignmentDialog.value.currentAction = null;
+  }
+};
+
+const uploadSignedDocument = async (assignmentId: number, type: 'assignment' | 'return') => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.pdf,.jpg,.jpeg,.png,.gif';
+  input.multiple = false;
+  
+  input.onchange = async (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      alert('File size must be less than 5MB');
+      return;
+    }
+    
+    const formData = new FormData();
+    formData.append('document', file);
+    formData.append('type', type);
+    formData.append('assignment_id', assignmentId.toString());
+    
+    try {
+      assignmentDialog.value.uploadingDocument = true;
+      assignmentDialog.value.currentAction = `uploading_${type}_${assignmentId}`;
+      
+      const response = await fetch(`/api/assets/${assignmentDialog.value.asset?.id}/assignments/${assignmentId}/upload-document`, {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+        },
+        body: formData,
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert('Document uploaded successfully!');
+        
+        // Refresh assignments data
+        await showAssignmentDialog(assignmentDialog.value.asset!);
+      } else {
+        const error = await response.json();
+        alert(`Failed to upload document: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      alert('Failed to upload document. Please try again.');
+    } finally {
+      assignmentDialog.value.uploadingDocument = false;
+      assignmentDialog.value.currentAction = null;
+    }
+  };
+  
+  input.click();
+};
+
+const downloadSignedDocument = async (assignmentId: number, type: 'assignment' | 'return') => {
+  try {
+    const response = await fetch(`/api/assets/${assignmentDialog.value.asset?.id}/assignments/${assignmentId}/download-document?type=${type}`);
+    
+    if (response.ok) {
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const contentDisposition = response.headers.get('content-disposition');
+      let filename = `${type}_document_${assignmentDialog.value.asset?.asset_tag}_${assignmentId}`;
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+    } else {
+      alert('Document not found or failed to download');
+    }
+  } catch (error) {
+    console.error('Error downloading document:', error);
+    alert('Failed to download document. Please try again.');
+  }
+};
+
+const formatDate = (date: string | null) => {
+  if (!date) return '—';
+  return new Date(date).toLocaleDateString();
+};
+
+const getStatusVariant = (status: string) => {
+  switch (status) {
+    case 'available':
+      return 'default';
+    case 'assigned':
+      return 'secondary';
+    case 'maintenance':
+      return 'destructive';
+    case 'retired':
+      return 'outline';
+    case 'active':
+      return 'default';
+    case 'returned':
+      return 'secondary';
+    case 'lost':
+      return 'destructive';
+    case 'damaged':
+      return 'destructive';
+    default:
+      return 'outline';
+  }
 };
 
 // Debounced search
@@ -277,58 +511,6 @@ onMounted(async () => {
     }
   }
 })
-
-// Send to Print Machine Dialog
-const sendToPrintDialog = ref({
-  show: false,
-  asset: null as Asset | null,
-  comment: '',
-  priority: 'normal',
-  sending: false,
-});
-
-const showSendToPrintDialog = (asset: Asset) => {
-  sendToPrintDialog.value.asset = asset;
-  sendToPrintDialog.value.comment = '';
-  sendToPrintDialog.value.priority = 'normal';
-  sendToPrintDialog.value.show = true;
-};
-
-const sendToPrintMachine = async () => {
-  if (!sendToPrintDialog.value.asset) return;
-  
-  sendToPrintDialog.value.sending = true;
-  
-  try {
-    const response = await fetch('/api/print-jobs', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-      },
-      body: JSON.stringify({
-        asset_id: sendToPrintDialog.value.asset.id,
-        priority: sendToPrintDialog.value.priority,
-        comment: sendToPrintDialog.value.comment || null,
-      }),
-    });
-
-    if (response.ok) {
-      const result = await response.json();
-      // Show success notification
-      alert(`Print job ${result.print_job.job_id} sent to print machine successfully!`);
-      sendToPrintDialog.value.show = false;
-    } else {
-      const error = await response.json();
-      alert(`Failed to send print job: ${error.error || 'Unknown error'}`);
-    }
-  } catch (error) {
-    console.error('Failed to send print job:', error);
-    alert('Failed to send print job. Please try again.');
-  } finally {
-    sendToPrintDialog.value.sending = false;
-  }
-};
 
 const printBarcode = async () => {
   const assetsToPrint = barcodeDialog.value.selectedAssets
@@ -600,6 +782,9 @@ const printBarcode = async () => {
                                         <Button variant="ghost" size="sm" @click="showSendToPrintDialog(asset)" title="Send to Print Machine">
                                             <Icon name="Send" class="h-4 w-4" />
                                         </Button>
+                                        <Button variant="ghost" size="sm" @click="showAssignmentDialog(asset)" title="Assignment Info">
+                                            <Icon name="Info" class="h-4 w-4" />
+                                        </Button>
                                         <Button variant="ghost" size="sm" asChild title="View">
                                             <Link :href="route('assets.show', asset.id)">
                                                 <Icon name="Eye" class="h-4 w-4" />
@@ -738,6 +923,108 @@ const printBarcode = async () => {
                     >
                         <Icon v-if="sendToPrintDialog.sending" name="Loader2" class="h-4 w-4 mr-2 animate-spin" />
                         Send to Print Machine
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Assignment Tracking Dialog -->
+        <Dialog v-model:open="assignmentDialog.show">
+            <DialogContent class="sm:max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>Assignment History for {{ assignmentDialog.asset?.asset_tag }}</DialogTitle>
+                    <DialogDescription>
+                        View and manage the assignment history for this asset.
+                    </DialogDescription>
+                </DialogHeader>
+                <div v-if="assignmentDialog.loading" class="text-center py-8">
+                    <Icon name="Loader2" class="mx-auto h-12 w-12 text-blue-500 animate-spin" />
+                    <p class="mt-4 text-gray-600 dark:text-gray-400">Loading assignments...</p>
+                </div>
+                <div v-else-if="assignmentDialog.assignments.length === 0" class="text-center py-8">
+                    <Icon name="Info" class="mx-auto h-12 w-12 text-gray-400" />
+                    <p class="mt-4 text-gray-600 dark:text-gray-400">No assignment history found for this asset.</p>
+                </div>
+                <div v-else class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 dark:bg-gray-700">
+                            <tr class="text-left rtl:text-right">
+                                <th class="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                    Assignment ID
+                                </th>
+                                <th class="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                    Status
+                                </th>
+                                <th class="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                    Assigned To
+                                </th>
+                                <th class="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                    Assigned By
+                                </th>
+                                                                 <th class="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                     Assigned Date
+                                 </th>
+                                 <th class="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                     Returned Date
+                                 </th>
+                                <th class="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            <tr v-for="assignment in assignmentDialog.assignments" :key="assignment.id" class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                                    {{ assignment.id }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <Badge :variant="getStatusVariant(assignment.status)">
+                                        {{ assignment.status }}
+                                    </Badge>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                                    {{ assignment.assigned_to_name }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                                    {{ assignment.assigned_by_name }}
+                                </td>
+                                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                     {{ formatDate(assignment.assigned_date) }}
+                                 </td>
+                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                     {{ formatDate(assignment.returned_date) }}
+                                 </td>
+                                                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                     <div class="flex justify-end rtl:justify-start gap-1">
+                                         <Button variant="ghost" size="sm" @click="printAssignmentDocument(assignment.id, 'assignment')" :disabled="assignmentDialog.currentAction === `printing_assignment_${assignment.id}`" title="Print Assignment Document">
+                                             <Icon v-if="assignmentDialog.currentAction === `printing_assignment_${assignment.id}`" name="Loader2" class="h-4 w-4 animate-spin" />
+                                             <Icon v-else name="Printer" class="h-4 w-4" />
+                                         </Button>
+                                         <Button variant="ghost" size="sm" @click="uploadSignedDocument(assignment.id, 'assignment')" :disabled="assignmentDialog.currentAction === `uploading_assignment_${assignment.id}`" title="Upload Signed Assignment Document">
+                                             <Icon v-if="assignmentDialog.currentAction === `uploading_assignment_${assignment.id}`" name="Loader2" class="h-4 w-4 animate-spin" />
+                                             <Icon v-else name="Upload" class="h-4 w-4" />
+                                         </Button>
+                                         <Button variant="ghost" size="sm" @click="downloadSignedDocument(assignment.id, 'assignment')" :disabled="assignmentDialog.currentAction === `downloading_assignment_${assignment.id}`" title="Download Signed Assignment Document">
+                                             <Icon v-if="assignmentDialog.currentAction === `downloading_assignment_${assignment.id}`" name="Loader2" class="h-4 w-4 animate-spin" />
+                                             <Icon v-else name="Download" class="h-4 w-4" />
+                                         </Button>
+                                         <Button v-if="assignment.status === 'returned'" variant="ghost" size="sm" @click="printAssignmentDocument(assignment.id, 'return')" :disabled="assignmentDialog.currentAction === `printing_return_${assignment.id}`" title="Print Return Document">
+                                             <Icon v-if="assignmentDialog.currentAction === `printing_return_${assignment.id}`" name="Loader2" class="h-4 w-4 animate-spin" />
+                                             <Icon v-else name="FileText" class="h-4 w-4" />
+                                         </Button>
+                                         <Button v-if="assignment.status === 'returned'" variant="ghost" size="sm" @click="uploadSignedDocument(assignment.id, 'return')" :disabled="assignmentDialog.currentAction === `uploading_return_${assignment.id}`" title="Upload Signed Return Document">
+                                             <Icon v-if="assignmentDialog.currentAction === `uploading_return_${assignment.id}`" name="Loader2" class="h-4 w-4 animate-spin" />
+                                             <Icon v-else name="Upload" class="h-4 w-4" />
+                                         </Button>
+                                     </div>
+                                 </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" @click="assignmentDialog.show = false">
+                        Close
                     </Button>
                 </DialogFooter>
             </DialogContent>

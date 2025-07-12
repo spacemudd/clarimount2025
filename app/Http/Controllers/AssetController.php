@@ -626,4 +626,368 @@ class AssetController extends Controller
         return redirect()->route('assets.index')
             ->with('success', 'Asset deleted successfully.');
     }
+
+    /**
+     * Get assignment history for an asset.
+     */
+    public function getAssignments(Asset $asset)
+    {
+        $user = Auth::user();
+        $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
+
+        // Check if user has access to this asset
+        if (!$ownedCompanyIds->contains($asset->company_id)) {
+            abort(403);
+        }
+
+        $assignments = $asset->assignments()
+            ->with(['employee', 'assignedBy', 'returnedBy'])
+            ->orderBy('assigned_date', 'desc')
+            ->get()
+            ->map(function ($assignment) {
+                return [
+                    'id' => $assignment->id,
+                    'asset_id' => $assignment->asset_id,
+                    'employee_id' => $assignment->employee_id,
+                    'assigned_by' => $assignment->assigned_by,
+                    'assigned_date' => $assignment->assigned_date,
+                    'returned_date' => $assignment->returned_date,
+                    'returned_by' => $assignment->returned_by,
+                    'status' => $assignment->status,
+                    'assignment_notes' => $assignment->assignment_notes,
+                    'return_notes' => $assignment->return_notes,
+                    'condition_notes' => $assignment->condition_notes,
+                    'assigned_to_name' => $assignment->employee ? $assignment->employee->full_name : 'Unknown',
+                    'assigned_by_name' => $assignment->assignedBy ? $assignment->assignedBy->name : 'Unknown',
+                    'returned_by_name' => $assignment->returnedBy ? $assignment->returnedBy->name : null,
+                    'assigned_at' => $assignment->assigned_date,
+                    'returned_at' => $assignment->returned_date,
+                    'duration_days' => $assignment->duration_days,
+                    'has_assignment_document' => $this->hasSignedDocument($assignment->id, 'assignment'),
+                    'has_return_document' => $this->hasSignedDocument($assignment->id, 'return'),
+                ];
+            });
+
+        return response()->json(['assignments' => $assignments]);
+    }
+
+    /**
+     * Generate and return a printable assignment document.
+     */
+    public function printAssignmentDocument(Asset $asset, \App\Models\AssetAssignment $assignment)
+    {
+        $user = Auth::user();
+        $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
+
+        // Check if user has access to this asset
+        if (!$ownedCompanyIds->contains($asset->company_id)) {
+            abort(403);
+        }
+
+        // Load relationships
+        $assignment->load(['employee', 'assignedBy', 'returnedBy']);
+        $asset->load(['company', 'category', 'location']);
+
+        $type = request('type', 'assignment');
+        
+        $htmlContent = $this->generateAssignmentDocumentHTML($asset, $assignment, $type);
+        
+        return response($htmlContent, 200)
+            ->header('Content-Type', 'text/html')
+            ->header('Content-Disposition', 'inline; filename="' . $type . '_document_' . $asset->asset_tag . '_' . $assignment->id . '.html"');
+    }
+
+    /**
+     * Upload a signed assignment document.
+     */
+    public function uploadSignedDocument(Asset $asset, \App\Models\AssetAssignment $assignment, Request $request)
+    {
+        $user = Auth::user();
+        $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
+
+        // Check if user has access to this asset
+        if (!$ownedCompanyIds->contains($asset->company_id)) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'document' => 'required|file|mimes:pdf,jpg,jpeg,png,gif|max:5120', // 5MB max
+            'type' => 'required|in:assignment,return',
+            'assignment_id' => 'required|exists:asset_assignments,id',
+        ]);
+
+        $type = $validated['type'];
+        $file = $request->file('document');
+        
+        // Generate unique filename
+        $filename = $type . '_document_' . $asset->asset_tag . '_' . $assignment->id . '.' . $file->getClientOriginalExtension();
+        
+        // Store the file
+        $path = $file->storeAs('assignment_documents', $filename, 'public');
+        
+        // Update the assignment record to track the document
+        $assignment->update([
+            $type . '_document_path' => $path,
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Document uploaded successfully.',
+            'path' => $path,
+        ]);
+    }
+
+    /**
+     * Download a signed assignment document.
+     */
+    public function downloadSignedDocument(Asset $asset, \App\Models\AssetAssignment $assignment)
+    {
+        $user = Auth::user();
+        $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
+
+        // Check if user has access to this asset
+        if (!$ownedCompanyIds->contains($asset->company_id)) {
+            abort(403);
+        }
+
+        $type = request('type', 'assignment');
+        $documentPath = $assignment->{$type . '_document_path'};
+        
+        if (!$documentPath || !Storage::disk('public')->exists($documentPath)) {
+            return response()->json(['error' => 'Document not found'], 404);
+        }
+
+        $fullPath = Storage::disk('public')->path($documentPath);
+        $filename = basename($documentPath);
+
+        return response()->download($fullPath, $filename);
+    }
+
+    /**
+     * Check if a signed document exists for an assignment.
+     */
+    private function hasSignedDocument(int $assignmentId, string $type): bool
+    {
+        $assignment = \App\Models\AssetAssignment::find($assignmentId);
+        if (!$assignment) {
+            return false;
+        }
+
+        $documentPath = $assignment->{$type . '_document_path'};
+        
+        return $documentPath && Storage::disk('public')->exists($documentPath);
+    }
+
+    /**
+     * Generate HTML content for assignment document.
+     */
+    private function generateAssignmentDocumentHTML(Asset $asset, \App\Models\AssetAssignment $assignment, string $type): string
+    {
+        $isAssignment = $type === 'assignment';
+        $title = $isAssignment ? 'Asset Assignment Document' : 'Asset Return Document';
+        
+        $html = '<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>' . $title . '</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .company-info {
+            margin-bottom: 30px;
+        }
+        .asset-info, .employee-info, .assignment-info {
+            margin-bottom: 30px;
+        }
+        .info-section {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .info-section h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .info-label {
+            font-weight: bold;
+            width: 40%;
+        }
+        .info-value {
+            width: 60%;
+        }
+        .signature-section {
+            border: 2px solid #333;
+            padding: 20px;
+            margin-top: 40px;
+        }
+        .signature-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+        }
+        .signature-box {
+            width: 45%;
+            border-bottom: 2px solid #333;
+            padding-bottom: 5px;
+            text-align: center;
+        }
+        .signature-space {
+            height: 60px;
+        }
+        .print-date {
+            text-align: right;
+            font-size: 12px;
+            color: #666;
+            margin-top: 20px;
+        }
+        @media print {
+            body {
+                margin: 0;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>' . $title . '</h1>
+        <p><strong>Document ID:</strong> ' . strtoupper($type) . '-' . $asset->asset_tag . '-' . $assignment->id . '</p>
+    </div>
+
+    <div class="company-info info-section">
+        <h3>Company Information</h3>
+        <div class="info-row">
+            <span class="info-label">Company Name:</span>
+            <span class="info-value">' . ($asset->company->name_en ?? 'N/A') . '</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Document Date:</span>
+            <span class="info-value">' . now()->format('Y-m-d H:i:s') . '</span>
+        </div>
+    </div>
+
+    <div class="asset-info info-section">
+        <h3>Asset Information</h3>
+        <div class="info-row">
+            <span class="info-label">Asset Tag:</span>
+            <span class="info-value">' . $asset->asset_tag . '</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Serial Number:</span>
+            <span class="info-value">' . ($asset->serial_number ?? 'N/A') . '</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Model:</span>
+            <span class="info-value">' . ($asset->model_name ?? 'N/A') . '</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Category:</span>
+            <span class="info-value">' . ($asset->category->name ?? 'N/A') . '</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Location:</span>
+            <span class="info-value">' . ($asset->location->name ?? 'N/A') . '</span>
+        </div>
+    </div>
+
+    <div class="employee-info info-section">
+        <h3>Employee Information</h3>
+        <div class="info-row">
+            <span class="info-label">Employee Name:</span>
+            <span class="info-value">' . ($assignment->employee->full_name ?? 'N/A') . '</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Employee ID:</span>
+            <span class="info-value">' . ($assignment->employee->employee_id ?? 'N/A') . '</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Department:</span>
+            <span class="info-value">' . ($assignment->employee->department ?? 'N/A') . '</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Email:</span>
+            <span class="info-value">' . ($assignment->employee->email ?? 'N/A') . '</span>
+        </div>
+    </div>
+
+    <div class="assignment-info info-section">
+        <h3>' . ($isAssignment ? 'Assignment' : 'Return') . ' Details</h3>
+        <div class="info-row">
+            <span class="info-label">' . ($isAssignment ? 'Assignment' : 'Return') . ' Date:</span>
+            <span class="info-value">' . ($isAssignment ? $assignment->assigned_date->format('Y-m-d') : ($assignment->returned_date ? $assignment->returned_date->format('Y-m-d') : 'N/A')) . '</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">' . ($isAssignment ? 'Assigned' : 'Returned') . ' By:</span>
+            <span class="info-value">' . ($isAssignment ? ($assignment->assignedBy->name ?? 'N/A') : ($assignment->returnedBy->name ?? 'N/A')) . '</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Status:</span>
+            <span class="info-value">' . ucfirst($assignment->status) . '</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Notes:</span>
+            <span class="info-value">' . ($isAssignment ? ($assignment->assignment_notes ?? 'N/A') : ($assignment->return_notes ?? 'N/A')) . '</span>
+        </div>
+    </div>
+
+    <div class="signature-section">
+        <h3>' . ($isAssignment ? 'Assignment' : 'Return') . ' Acknowledgment</h3>
+        <p>By signing below, I acknowledge that I have ' . ($isAssignment ? 'received' : 'returned') . ' the above-mentioned asset and agree to the terms and conditions of this ' . ($isAssignment ? 'assignment' : 'return') . '.</p>
+        
+        <div class="signature-row">
+            <div class="signature-box">
+                <div class="signature-space"></div>
+                <div><strong>Employee Signature</strong></div>
+                <div>' . ($assignment->employee->full_name ?? 'N/A') . '</div>
+            </div>
+            <div class="signature-box">
+                <div class="signature-space"></div>
+                <div><strong>IT Department Signature</strong></div>
+                <div>' . ($isAssignment ? ($assignment->assignedBy->name ?? 'N/A') : ($assignment->returnedBy->name ?? 'N/A')) . '</div>
+            </div>
+        </div>
+        
+        <div class="signature-row">
+            <div class="signature-box">
+                <div class="signature-space"></div>
+                <div><strong>Date</strong></div>
+                <div>____________________</div>
+            </div>
+            <div class="signature-box">
+                <div class="signature-space"></div>
+                <div><strong>Date</strong></div>
+                <div>____________________</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="print-date">
+        Generated on: ' . now()->format('Y-m-d H:i:s') . '
+    </div>
+</body>
+</html>';
+
+        return $html;
+    }
 }

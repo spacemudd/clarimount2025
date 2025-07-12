@@ -5,6 +5,7 @@ use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\EmployeeImportController;
 use App\Http\Controllers\AssetCategoryController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AssetTemplateController;
@@ -95,6 +96,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Locations management
     Route::resource('locations', LocationController::class);
     
+    // Employee Import routes (must come before resource routes)
+    Route::get('employees/import', [EmployeeImportController::class, 'instructions'])->name('employees.import');
+    Route::get('employees/import/upload', [EmployeeImportController::class, 'upload'])->name('employees.import.upload');
+    Route::get('employees/import/sample-csv', [EmployeeImportController::class, 'sampleCsv'])->name('employees.import.sample-csv');
+    Route::get('employees/export-csv', [EmployeeImportController::class, 'exportCsv'])->name('employees.export-csv');
+    Route::post('employees/import/process', [EmployeeImportController::class, 'processUpload'])->name('employees.import.process');
+    Route::post('employees/import/execute', [EmployeeImportController::class, 'executeImport'])->name('employees.import.execute');
+    
     // Employees management
     Route::resource('employees', EmployeeController::class);
     
@@ -105,6 +114,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('assets', AssetController::class);
     Route::get('api/assets/bulk-created', [AssetController::class, 'getBulkCreatedAssets'])->name('api.assets.bulk-created');
     Route::delete('api/assets/bulk-created', [AssetController::class, 'clearBulkCreatedAssets'])->name('api.assets.clear-bulk-created');
+    
+    // Asset Assignment tracking
+    Route::get('api/assets/{asset}/assignments', [AssetController::class, 'getAssignments'])->name('api.assets.assignments');
+    Route::post('api/assets/{asset}/assignments/{assignment}/print-document', [AssetController::class, 'printAssignmentDocument'])->name('api.assets.assignments.print-document');
+    Route::post('api/assets/{asset}/assignments/{assignment}/upload-document', [AssetController::class, 'uploadSignedDocument'])->name('api.assets.assignments.upload-document');
+    Route::get('api/assets/{asset}/assignments/{assignment}/download-document', [AssetController::class, 'downloadSignedDocument'])->name('api.assets.assignments.download-document');
     
     // Asset Templates management
     Route::resource('asset-templates', AssetTemplateController::class);

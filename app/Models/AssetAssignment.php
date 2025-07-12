@@ -22,6 +22,8 @@ class AssetAssignment extends Model
         'return_notes',
         'condition_notes',
         'checklist_data',
+        'assignment_document_path',
+        'return_document_path',
     ];
 
     protected $casts = [

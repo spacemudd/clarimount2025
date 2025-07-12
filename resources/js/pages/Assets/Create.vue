@@ -657,8 +657,7 @@ const searchEmployees = async () => {
     isEmployeeSearching.value = true;
     
     try {
-        const companyId = selectedCompany.value?.id || props.currentCompany?.id;
-        const url = `/api/employees/search?q=${encodeURIComponent(employeeSearchQuery.value)}&company_id=${companyId}`;
+        const url = `/api/employees/search?q=${encodeURIComponent(employeeSearchQuery.value)}`;
         
         const response = await fetch(url);
         const employees = await response.json();

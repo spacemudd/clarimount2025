@@ -207,6 +207,12 @@ const clearFilters = () => {
                     </p>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-2">
+                    <Button variant="outline" asChild>
+                        <Link :href="route('employees.import')">
+                            <Icon name="Upload" class="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
+                            {{ t('employees.import_csv') }}
+                        </Link>
+                    </Button>
                     <Button asChild>
                         <Link :href="route('employees.create')">
                             <Icon name="Plus" class="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
@@ -438,6 +444,9 @@ const clearFilters = () => {
                                     </div>
                                     <div class="text-sm text-gray-500 dark:text-gray-400">
                                         {{ employee.department || '-' }}
+                                    </div>
+                                    <div class="text-xs text-gray-400 dark:text-gray-500">
+                                        {{ employee.company?.name_en || 'No Company' }}
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
