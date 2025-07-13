@@ -125,7 +125,9 @@ return [
         'remove' => 'Remove',
         'change' => 'Change',
         'next' => 'Next',
+        'image' => 'Image',
     ],
+
     'teams' => [
         'select_team' => 'Select Team',
         'select_team_description' => 'Choose which team you want to work with or create a new one.',
@@ -723,6 +725,15 @@ return [
         'workstation_creation_notice' => 'Workstation Range Creation',
         'workstation_creation_description' => 'Creating {count} assets for workstations {prefix}{start} to {prefix}{end}. Each workstation will get its own location and asset.',
         'asset' => 'asset',
+        
+        // Template browser
+        'choose_template' => 'Choose Template',
+        'browse_templates_by_category' => 'Browse and select an asset template organized by category',
+        'loading_templates' => 'Loading templates...',
+        'categories' => 'Categories',
+        'no_templates_in_category' => 'No templates found in this category',
+        'no_templates_available' => 'No templates available',
+        'scope' => 'Scope',
     ],
     'asset_templates' => [
         'title' => 'Asset Templates',
@@ -764,6 +775,17 @@ return [
         'company' => 'Company',
         'image' => 'Template Image',
         'is_global_description' => 'Make this template available to all companies',
+        'template_name_placeholder' => 'Dell Latitude 7420 Laptop',
+        'manufacturer_placeholder' => 'Dell, HP, Apple...',
+        'model_name_placeholder' => 'Latitude 7420',
+        'model_number_placeholder' => 'LAT7420-001',
+        'category_placeholder' => 'Select a category',
+        'default_notes_placeholder' => 'Additional notes about this template',
+        'template_image' => 'Template Image',
+        'image_description' => 'PNG, JPG, GIF up to 2MB',
+        'image_preview' => 'Preview',
+        'remove_image' => 'Remove image',
+        'required_field' => 'Required field',
     ],
     'validation' => [
         'required' => 'This field is required.',

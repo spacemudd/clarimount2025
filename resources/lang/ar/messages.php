@@ -125,7 +125,9 @@ return [
         'remove' => 'إزالة',
         'change' => 'تغيير',
         'next' => 'التالي',
+        'image' => 'الصورة',
     ],
+
     'teams' => [
         'select_team' => 'اختيار الفريق',
         'select_team_description' => 'اختر الفريق الذي تريد العمل معه أو إنشاء فريق جديد.',
@@ -722,6 +724,15 @@ return [
         'workstation_creation_notice' => 'إنشاء نطاق محطات العمل',
         'workstation_creation_description' => 'إنشاء {count} أصول لمحطات العمل {prefix}{start} إلى {prefix}{end}. كل محطة عمل ستحصل على موقعها وأصلها الخاص.',
         'asset' => 'أصل',
+        
+        // Template browser
+        'choose_template' => 'اختر قالب',
+        'browse_templates_by_category' => 'تصفح واختر قالب أصل مرتب حسب الفئة',
+        'loading_templates' => 'جاري تحميل القوالب...',
+        'categories' => 'الفئات',
+        'no_templates_in_category' => 'لا توجد قوالب في هذه الفئة',
+        'no_templates_available' => 'لا توجد قوالب متاحة',
+        'scope' => 'النطاق',
     ],
     'asset_templates' => [
         'title' => 'قوالب الأصول',
@@ -777,6 +788,17 @@ return [
         'company' => 'الشركة',
         'image' => 'صورة القالب',
         'is_global_description' => 'جعل هذا القالب متاحاً لجميع الشركات',
+        'template_name_placeholder' => 'لابتوب Dell Latitude 7420',
+        'manufacturer_placeholder' => 'Dell، HP، Apple...',
+        'model_name_placeholder' => 'Latitude 7420',
+        'model_number_placeholder' => 'LAT7420-001',
+        'category_placeholder' => 'اختر فئة',
+        'default_notes_placeholder' => 'ملاحظات إضافية حول هذا القالب',
+        'template_image' => 'صورة القالب',
+        'image_description' => 'PNG، JPG، GIF حتى 2 ميجابايت',
+        'image_preview' => 'معاينة',
+        'remove_image' => 'إزالة الصورة',
+        'required_field' => 'حقل مطلوب',
     ],
     'validation' => [
         'required' => 'هذا الحقل مطلوب.',

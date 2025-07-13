@@ -17,23 +17,19 @@ class AssetTemplate extends Model
         'model_name',
         'model_number',
         'asset_category_id',
-        'company_id',
         'specifications',
         'default_notes',
         'image_path',
-        'is_global',
         'usage_count',
         'created_by_user_id',
     ];
 
     protected $casts = [
         'specifications' => 'array',
-        'is_global' => 'boolean',
         'usage_count' => 'integer',
     ];
 
     protected $attributes = [
-        'is_global' => true,
         'usage_count' => 0,
     ];
 
@@ -51,46 +47,11 @@ class AssetTemplate extends Model
     }
 
     /**
-     * Get the company this template belongs to.
-     */
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
-    }
-
-    /**
      * Get the user who created this template.
      */
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by_user_id');
-    }
-
-    /**
-     * Scope for global templates.
-     */
-    public function scopeGlobal(Builder $query): Builder
-    {
-        return $query->where('is_global', true);
-    }
-
-    /**
-     * Scope for company-specific templates.
-     */
-    public function scopeForCompany(Builder $query, int $companyId): Builder
-    {
-        return $query->where('company_id', $companyId);
-    }
-
-    /**
-     * Scope for templates available to a specific company (global + company-specific).
-     */
-    public function scopeAvailableToCompany(Builder $query, int $companyId): Builder
-    {
-        return $query->where(function ($q) use ($companyId) {
-            $q->where('is_global', true)
-              ->orWhere('company_id', $companyId);
-        });
     }
 
     /**
@@ -150,14 +111,8 @@ class AssetTemplate extends Model
      */
     public function canBeEditedBy(User $user): bool
     {
-        // Global templates can only be edited by super admins
-        if ($this->is_global) {
-            return $user->hasRole('super-admin');
-        }
-
-        // Company templates can be edited by the creator or company owner
-        return $this->created_by_user_id === $user->id || 
-               ($this->company && $this->company->owner_id === $user->id);
+        // Templates can be edited by super admins or the creator
+        return $user->hasRole('super-admin') || $this->created_by_user_id === $user->id;
     }
 
     /**

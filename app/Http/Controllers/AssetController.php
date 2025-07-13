@@ -135,14 +135,14 @@ class AssetController extends Controller
             'condition' => 'required|in:good,damaged',
             'image' => 'nullable|image|max:5120', // 5MB max
             'quantity' => 'nullable|integer|min:1|max:100', // Allow bulk creation up to 100 assets
-            
+
             // Workstation range fields
             'creation_mode' => 'required|in:single,bulk,workstation_range',
             'workstation_prefix' => 'nullable|string|max:100',
             'workstation_start' => 'nullable|integer|min:1|max:999',
             'workstation_end' => 'nullable|integer|min:1|max:999',
             'workstation_company_id' => 'nullable|exists:companies,id',
-            
+
             // Print station fields
             'send_to_print_station' => 'nullable|boolean',
             'print_priority' => 'nullable|in:low,normal,high,urgent',
@@ -156,9 +156,9 @@ class AssetController extends Controller
         }
 
         // Check if user has access to this template (either global or belongs to their company)
-        if (!$template->is_global && $template->company_id !== $company->id) {
-            return back()->withErrors(['asset_template_id' => 'Invalid asset template.']);
-        }
+//        if (!$template->is_global && $template->company_id !== $company->id) {
+//            return back()->withErrors(['asset_template_id' => 'Invalid asset template.']);
+//        }
 
         // Ensure template has a valid category
         if (!$template->asset_category_id) {
@@ -176,7 +176,7 @@ class AssetController extends Controller
 
         // Handle different creation modes
         $creationMode = $validated['creation_mode'] ?? 'single';
-        
+
         // Validate based on creation mode
         if ($creationMode === 'workstation_range') {
             // Validate workstation range fields
@@ -192,7 +192,7 @@ class AssetController extends Controller
             if (($validated['workstation_end'] - $validated['workstation_start'] + 1) > 100) {
                 return back()->withErrors(['workstation_end' => 'Maximum 100 workstations can be created at once.']);
             }
-            
+
             // Use workstation company if specified
             if (!empty($validated['workstation_company_id'])) {
                 $workstationCompany = $user->ownedCompanies()->find($validated['workstation_company_id']);
@@ -208,7 +208,7 @@ class AssetController extends Controller
             if (empty($validated['location_id'])) {
                 return back()->withErrors(['location_id' => 'Location is required for single/bulk creation.']);
             }
-            
+
             $location = Location::find($validated['location_id']);
             if (!$location) {
                 return back()->withErrors(['location_id' => 'Invalid location selection.']);
@@ -239,16 +239,16 @@ class AssetController extends Controller
 
         // Create assets based on creation mode
         $createdAssets = [];
-        
+
         if ($creationMode === 'workstation_range') {
             // Create assets for workstation range
             $prefix = $validated['workstation_prefix'];
             $start = $validated['workstation_start'];
             $end = $validated['workstation_end'];
-            
+
             for ($i = $start; $i <= $end; $i++) {
                 $workstationName = $prefix . $i;
-                
+
                 // Create or find the workstation location
                 $workstationLocation = $this->createOrFindWorkstationLocation(
                     $workstationName,
@@ -256,11 +256,11 @@ class AssetController extends Controller
                     $prefix,
                     $i
                 );
-                
+
                 if (!$workstationLocation) {
                     continue; // Skip if location creation failed
                 }
-                
+
                 // Create asset with data from template
                 $assetData = [
                     'company_id' => $targetCompanyId,
@@ -285,13 +285,13 @@ class AssetController extends Controller
                 $asset = Asset::create($assetData);
                 $createdAssets[] = $asset;
             }
-            
+
             $totalCreated = count($createdAssets);
             $message = "Successfully created {$totalCreated} assets for workstations {$prefix}{$start} to {$prefix}{$end}.";
         } else {
             // Single or bulk creation for one location
             $quantity = $validated['quantity'] ?? 1;
-            
+
             for ($i = 0; $i < $quantity; $i++) {
                 // Create asset with data from template
                 $assetData = [
@@ -317,9 +317,9 @@ class AssetController extends Controller
                 $asset = Asset::create($assetData);
                 $createdAssets[] = $asset;
             }
-            
-            $message = $quantity > 1 
-                ? "Successfully created {$quantity} assets." 
+
+            $message = $quantity > 1
+                ? "Successfully created {$quantity} assets."
                 : 'Asset created successfully.';
         }
 
@@ -360,7 +360,7 @@ class AssetController extends Controller
             abort(403);
         }
 
-        $asset->load(['category', 'location', 'assignments.employee', 'company', 'assetTemplate.company']);
+        $asset->load(['category', 'location', 'assignments.employee', 'company', 'assetTemplate']);
 
         return Inertia::render('Assets/Show', [
             'asset' => $asset,
@@ -491,11 +491,11 @@ class AssetController extends Controller
         $existingLocation = Location::where('company_id', $companyId)
             ->where('name', $workstationName)
             ->first();
-            
+
         if ($existingLocation) {
             return $existingLocation;
         }
-        
+
         // Create new workstation location
         try {
             $location = Location::create([
@@ -510,7 +510,7 @@ class AssetController extends Controller
                 'country' => null,
                 'is_active' => true,
             ]);
-            
+
             return $location;
         } catch (\Exception $e) {
             \Log::error("Failed to create workstation location: {$workstationName}", [
@@ -528,13 +528,13 @@ class AssetController extends Controller
     {
         $user = Auth::user();
         $assetIds = session('bulk_created_assets', []);
-        
+
         if (empty($assetIds)) {
             return response()->json(['error' => 'No bulk created assets found'], 404);
         }
-        
+
         $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
-        
+
         $assets = Asset::whereIn('id', $assetIds)
             ->whereIn('company_id', $ownedCompanyIds)
             ->with(['company'])
@@ -547,10 +547,10 @@ class AssetController extends Controller
                     'company_name' => $asset->company->name_en ?? 'Unknown Company',
                 ];
             });
-        
+
         return response()->json($assets);
     }
-    
+
     /**
      * Clear bulk created assets from session.
      */
@@ -568,7 +568,7 @@ class AssetController extends Controller
         foreach ($createdAssets as $asset) {
             // Load relationships needed for print data
             $asset->load(['company', 'category', 'location']);
-            
+
             // Prepare print data
             $printData = [
                 'asset_tag' => $asset->asset_tag,
@@ -616,7 +616,7 @@ class AssetController extends Controller
         }
 
         // Check if asset is currently assigned
-        if ($asset->assignments()->where('returned_at', null)->count() > 0) {
+        if ($asset->assignments()->active()->count() > 0) {
             return redirect()->route('assets.show', $asset)
                 ->with('error', 'Cannot delete asset that is currently assigned. Please return the asset first.');
         }
@@ -689,9 +689,9 @@ class AssetController extends Controller
         $asset->load(['company', 'category', 'location']);
 
         $type = request('type', 'assignment');
-        
+
         $htmlContent = $this->generateAssignmentDocumentHTML($asset, $assignment, $type);
-        
+
         return response($htmlContent, 200)
             ->header('Content-Type', 'text/html')
             ->header('Content-Disposition', 'inline; filename="' . $type . '_document_' . $asset->asset_tag . '_' . $assignment->id . '.html"');
@@ -718,13 +718,13 @@ class AssetController extends Controller
 
         $type = $validated['type'];
         $file = $request->file('document');
-        
+
         // Generate unique filename
         $filename = $type . '_document_' . $asset->asset_tag . '_' . $assignment->id . '.' . $file->getClientOriginalExtension();
-        
+
         // Store the file
         $path = $file->storeAs('assignment_documents', $filename, 'public');
-        
+
         // Update the assignment record to track the document
         $assignment->update([
             $type . '_document_path' => $path,
@@ -753,7 +753,7 @@ class AssetController extends Controller
 
         $type = request('type', 'assignment');
         $documentPath = $assignment->{$type . '_document_path'};
-        
+
         if (!$documentPath || !Storage::disk('public')->exists($documentPath)) {
             return response()->json(['error' => 'Document not found'], 404);
         }
@@ -775,7 +775,7 @@ class AssetController extends Controller
         }
 
         $documentPath = $assignment->{$type . '_document_path'};
-        
+
         return $documentPath && Storage::disk('public')->exists($documentPath);
     }
 
@@ -786,7 +786,7 @@ class AssetController extends Controller
     {
         $isAssignment = $type === 'assignment';
         $title = $isAssignment ? 'Asset Assignment Document' : 'Asset Return Document';
-        
+
         $html = '<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -954,7 +954,7 @@ class AssetController extends Controller
     <div class="signature-section">
         <h3>' . ($isAssignment ? 'Assignment' : 'Return') . ' Acknowledgment</h3>
         <p>By signing below, I acknowledge that I have ' . ($isAssignment ? 'received' : 'returned') . ' the above-mentioned asset and agree to the terms and conditions of this ' . ($isAssignment ? 'assignment' : 'return') . '.</p>
-        
+
         <div class="signature-row">
             <div class="signature-box">
                 <div class="signature-space"></div>
@@ -967,7 +967,7 @@ class AssetController extends Controller
                 <div>' . ($isAssignment ? ($assignment->assignedBy->name ?? 'N/A') : ($assignment->returnedBy->name ?? 'N/A')) . '</div>
             </div>
         </div>
-        
+
         <div class="signature-row">
             <div class="signature-box">
                 <div class="signature-space"></div>

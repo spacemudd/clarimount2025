@@ -42,7 +42,7 @@ class RegenerateAssetTags extends Command
         }
 
         // Get all assets with their templates and companies
-        $assets = Asset::with(['assetTemplate.company', 'company'])->get();
+        $assets = Asset::with(['assetTemplate', 'company'])->get();
         
         if ($assets->isEmpty()) {
             $this->error('No assets found.');
@@ -53,13 +53,10 @@ class RegenerateAssetTags extends Command
         $this->info("Found {$assets->count()} assets...");
         $this->newLine();
 
-        // Group assets by the company that should be used for tag generation (template's company)
+        // Group assets by the company that should be used for tag generation (asset's company)
         $assetsByTagCompany = $assets->groupBy(function ($asset) {
-            if (!$asset->assetTemplate) {
-                return $asset->company_id; // Fallback to asset's company if no template
-            }
-            // Always use template's company for tag generation
-            return $asset->assetTemplate->company_id;
+            // Since all templates are now global, always use the asset's company for tag generation
+            return $asset->company_id;
         });
 
         foreach ($assetsByTagCompany as $companyId => $companyAssets) {
@@ -102,13 +99,11 @@ class RegenerateAssetTags extends Command
         // Generate sequential tags manually to avoid duplicates during the same run
         $abbreviation = $this->generateCompanyAbbreviation($company->name_en);
         $counter = 1;
-        $existingTags = Asset::with(['assetTemplate.company', 'company'])
+        $existingTags = Asset::with(['assetTemplate', 'company'])
             ->get()
             ->filter(function ($existingAsset) use ($company) {
-                if (!$existingAsset->assetTemplate) {
-                    return $existingAsset->company_id == $company->id;
-                }
-                return $existingAsset->assetTemplate->company_id == $company->id;
+                // Since all templates are now global, always use the asset's company for filtering
+                return $existingAsset->company_id == $company->id;
             })
             ->pluck('asset_tag')
             ->toArray();

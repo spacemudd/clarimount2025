@@ -4,10 +4,10 @@
       <!-- Header -->
       <div class="mb-6">
         <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          Create Template
+          {{ t('asset_templates.create_template') }}
         </h1>
         <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          Create a reusable asset template to streamline asset creation
+          {{ t('asset_templates.create_template_description') }}
         </p>
       </div>
 
@@ -15,17 +15,17 @@
       <form @submit.prevent="handleSubmit" class="max-w-2xl">
         <Card>
           <CardHeader>
-            <CardTitle>Template Details</CardTitle>
+            <CardTitle>{{ t('asset_templates.template_details') }}</CardTitle>
           </CardHeader>
           <CardContent class="space-y-6">
             <!-- Template Name -->
             <div>
-              <Label for="name">Template Name *</Label>
+              <Label for="name">{{ t('asset_templates.template_name') }} *</Label>
               <Input
                 id="name"
                 v-model="form.name"
                 required
-                placeholder="Dell Latitude 7420 Laptop"
+                :placeholder="t('asset_templates.template_name_placeholder')"
                 class="mt-1"
               />
               <InputError v-if="errors.name" :message="errors.name" class="mt-1" />
@@ -33,11 +33,11 @@
 
             <!-- Manufacturer -->
             <div>
-              <Label for="manufacturer">Manufacturer</Label>
+              <Label for="manufacturer">{{ t('asset_templates.manufacturer') }}</Label>
               <Input
                 id="manufacturer"
                 v-model="form.manufacturer"
-                placeholder="Dell, HP, Apple..."
+                :placeholder="t('asset_templates.manufacturer_placeholder')"
                 class="mt-1"
               />
               <InputError v-if="errors.manufacturer" :message="errors.manufacturer" class="mt-1" />
@@ -46,21 +46,21 @@
             <!-- Model Information -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label for="model_name">Model Name</Label>
+                <Label for="model_name">{{ t('asset_templates.model_name') }}</Label>
                 <Input
                   id="model_name"
                   v-model="form.model_name"
-                  placeholder="Latitude 7420"
+                  :placeholder="t('asset_templates.model_name_placeholder')"
                   class="mt-1"
                 />
                 <InputError v-if="errors.model_name" :message="errors.model_name" class="mt-1" />
               </div>
               <div>
-                <Label for="model_number">Model Number</Label>
+                <Label for="model_number">{{ t('asset_templates.model_number') }}</Label>
                 <Input
                   id="model_number"
                   v-model="form.model_number"
-                  placeholder="LAT7420-001"
+                  :placeholder="t('asset_templates.model_number_placeholder')"
                   class="mt-1"
                 />
                 <InputError v-if="errors.model_number" :message="errors.model_number" class="mt-1" />
@@ -69,13 +69,13 @@
 
             <!-- Category -->
             <div>
-              <Label for="asset_category_id">Category</Label>
+              <Label for="asset_category_id">{{ t('asset_templates.category') }}</Label>
               <select
                 id="asset_category_id"
                 v-model="form.asset_category_id"
                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
               >
-                <option value="">Select a category</option>
+                <option value="">{{ t('asset_templates.category_placeholder') }}</option>
                 <option 
                   v-for="category in categories" 
                   :key="category.id" 
@@ -87,42 +87,22 @@
               <InputError v-if="errors.asset_category_id" :message="errors.asset_category_id" class="mt-1" />
             </div>
 
-            <!-- Company -->
-            <div>
-              <Label for="company_id">Company</Label>
-              <select
-                id="company_id"
-                v-model="form.company_id"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-              >
-                <option value="">Select a company</option>
-                <option 
-                  v-for="company in companies" 
-                  :key="company.id" 
-                  :value="company.id"
-                >
-                  {{ company.name_en }}
-                </option>
-              </select>
-              <InputError v-if="errors.company_id" :message="errors.company_id" class="mt-1" />
-            </div>
-
             <!-- Notes -->
             <div>
-              <Label for="default_notes">Default Notes</Label>
+              <Label for="default_notes">{{ t('asset_templates.default_notes') }}</Label>
               <textarea
                 id="default_notes"
                 v-model="form.default_notes"
                 rows="3"
                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-                placeholder="Additional notes about this template"
+                :placeholder="t('asset_templates.default_notes_placeholder')"
               />
               <InputError v-if="errors.default_notes" :message="errors.default_notes" class="mt-1" />
             </div>
 
             <!-- Image Upload -->
             <div>
-              <Label for="image">Template Image</Label>
+              <Label for="image">{{ t('asset_templates.template_image') }}</Label>
               <input
                 id="image"
                 type="file"
@@ -130,14 +110,14 @@
                 @change="handleImageChange"
                 class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-gray-700 dark:file:text-gray-300"
               />
-              <p class="mt-1 text-sm text-gray-500">PNG, JPG, GIF up to 2MB</p>
+              <p class="mt-1 text-sm text-gray-500">{{ t('asset_templates.image_description') }}</p>
               <InputError v-if="errors.image" :message="errors.image" class="mt-1" />
               
               <!-- Image Preview -->
               <div v-if="imagePreview" class="mt-4">
                 <img 
                   :src="imagePreview" 
-                  alt="Preview" 
+                  :alt="t('asset_templates.image_preview')" 
                   class="max-w-xs max-h-48 rounded-lg border border-gray-300 dark:border-gray-600"
                 />
                 <button 
@@ -145,23 +125,9 @@
                   @click="removeImage"
                   class="mt-2 text-sm text-red-600 hover:text-red-800 dark:text-red-400"
                 >
-                  Remove image
+                  {{ t('asset_templates.remove_image') }}
                 </button>
               </div>
-            </div>
-
-            <!-- Global Template -->
-            <div class="flex items-center space-x-2">
-              <input
-                id="is_global"
-                v-model="form.is_global"
-                type="checkbox"
-                class="rounded border-gray-300 text-blue-600 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
-              />
-              <Label for="is_global" class="text-sm font-medium">
-                Make this template available to all companies (Global)
-              </Label>
-              <InputError v-if="errors.is_global" :message="errors.is_global" class="mt-1" />
             </div>
           </CardContent>
         </Card>
@@ -170,10 +136,10 @@
         <div class="mt-6 flex items-center gap-4">
           <Button type="submit" :disabled="processing">
             <Icon v-if="processing" name="loader-2" class="h-4 w-4 mr-2 animate-spin" />
-            Create Template
+            {{ t('asset_templates.create_template') }}
           </Button>
           <Button variant="outline" as="Link" :href="route('asset-templates.index')">
-            Cancel
+            {{ t('common.cancel') }}
           </Button>
         </div>
       </form>
@@ -184,6 +150,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useForm } from '@inertiajs/vue3'
+import { useI18n } from 'vue-i18n'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -193,22 +160,15 @@ import InputError from '@/components/InputError.vue'
 import Icon from '@/components/Icon.vue'
 
 interface Props {
-  companies: Array<{
-    id: number
-    name_en: string
-  }>
   categories: Array<{
     id: number
     name: string
     depth: number
   }>
-  currentCompany?: {
-    id: number
-    name_en: string
-  }
 }
 
 const props = defineProps<Props>()
+const { t } = useI18n()
 
 const form = useForm({
   name: '',
@@ -216,11 +176,9 @@ const form = useForm({
   model_name: '',
   model_number: '',
   asset_category_id: '',
-  company_id: props.currentCompany?.id || '',
   specifications: {},
   default_notes: '',
   image: null as File | null,
-  is_global: true,
 })
 
 const processing = ref(false)

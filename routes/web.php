@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\CustodyController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\EmployeeController;
@@ -107,6 +108,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Employees management
     Route::resource('employees', EmployeeController::class);
     
+    // Custody management routes
+    Route::get('employees/{employee}/custody', [CustodyController::class, 'show'])->name('employees.custody.show');
+    Route::post('employees/{employee}/custody', [CustodyController::class, 'store'])->name('employees.custody.store');
+    Route::get('custody-changes/{custodyChange}/document', [CustodyController::class, 'generateDocument'])->name('custody.document');
+    Route::post('custody-changes/{custodyChange}/upload', [CustodyController::class, 'uploadDocument'])->name('custody.upload');
+    Route::get('api/custody/available-assets', [CustodyController::class, 'getAvailableAssets'])->name('api.custody.available-assets');
+    
     // Asset Categories management
     Route::resource('asset-categories', AssetCategoryController::class);
     
@@ -136,6 +144,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // API endpoints for async searches
     Route::get('api/locations/search', [LocationController::class, 'search'])->name('api.locations.search');
     Route::get('api/asset-templates/search', [AssetTemplateController::class, 'search'])->name('api.asset-templates.search');
+    Route::get('api/asset-templates/by-category', [AssetTemplateController::class, 'byCategory'])->name('api.asset-templates.by-category');
     Route::get('api/companies/search', [CompanyController::class, 'search'])->name('api.companies.search');
     Route::get('api/departments/search', [DepartmentController::class, 'search'])->name('api.departments.search');
     Route::get('api/employees/search', [EmployeeController::class, 'search'])->name('api.employees.search');

@@ -13,7 +13,7 @@ import { computed, ref, onMounted } from 'vue';
 import type { AssetCategory, Location, Company, BreadcrumbItem } from '@/types';
 import BarcodeScanner from '@/components/BarcodeScanner.vue';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 interface AssetTemplate {
     id: number;
@@ -83,6 +83,12 @@ const templateSearchResults = ref<AssetTemplate[]>([]);
 const isTemplateSearching = ref(false);
 const showTemplateSearchResults = ref(false);
 const selectedTemplate = ref<AssetTemplate | null>(null);
+
+// Template browser modal state
+const isTemplateBrowserOpen = ref(false);
+const templatesByCategory = ref<Record<string, AssetTemplate[]>>({});
+const isLoadingTemplates = ref(false);
+const activeCategoryTab = ref<string>('');
 
 // Company search state
 const companySearchQuery = ref('');
@@ -330,6 +336,36 @@ const hideTemplateSearchResults = () => {
     setTimeout(() => {
         showTemplateSearchResults.value = false;
     }, 200);
+};
+
+// Template browser modal functions
+const openTemplateBrowser = async () => {
+    isTemplateBrowserOpen.value = true;
+    isLoadingTemplates.value = true;
+    
+    try {
+        const response = await fetch('/api/asset-templates/by-category');
+        const data = await response.json();
+        templatesByCategory.value = data;
+        
+        // Set the first category as active if we have categories
+        const categories = Object.keys(data);
+        if (categories.length > 0) {
+            activeCategoryTab.value = categories[0];
+        }
+    } catch (error) {
+        console.error('Failed to load templates by category:', error);
+    } finally {
+        isLoadingTemplates.value = false;
+    }
+};
+
+const selectTemplateFromBrowser = (template: AssetTemplate) => {
+    selectedTemplate.value = template;
+    form.asset_template_id = template.id.toString();
+    templateSearchQuery.value = template.display_name;
+    showTemplateSearchResults.value = false;
+    isTemplateBrowserOpen.value = false;
 };
 
 // Asset Template Creation Modal functions
@@ -1459,6 +1495,14 @@ onMounted(async () => {
                                         </div>
                                     </div>
                                 </div>
+                                <Button
+                                    variant="outline"
+                                    type="button"
+                                    @click="openTemplateBrowser"
+                                >
+                                    <Icon name="List" class="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" />
+                                    {{ t('assets.choose_template') }}
+                                </Button>
                                 <Dialog v-model:open="isTemplateDialogOpen">
                                     <DialogTrigger asChild>
                                         <Button variant="outline" type="button">
@@ -2119,7 +2163,7 @@ onMounted(async () => {
                 <div class="flex gap-2">
                     <Button variant="outline" asChild>
                         <Link :href="route('assets.index')">
-                            <Icon name="ArrowLeft" class="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" />
+                            <Icon :name="locale === 'ar' ? 'ArrowRight' : 'ArrowLeft'" class="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" />
                             {{ t('common.cancel') }}
                         </Link>
                     </Button>
@@ -2128,7 +2172,7 @@ onMounted(async () => {
                         variant="outline"
                         @click="prevStep"
                     >
-                        <Icon name="ChevronLeft" class="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" />
+                        <Icon :name="locale === 'ar' ? 'ChevronRight' : 'ChevronLeft'" class="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" />
                         {{ t('common.previous') }}
                     </Button>
                 </div>
@@ -2139,7 +2183,7 @@ onMounted(async () => {
                         :disabled="!canGoNext"
                     >
                         {{ t('common.next') }}
-                        <Icon name="ChevronRight" class="h-4 w-4 ml-2 rtl:ml-0 rtl:mr-2" />
+                        <Icon :name="locale === 'ar' ? 'ChevronLeft' : 'ChevronRight'" class="h-4 w-4 ml-2 rtl:ml-0 rtl:mr-2" />
                     </Button>
                     <Button
                         v-else
@@ -2171,5 +2215,111 @@ onMounted(async () => {
             @cancel="templateCameraActive = false"
             :enable-camera-capture="true"
         />
+
+        <!-- Template Browser Modal -->
+        <Dialog v-model:open="isTemplateBrowserOpen">
+            <DialogContent class="sm:max-w-4xl max-h-[90vh] overflow-hidden">
+                <DialogHeader>
+                    <DialogTitle>{{ t('assets.choose_template') }}</DialogTitle>
+                    <DialogDescription>
+                        {{ t('assets.browse_templates_by_category') }}
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="flex flex-col h-[60vh]">
+                    <!-- Loading State -->
+                    <div v-if="isLoadingTemplates" class="flex items-center justify-center h-full">
+                        <div class="text-center">
+                            <Icon name="Loader2" class="h-8 w-8 animate-spin text-gray-400 mx-auto mb-2" />
+                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('assets.loading_templates') }}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Templates Content -->
+                    <div v-else-if="Object.keys(templatesByCategory).length > 0" class="flex h-full">
+                        <!-- Category Tabs -->
+                        <div class="w-64 border-r border-gray-200 dark:border-gray-700 overflow-y-auto">
+                            <div class="p-4">
+                                <h4 class="font-medium text-sm text-gray-900 dark:text-gray-100 mb-3">{{ t('assets.categories') }}</h4>
+                                <div class="space-y-1">
+                                    <button
+                                        v-for="(templates, categoryName) in templatesByCategory"
+                                        :key="categoryName"
+                                        @click="activeCategoryTab = categoryName"
+                                        :class="[
+                                            'w-full text-left px-3 py-2 rounded-md text-sm transition-colors',
+                                            activeCategoryTab === categoryName
+                                                ? 'bg-primary text-primary-foreground'
+                                                : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+                                        ]"
+                                    >
+                                        <div class="flex items-center justify-between">
+                                            <span>{{ categoryName }}</span>
+                                            <span class="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full">
+                                                {{ templates.length }}
+                                            </span>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Templates Grid -->
+                        <div class="flex-1 overflow-y-auto">
+                            <div class="p-4">
+                                <h4 class="font-medium text-sm text-gray-900 dark:text-gray-100 mb-3">
+                                    {{ activeCategoryTab }} ({{ templatesByCategory[activeCategoryTab]?.length || 0 }})
+                                </h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                    <div
+                                        v-for="template in templatesByCategory[activeCategoryTab]"
+                                        :key="template.id"
+                                        @click="selectTemplateFromBrowser(template)"
+                                        class="p-3 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:border-primary hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                    >
+                                        <div class="font-medium text-sm mb-1">{{ template.name }}</div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                                            <div v-if="template.manufacturer">
+                                                <strong>{{ t('assets.manufacturer') }}:</strong> {{ template.manufacturer }}
+                                            </div>
+                                            <div v-if="template.model_name">
+                                                <strong>{{ t('assets.model') }}:</strong> {{ template.model_name }}
+                                            </div>
+                                            <div v-if="template.model_number">
+                                                <strong>{{ t('assets.model_number') }}:</strong> {{ template.model_number }}
+                                            </div>
+                                            <div>
+                                                <strong>{{ t('assets.scope') }}:</strong>
+                                                <span v-if="template.is_global" class="text-blue-600 dark:text-blue-400">
+                                                    {{ t('asset_templates.global') }}
+                                                </span>
+                                                <span v-else-if="template.company?.name_en" class="text-green-600 dark:text-green-400">
+                                                    {{ template.company.name_en }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- No templates in category -->
+                                <div v-if="templatesByCategory[activeCategoryTab]?.length === 0" class="text-center py-8">
+                                    <Icon name="Package" class="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                                        {{ t('assets.no_templates_in_category') }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- No templates found -->
+                    <div v-else class="flex items-center justify-center h-full">
+                        <div class="text-center">
+                            <Icon name="Package" class="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('assets.no_templates_available') }}</p>
+                        </div>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
     </AppLayout>
 </template> 

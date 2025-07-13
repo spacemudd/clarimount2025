@@ -107,8 +107,10 @@ export interface Employee {
     first_name: string;
     last_name: string;
     father_name?: string;
-    nationality?: string;
-    residence_country?: string;
+    nationality?: Nationality | string;
+    nationality_id?: number;
+    residence_country?: Country | string;
+    residence_country_id?: number;
     birth_date?: string;
     email: string;
     personal_email?: string;
@@ -209,19 +211,24 @@ export interface Asset {
     company_id: number;
     model_name?: string;
     model_number?: string;
+    manufacturer?: string;
     status: 'available' | 'assigned' | 'maintenance' | 'retired';
     condition: 'good' | 'damaged';
     notes?: string;
     image_path?: string;
     asset_template_id?: number;
+    assigned_to?: number;
+    assigned_date?: string;
     created_at: string;
     updated_at: string;
     category?: AssetCategory;
+    assetCategory?: AssetCategory;
     location?: Location;
     company?: Company;
     assetTemplate?: AssetTemplate;
     assignments?: AssetAssignment[];
     tickets?: Ticket[];
+    display_name?: string;
 }
 
 export interface AssetTemplate {
@@ -314,13 +321,54 @@ export interface AssetAssignment {
     return_notes?: string;
     condition_notes?: string;
     checklist_data?: Record<string, any>;
+    custody_change_id?: number;
     created_at: string;
     updated_at: string;
     asset?: Asset;
     employee?: Employee;
     assigned_by_user?: User;
     returned_by_user?: User;
+    custody_change?: CustodyChange;
     duration_days?: number;
+}
+
+export interface CustodyChange {
+    id: number;
+    employee_id: number;
+    updated_by: number;
+    previous_state: {
+        assets: any[];
+        count: number;
+    };
+    new_state: {
+        assets: any[];
+        count: number;
+    };
+    changes_summary?: string;
+    document_path?: string;
+    status: 'pending' | 'approved' | 'signed' | 'completed';
+    created_at: string;
+    updated_at: string;
+    employee?: Employee;
+    updatedBy?: User;
+}
+
+export interface Nationality {
+    id: number;
+    name: string;
+    code: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface Country {
+    id: number;
+    name: string;
+    code: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface TicketComment {

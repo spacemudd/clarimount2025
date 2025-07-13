@@ -21,6 +21,12 @@
                                     {{ t('employees.edit') }}
                                 </Link>
                             </Button>
+                            <Button variant="secondary" asChild>
+                                <Link :href="route('employees.custody.show', employee.id)">
+                                    <Icon name="Package" class="mr-2 h-4 w-4" />
+                                    Update Custody
+                                </Link>
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -333,11 +339,11 @@
                                                 <Icon name="Package" class="h-4 w-4" />
                                             </div>
                                             <div>
-                                                <p class="font-medium">{{ asset.name }}</p>
+                                                <p class="font-medium">{{ asset.display_name || asset.model_name || asset.asset_tag }}</p>
                                                 <p class="text-sm text-muted-foreground">{{ asset.asset_tag }}</p>
                                             </div>
                                         </div>
-                                        <Badge :class="asset.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'">
+                                        <Badge :class="asset.status === 'assigned' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'">
                                             {{ asset.status }}
                                         </Badge>
                                     </div>
@@ -365,7 +371,7 @@
                                                 <Icon name="Activity" class="h-4 w-4" />
                                             </div>
                                             <div>
-                                                <p class="font-medium">{{ ticket.title }}</p>
+                                                <p class="font-medium">{{ ticket.subject }}</p>
                                                 <p class="text-sm text-muted-foreground">{{ ticket.ticket_number }}</p>
                                             </div>
                                         </div>

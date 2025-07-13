@@ -24,6 +24,7 @@ class AssetAssignment extends Model
         'checklist_data',
         'assignment_document_path',
         'return_document_path',
+        'custody_change_id',
     ];
 
     protected $casts = [
@@ -62,6 +63,14 @@ class AssetAssignment extends Model
     public function returnedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'returned_by');
+    }
+
+    /**
+     * Get the custody change that this assignment belongs to.
+     */
+    public function custodyChange(): BelongsTo
+    {
+        return $this->belongsTo(CustodyChange::class);
     }
 
     /**

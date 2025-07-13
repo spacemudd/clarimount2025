@@ -87,26 +87,6 @@
               <InputError v-if="errors.asset_category_id" :message="errors.asset_category_id" class="mt-1" />
             </div>
 
-            <!-- Company -->
-            <div>
-              <Label for="company_id">Company</Label>
-              <select
-                id="company_id"
-                v-model="form.company_id"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-              >
-                <option value="">Select a company</option>
-                <option 
-                  v-for="company in companies" 
-                  :key="company.id" 
-                  :value="company.id"
-                >
-                  {{ company.name_en }}
-                </option>
-              </select>
-              <InputError v-if="errors.company_id" :message="errors.company_id" class="mt-1" />
-            </div>
-
             <!-- Notes -->
             <div>
               <Label for="default_notes">Default Notes</Label>
@@ -205,20 +185,6 @@
                 </p>
               </div>
             </div>
-
-            <!-- Global Template -->
-            <div class="flex items-center space-x-2">
-              <input
-                id="is_global"
-                v-model="form.is_global"
-                type="checkbox"
-                class="rounded border-gray-300 text-blue-600 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
-              />
-              <Label for="is_global" class="text-sm font-medium">
-                Make this template available to all companies (Global)
-              </Label>
-              <InputError v-if="errors.is_global" :message="errors.is_global" class="mt-1" />
-            </div>
           </CardContent>
         </Card>
 
@@ -256,15 +222,9 @@ interface Props {
     model_name?: string
     model_number?: string
     asset_category_id: number
-    company_id?: number
     default_notes?: string
     image_path?: string
-    is_global: boolean
   }
-  companies: Array<{
-    id: number
-    name_en: string
-  }>
   categories: Array<{
     id: number
     name: string
@@ -280,12 +240,10 @@ const form = useForm({
   model_name: props.template.model_name || '',
   model_number: props.template.model_number || '',
   asset_category_id: props.template.asset_category_id,
-  company_id: props.template.company_id || '',
   specifications: {},
   default_notes: props.template.default_notes || '',
   image: null as File | null,
   delete_image: false as boolean,
-  is_global: props.template.is_global,
 })
 
 const processing = ref(false)
