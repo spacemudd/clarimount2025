@@ -24,7 +24,7 @@
                             <Button variant="secondary" asChild>
                                 <Link :href="route('employees.custody.show', employee.id)">
                                     <Icon name="Package" class="mr-2 h-4 w-4" />
-                                    Update Custody
+                                    {{ t('custody.update_custody') }}
                                 </Link>
                             </Button>
                         </div>

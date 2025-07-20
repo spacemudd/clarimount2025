@@ -56,11 +56,12 @@ class CustodyChange extends Model
         $added = $newCount - $previousCount;
         
         if ($added > 0) {
-            return "Added {$added} asset(s)";
+            return trans_choice('messages.custody.added_assets', $added, ['count' => $added]);
         } elseif ($added < 0) {
-            return "Removed " . abs($added) . " asset(s)";
+            $removed = abs($added);
+            return trans_choice('messages.custody.removed_assets', $removed, ['count' => $removed]);
         } else {
-            return "Modified asset assignments";
+            return __('messages.custody.modified_asset_assignments');
         }
     }
 

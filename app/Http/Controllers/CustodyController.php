@@ -72,10 +72,9 @@ class CustodyController extends Controller
         }
 
         $validated = $request->validate([
-            'new_asset_ids' => 'required|array',
+            'new_asset_ids' => 'present|array',
             'new_asset_ids.*' => 'exists:assets,id',
             'changes_summary' => 'nullable|string|max:500',
-            'document' => 'nullable|file|mimes:pdf,jpg,jpeg,png,gif|max:10240', // 10MB max
         ]);
 
         try {
@@ -88,13 +87,23 @@ class CustodyController extends Controller
                 ->get();
 
             // Get new assets
-            $newAssets = Asset::whereIn('id', $validated['new_asset_ids'])
-                ->whereIn('company_id', $ownedCompanyIds)
-                ->with(['assetCategory', 'location', 'company'])
-                ->get();
+            $newAssets = !empty($validated['new_asset_ids']) 
+                ? Asset::whereIn('id', $validated['new_asset_ids'])
+                    ->whereIn('company_id', $ownedCompanyIds)
+                    ->with(['assetCategory', 'location', 'company'])
+                    ->get()
+                : collect(); // Empty collection when no assets selected
 
-            // Validate that all new assets are available
-            foreach ($newAssets as $asset) {
+            // Get IDs of currently assigned assets
+            $currentAssetIds = $currentAssets->pluck('id')->toArray();
+            
+            // Only validate availability for assets that are truly new (not currently assigned to this employee)
+            $assetsToAdd = $newAssets->filter(function ($asset) use ($currentAssetIds) {
+                return !in_array($asset->id, $currentAssetIds);
+            });
+            
+            // Validate that new assets are available
+            foreach ($assetsToAdd as $asset) {
                 if ($asset->status !== 'available') {
                     return response()->json([
                         'error' => "Asset {$asset->asset_tag} is not available for assignment."
@@ -137,12 +146,6 @@ class CustodyController extends Controller
                 'count' => $newAssets->count(),
             ];
 
-            // Handle document upload
-            $documentPath = null;
-            if ($request->hasFile('document')) {
-                $documentPath = $request->file('document')->store('custody-documents', 'public');
-            }
-
             // Create custody change record
             $custodyChange = CustodyChange::create([
                 'employee_id' => $employee->id,
@@ -150,7 +153,7 @@ class CustodyController extends Controller
                 'previous_state' => $previousState,
                 'new_state' => $newState,
                 'changes_summary' => $validated['changes_summary'],
-                'document_path' => $documentPath,
+                'document_path' => null, // Document will be uploaded later
                 'status' => 'pending',
             ]);
 
@@ -238,12 +241,16 @@ class CustodyController extends Controller
             abort(422, 'Invalid custody change: ' . implode(', ', $errors));
         }
 
+        // Set locale to Arabic for the document
+        app()->setLocale('ar');
+
         return Inertia::render('Documents/CustodyChangeDocument', [
             'custodyChange' => $custodyChange,
             'employee' => $custodyChange->employee,
             'previousAssets' => $custodyChange->previous_state['assets'] ?? [],
             'newAssets' => $custodyChange->new_state['assets'] ?? [],
             'generatedAt' => now()->format('Y-m-d H:i:s'),
+            'locale' => 'ar', // Pass Arabic locale to frontend
         ]);
     }
 

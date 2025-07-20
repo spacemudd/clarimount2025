@@ -6,7 +6,7 @@
                     <Breadcrumbs :breadcrumbs="breadcrumbs" />
                     <div class="flex items-center justify-between">
                         <div class="space-y-1">
-                            <Heading :title="`Update Custody - ${employee.full_name}`" />
+                            <Heading :title="`${t('custody.update_custody')} - ${employee.full_name}`" />
                             <div class="flex items-center gap-2">
                                 <Badge :class="getStatusBadgeClass(employee.employment_status)">
                                     {{ t(`employees.status_${employee.employment_status}`) }}
@@ -18,7 +18,7 @@
                             <Button variant="outline" asChild>
                                 <Link :href="route('employees.show', employee.id)">
                                     <Icon name="ArrowLeft" class="mr-2 h-4 w-4" />
-                                    Back to Employee
+                                    {{ t('custody.back_to_employee') }}
                                 </Link>
                             </Button>
                         </div>
@@ -31,7 +31,7 @@
                         <CardHeader>
                             <CardTitle class="flex items-center gap-2">
                                 <Icon name="Package" class="h-5 w-5 text-blue-600" />
-                                Current Custody ({{ currentAssets.length }})
+                                {{ t('custody.current_custody') }} ({{ currentAssets.length }})
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
@@ -61,7 +61,7 @@
                                     </Button>
                                 </div>
                                 <div v-if="currentAssets.length === 0" class="text-center py-8 text-muted-foreground">
-                                    No assets currently assigned
+                                    {{ t('custody.no_assets_assigned') }}
                                 </div>
                             </div>
                         </CardContent>
@@ -72,7 +72,7 @@
                         <CardHeader>
                             <CardTitle class="flex items-center gap-2">
                                 <Icon name="Package" class="h-5 w-5 text-green-600" />
-                                Updated Custody ({{ updatedAssets.length }})
+                                {{ t('custody.updated_custody') }} ({{ updatedAssets.length }})
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
@@ -104,13 +104,13 @@
                                 
                                 <!-- Add Asset Button -->
                                 <Button 
-                                    variant="dashed" 
-                                    class="w-full"
+                                    variant="outline" 
+                                    class="w-full border-dashed"
                                     @click="showAssetSearch = true"
                                     :disabled="loading"
                                 >
                                     <Icon name="Plus" class="mr-2 h-4 w-4" />
-                                    Add Asset
+                                    {{ t('custody.add_asset') }}
                                 </Button>
                             </div>
                         </CardContent>
@@ -122,34 +122,19 @@
                     <CardHeader>
                         <CardTitle class="flex items-center gap-2">
                             <Icon name="FileText" class="h-5 w-5 text-orange-600" />
-                            Changes Summary
+                            {{ t('custody.changes_summary') }}
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div class="space-y-4">
-                            <div>
-                                <Label for="changes_summary" class="mb-2">Summary (Optional)</Label>
-                                <textarea 
-                                    id="changes_summary"
-                                    v-model="changesSummary"
-                                    rows="3"
-                                    placeholder="Describe the reason for this custody change..."
-                                    class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                ></textarea>
-                            </div>
-                            
-                            <div>
-                                <Label for="document" class="mb-2">Upload Document (Proof of Action)</Label>
-                                <Input 
-                                    id="document"
-                                    type="file" 
-                                    accept=".pdf,.jpg,.jpeg,.png,.gif"
-                                    @change="handleDocumentUpload" 
-                                />
-                                <p class="text-xs text-muted-foreground mt-1">
-                                    PDF, JPG, PNG, or GIF files up to 10MB
-                                </p>
-                            </div>
+                        <div>
+                            <Label for="changes_summary" class="mb-2">{{ t('custody.summary_optional') }}</Label>
+                            <textarea 
+                                id="changes_summary"
+                                v-model="changesSummary"
+                                rows="3"
+                                :placeholder="t('custody.summary_placeholder')"
+                                class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            ></textarea>
                         </div>
                     </CardContent>
                 </Card>
@@ -157,11 +142,11 @@
                 <!-- Action Buttons -->
                 <div class="flex justify-end gap-4" v-if="hasChanges">
                     <Button variant="outline" @click="resetChanges" :disabled="loading">
-                        Reset Changes
+                        {{ t('custody.reset_changes') }}
                     </Button>
                     <Button @click="saveCustodyUpdate" :disabled="loading">
                         <Icon name="Save" class="mr-2 h-4 w-4" />
-                        {{ loading ? 'Saving...' : 'Save Custody Update' }}
+                        {{ loading ? t('custody.saving') : t('custody.save_custody_update') }}
                     </Button>
                 </div>
                 
@@ -170,7 +155,7 @@
                     <CardHeader>
                         <CardTitle class="flex items-center gap-2">
                             <Icon name="History" class="h-5 w-5 text-gray-600" />
-                            Recent Custody Changes
+                            {{ t('custody.recent_custody_changes') }}
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -181,17 +166,106 @@
                                 class="flex items-center justify-between p-3 border rounded-lg"
                             >
                                 <div>
-                                    <p class="font-medium">{{ change.changes_summary || 'Custody Updated' }}</p>
+                                    <p class="font-medium">{{ change.changes_summary || t('custody.custody_updated') }}</p>
                                     <p class="text-sm text-muted-foreground">
                                         {{ new Date(change.created_at).toLocaleDateString() }} by {{ change.updatedBy?.name }}
                                     </p>
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <Badge :class="change.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'">
-                                        {{ change.status }}
+                                        {{ t('custody.status_' + change.status) }}
+                                    </Badge>
+                                    <Button variant="outline" size="sm" @click="printCustodyDocument(change)" :title="t('custody.print_document')">
+                                        <Icon name="Printer" class="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="outline" size="sm" @click="viewCustodyDocument(change)" :title="t('custody.view_document')">
+                                        <Icon name="FileText" class="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+                
+                <!-- Pending Custody Changes - Need Documents -->
+                <Card v-if="pendingCustodyChanges.length > 0">
+                    <CardHeader>
+                        <CardTitle class="flex items-center gap-2">
+                            <Icon name="AlertCircle" class="h-5 w-5 text-amber-600" />
+                            {{ t('custody.pending_custody_changes') }}
+                        </CardTitle>
+                        <p class="text-sm text-muted-foreground">
+                            {{ t('custody.pending_custody_changes_description') }}
+                        </p>
+                    </CardHeader>
+                    <CardContent>
+                        <div class="space-y-3">
+                            <div 
+                                v-for="change in pendingCustodyChanges" 
+                                :key="change.id"
+                                class="flex items-center justify-between p-3 border rounded-lg bg-amber-50 border-amber-200"
+                            >
+                                <div class="flex-1">
+                                    <p class="font-medium">{{ change.changes_summary || t('custody.custody_updated') }}</p>
+                                    <p class="text-sm text-muted-foreground">
+                                        {{ new Date(change.created_at).toLocaleDateString() }} by {{ change.updatedBy?.name }}
+                                    </p>
+                                    <p class="text-xs text-amber-600 mt-1">
+                                        <Icon name="Clock" class="h-3 w-3 inline mr-1" />
+                                        {{ t('custody.waiting_for_document') }}
+                                    </p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <Badge class="bg-amber-100 text-amber-800">
+                                        {{ t('custody.status_' + change.status) }}
                                     </Badge>
                                     <Button variant="outline" size="sm" @click="viewCustodyDocument(change)">
                                         <Icon name="FileText" class="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="default" size="sm" @click="uploadDocumentForChange(change)">
+                                        <Icon name="Upload" class="h-4 w-4 mr-1" />
+                                        {{ t('custody.upload_document_button') }}
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+                
+                <!-- Other Custody Changes -->
+                <Card v-if="otherCustodyChanges.length > 0">
+                    <CardHeader>
+                        <CardTitle class="flex items-center gap-2">
+                            <Icon name="History" class="h-5 w-5 text-gray-600" />
+                            {{ t('custody.other_custody_changes') }}
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div class="space-y-3">
+                            <div 
+                                v-for="change in otherCustodyChanges" 
+                                :key="change.id"
+                                class="flex items-center justify-between p-3 border rounded-lg"
+                            >
+                                <div>
+                                    <p class="font-medium">{{ change.changes_summary || t('custody.custody_updated') }}</p>
+                                    <p class="text-sm text-muted-foreground">
+                                        {{ new Date(change.created_at).toLocaleDateString() }} by {{ change.updatedBy?.name }}
+                                    </p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <Badge :class="getStatusBadgeClass(change.status)">
+                                        {{ t('custody.status_' + change.status) }}
+                                    </Badge>
+                                    <Button variant="outline" size="sm" @click="printCustodyDocument(change)" :title="t('custody.print_document')">
+                                        <Icon name="Printer" class="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="outline" size="sm" @click="viewCustodyDocument(change)" :title="t('custody.view_document')">
+                                        <Icon name="FileText" class="h-4 w-4" />
+                                    </Button>
+                                    <Button v-if="change.status === 'pending'" variant="default" size="sm" @click="uploadDocumentForChange(change)">
+                                        <Icon name="Upload" class="h-4 w-4 mr-1" />
+                                        {{ t('custody.upload_document_button') }}
                                     </Button>
                                 </div>
                             </div>
@@ -205,14 +279,14 @@
         <Dialog v-model:open="showAssetSearch">
             <DialogContent class="max-w-4xl">
                 <DialogHeader>
-                    <DialogTitle>Select Assets to Add</DialogTitle>
+                    <DialogTitle>{{ t('custody.select_assets_to_add') }}</DialogTitle>
                 </DialogHeader>
                 
                 <div class="space-y-4">
                     <div>
                         <Input 
                             v-model="assetSearchQuery"
-                            placeholder="Search assets by tag, model, or serial number..."
+                            :placeholder="t('custody.search_assets_placeholder')"
                             @input="searchAssets"
                         />
                     </div>
@@ -243,16 +317,58 @@
                             </div>
                             
                             <div v-if="searchResults.length === 0 && assetSearchQuery" class="text-center py-8 text-muted-foreground">
-                                No available assets found
+                                {{ t('custody.no_available_assets_found') }}
                             </div>
                         </div>
                     </div>
                 </div>
                 
                 <DialogFooter>
-                    <Button variant="outline" @click="showAssetSearch = false">Cancel</Button>
+                    <Button variant="outline" @click="showAssetSearch = false">{{ t('common.cancel') }}</Button>
                     <Button @click="addSelectedAssets" :disabled="selectedAssetIds.size === 0">
-                        Add {{ selectedAssetIds.size }} Asset(s)
+                        {{ t('custody.add_selected_assets', { count: selectedAssetIds.size }) }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        
+        <!-- Document Upload Dialog -->
+        <Dialog v-model:open="showDocumentUpload">
+            <DialogContent class="max-w-md">
+                <DialogHeader>
+                    <DialogTitle>{{ t('custody.upload_document_button') }}</DialogTitle>
+                </DialogHeader>
+                
+                <div class="space-y-4">
+                    <div>
+                        <Label for="document-upload">{{ t('custody.select_document') }}</Label>
+                        <Input 
+                            id="document-upload"
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png,.gif"
+                            @change="handleDocumentUpload"
+                            class="mt-1"
+                        />
+                        <p class="text-sm text-muted-foreground mt-1">
+                            {{ t('custody.upload_signed_document') }}
+                        </p>
+                    </div>
+                    
+                    <div v-if="selectedCustodyChange" class="p-3 bg-gray-50 rounded-lg">
+                        <p class="font-medium">{{ selectedCustodyChange.changes_summary || t('custody.custody_change') }}</p>
+                        <p class="text-sm text-muted-foreground">
+                            {{ new Date(selectedCustodyChange.created_at).toLocaleDateString() }}
+                        </p>
+                    </div>
+                </div>
+                
+                <DialogFooter>
+                    <Button variant="outline" @click="showDocumentUpload = false">{{ t('common.cancel') }}</Button>
+                    <Button 
+                        @click="uploadDocument"
+                        :disabled="!selectedDocument || loading"
+                    >
+                        {{ loading ? t('custody.uploading') : t('custody.upload_document_button') }}
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -292,11 +408,13 @@ const props = defineProps<Props>();
 const loading = ref(false);
 const updatedAssets = ref<Asset[]>([...props.currentAssets]);
 const changesSummary = ref('');
-const selectedDocument = ref<File | null>(null);
 const showAssetSearch = ref(false);
 const assetSearchQuery = ref('');
 const searchResults = ref<Asset[]>([...props.availableAssets]);
 const selectedAssetIds = ref<Set<number>>(new Set());
+const showDocumentUpload = ref(false);
+const selectedCustodyChange = ref<CustodyChange | null>(null);
+const selectedDocument = ref<File | null>(null);
 
 // Computed properties
 const breadcrumbs = computed((): BreadcrumbItem[] => [
@@ -309,11 +427,11 @@ const breadcrumbs = computed((): BreadcrumbItem[] => [
         href: '/employees',
     },
     {
-        title: props.employee.full_name,
+        title: props.employee.full_name || 'Employee',
         href: `/employees/${props.employee.id}`,
     },
     {
-        title: 'Update Custody',
+        title: t('custody.update_custody'),
         href: `/employees/${props.employee.id}/custody`,
     },
 ]);
@@ -331,6 +449,18 @@ const hasChanges = computed(() => {
     return false;
 });
 
+const pendingCustodyChanges = computed(() => {
+    return props.recentCustodyChanges.filter(change => 
+        change.status === 'pending' && !change.document_path
+    );
+});
+
+const otherCustodyChanges = computed(() => {
+    return props.recentCustodyChanges.filter(change => 
+        change.status !== 'pending' || change.document_path
+    );
+});
+
 // Methods
 const getStatusBadgeClass = (status: string) => {
     switch (status) {
@@ -340,6 +470,12 @@ const getStatusBadgeClass = (status: string) => {
             return 'bg-yellow-100 text-yellow-800';
         case 'terminated':
             return 'bg-red-100 text-red-800';
+        case 'pending':
+            return 'bg-amber-100 text-amber-800';
+        case 'signed':
+            return 'bg-blue-100 text-blue-800';
+        case 'completed':
+            return 'bg-green-100 text-green-800';
         default:
             return 'bg-gray-100 text-gray-800';
     }
@@ -356,7 +492,6 @@ const removeFromUpdated = (asset: Asset) => {
 const resetChanges = () => {
     updatedAssets.value = [...props.currentAssets];
     changesSummary.value = '';
-    selectedDocument.value = null;
 };
 
 const handleDocumentUpload = (event: Event) => {
@@ -409,45 +544,59 @@ const addSelectedAssets = () => {
 
 const saveCustodyUpdate = async () => {
     if (!hasChanges.value) {
-        alert('No changes to save');
+        alert(t('custody.no_changes_to_save'));
         return;
     }
     
     loading.value = true;
     
     try {
-        const formData = new FormData();
-        formData.append('new_asset_ids', JSON.stringify(updatedAssets.value.map(a => a.id)));
+        const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content;
+        const url = route('employees.custody.store', props.employee.id);
         
-        if (changesSummary.value) {
-            formData.append('changes_summary', changesSummary.value);
-        }
+        const requestData = {
+            new_asset_ids: updatedAssets.value.map(a => a.id),
+            changes_summary: changesSummary.value || ''
+        };
         
-        if (selectedDocument.value) {
-            formData.append('document', selectedDocument.value);
-        }
-        
-        const response = await fetch(route('employees.custody.store', props.employee.id), {
+        const response = await fetch(url, {
             method: 'POST',
-            body: formData,
             headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken || '',
+                'X-Requested-With': 'XMLHttpRequest'
             },
+            body: JSON.stringify(requestData)
         });
+        
+        console.log('Response status:', response.status);
+        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+        
+        // Check if response is actually JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('Non-JSON response received:', text);
+            alert('Server returned non-JSON response. Check browser console for details.');
+            return;
+        }
         
         if (response.ok) {
             const result = await response.json();
-            alert('Custody updated successfully!');
+            console.log('Success result:', result);
+            alert(t('custody.custody_updated_successfully'));
             
             // Redirect back to employee page
             router.visit(route('employees.show', props.employee.id));
         } else {
             const error = await response.json();
-            alert('Failed to update custody: ' + (error.error || 'Unknown error'));
+            console.error('Server error:', error);
+            alert(t('custody.failed_to_update_custody') + ': ' + (error.error || error.message || t('custody.unknown_error')));
         }
     } catch (error) {
         console.error('Error updating custody:', error);
-        alert('Failed to update custody. Please try again.');
+        alert(t('custody.failed_to_update_try_again'));
     } finally {
         loading.value = false;
     }
@@ -455,6 +604,62 @@ const saveCustodyUpdate = async () => {
 
 const viewCustodyDocument = (custodyChange: CustodyChange) => {
     window.open(route('custody.document', custodyChange.id), '_blank');
+};
+
+const printCustodyDocument = (custodyChange: CustodyChange) => {
+    // Open the document in a new window and trigger print
+    const printWindow = window.open(route('custody.document', custodyChange.id), '_blank');
+    if (printWindow) {
+        printWindow.addEventListener('load', () => {
+            printWindow.print();
+        });
+    }
+};
+
+const uploadDocumentForChange = async (custodyChange: CustodyChange) => {
+    selectedCustodyChange.value = custodyChange;
+    showDocumentUpload.value = true;
+};
+
+const uploadDocument = async () => {
+    if (!selectedDocument.value || !selectedCustodyChange.value) {
+        alert(t('custody.select_document_to_upload'));
+        return;
+    }
+
+    loading.value = true;
+    try {
+        const formData = new FormData();
+        formData.append('document', selectedDocument.value);
+        formData.append('type', 'signed');
+
+        const response = await fetch(route('custody.upload', selectedCustodyChange.value.id), {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+            },
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            alert(t('custody.document_uploaded_successfully'));
+            // Close dialog and reset state
+            showDocumentUpload.value = false;
+            selectedCustodyChange.value = null;
+            selectedDocument.value = null;
+            // Refresh the page to show updated custody changes
+            router.reload();
+        } else {
+            const error = await response.json();
+            alert(t('custody.failed_to_upload_document') + ': ' + (error.error || t('custody.unknown_error')));
+        }
+    } catch (error) {
+        console.error('Error uploading document:', error);
+        alert(t('custody.failed_to_upload_try_again'));
+    } finally {
+        loading.value = false;
+    }
 };
 
 // Initialize search results
