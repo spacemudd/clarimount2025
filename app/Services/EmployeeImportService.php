@@ -257,8 +257,18 @@ class EmployeeImportService
             }
 
             // Get lookup data for validation
-            $countries = Country::pluck('name', 'id')->toArray();
-            $nationalities = Nationality::pluck('name', 'id')->toArray();
+            $countries = Country::get()->flatMap(function ($country) {
+                return [
+                    mb_strtolower($country->name_en) => $country->id,
+                    mb_strtolower($country->name_ar) => $country->id,
+                ];
+            })->toArray();
+            $nationalities = Nationality::get()->flatMap(function ($nationality) {
+                return [
+                    mb_strtolower($nationality->name_en) => $nationality->id,
+                    mb_strtolower($nationality->name_ar) => $nationality->id,
+                ];
+            })->toArray();
             $departments = Department::where('company_id', $company->id)->pluck('name', 'id')->toArray();
             $existingEmployees = Employee::where('company_id', $company->id)->pluck('email', 'id')->toArray();
 
@@ -378,8 +388,13 @@ class EmployeeImportService
         ];
 
         foreach ($dateFields as $field) {
-            if (!empty($rowData[$field]) && !$this->isValidDate($rowData[$field])) {
-                $errors[] = "Row {$rowNumber}: Invalid date format for {$field}. Use YYYY-MM-DD.";
+            if (!empty($rowData[$field])) {
+                try {
+                    $parsed = \Carbon\Carbon::parse($rowData[$field]);
+                    $rowData[$field] = $parsed->format('Y-m-d');
+                } catch (\Exception $e) {
+                    $errors[] = "Row {$rowNumber}: Invalid date format for {$field}.";
+                }
             }
         }
 
@@ -547,12 +562,8 @@ class EmployeeImportService
      */
     protected function findNationalityId(string $name, array $nationalities): ?int
     {
-        foreach ($nationalities as $id => $nationality) {
-            if (strcasecmp($nationality, $name) === 0) {
-                return $id;
-            }
-        }
-        return null;
+        $key = mb_strtolower($name);
+        return $nationalities[$key] ?? null;
     }
 
     /**
@@ -560,12 +571,8 @@ class EmployeeImportService
      */
     protected function findCountryId(string $name, array $countries): ?int
     {
-        foreach ($countries as $id => $country) {
-            if (strcasecmp($country, $name) === 0) {
-                return $id;
-            }
-        }
-        return null;
+        $key = mb_strtolower($name);
+        return $countries[$key] ?? null;
     }
 
     /**

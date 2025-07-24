@@ -33,7 +33,7 @@
                     <!-- Header -->
                     <div class="text-center border-b-2 border-gray-800 pb-4 mb-6">
                         <h1 class="text-2xl font-bold mb-2">{{ t('custody.asset_custody_change_form') }}</h1>
-                        <p><strong>{{ t('custody.document_id') }}:</strong> {{ custodyChange.id }}</p>
+                        <p><strong>{{ t('custody.document_id') }}:</strong> {{ custodyChange.id.toString().padStart(4, '0') }}</p>
                         <p><strong>{{ t('custody.date') }}:</strong> <span dir="ltr">{{ new Date(custodyChange.created_at).toLocaleDateString() }}</span></p>
                         <Badge :class="getStatusBadgeClass(custodyChange.status)" class="mt-2">
                             {{ t('custody.status_' + custodyChange.status) }}
@@ -181,7 +181,7 @@
                     <!-- Footer -->
                     <div class="mt-8 text-center text-xs text-gray-500 print:mt-12">
                         <p v-html="t('custody.document_generated_on', { date: `<span dir='ltr'>${new Date(generatedAt).toLocaleDateString()}</span>` })"></p>
-                        <p>{{ t('custody.document_id') }}: {{ custodyChange.id }} | {{ t('custody.status') }}: {{ t('custody.status_' + custodyChange.status) }}</p>
+                        <p>{{ t('custody.document_id') }}: {{ custodyChange.id.toString().padStart(4, '0') }} | {{ t('custody.status') }}: {{ t('custody.status_' + custodyChange.status) }}</p>
                     </div>
                 </div>
             </div>
