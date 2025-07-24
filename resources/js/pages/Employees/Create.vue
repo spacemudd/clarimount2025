@@ -603,230 +603,224 @@ const translateValidationError = (error: string) => {
 
                 <!-- General Information Section -->
                 <Card>
-                    <Collapsible v-model:open="sectionGeneral">
-                        <CollapsibleTrigger asChild>
-                            <CardHeader class="cursor-pointer hover:bg-gray-50">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center gap-3">
-                                        <Icon name="User" class="h-5 w-5 text-blue-600" />
-                                        <CardTitle class="text-xl">{{ t('employees.general_information') }}</CardTitle>
-                                        <Badge v-if="completedSections.general" variant="default">✓</Badge>
-                                        <Badge v-if="hasErrorsInSection(['employee_id', 'first_name', 'father_name', 'last_name', 'nationality_id', 'residence_country_id', 'birth_date', 'email', 'personal_email', 'work_email'])" variant="destructive">!</Badge>
-                                    </div>
-                                    <Icon :name="!sectionGeneral ? 'ChevronRight' : 'ChevronDown'" class="h-5 w-5" />
+                    <CardHeader class="cursor-pointer hover:bg-gray-50">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <Icon name="User" class="h-5 w-5 text-blue-600" />
+                                <CardTitle class="text-xl">{{ t('employees.general_information') }}</CardTitle>
+                                <Badge v-if="completedSections.general" variant="default">✓</Badge>
+                                <Badge v-if="hasErrorsInSection(['employee_id', 'first_name', 'father_name', 'last_name', 'nationality_id', 'residence_country_id', 'birth_date', 'email', 'personal_email', 'work_email'])" variant="destructive">!</Badge>
+                            </div>
+                            <Icon :name="!sectionGeneral ? 'ChevronRight' : 'ChevronDown'" class="h-5 w-5" />
+                        </div>
+                    </CardHeader>
+                    <CardContent class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <!-- Employee ID -->
+                            <div>
+                                <Label for="employee_id" class="mb-2">
+                                    {{ t('employees.employee_id') }}
+                                    <span v-if="form.errors.employee_id" class="text-red-500 ml-1">*</span>
+                                </Label>
+                                <Input 
+                                    id="employee_id"
+                                    v-model="form.employee_id" 
+                                    type="text" 
+                                    :placeholder="t('employees.employee_id_placeholder')"
+                                    :class="form.errors.employee_id ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''"
+                                />
+                                <div v-if="form.errors.employee_id" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
+                                    <Icon name="AlertCircle" class="h-4 w-4" />
+                                    {{ translateValidationError(form.errors.employee_id || '') }}
                                 </div>
-                            </CardHeader>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                            <CardContent class="space-y-6">
-                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    <!-- Employee ID -->
-                                    <div>
-                                        <Label for="employee_id" class="mb-2">
-                                            {{ t('employees.employee_id') }}
-                                            <span v-if="form.errors.employee_id" class="text-red-500 ml-1">*</span>
-                                        </Label>
-                                        <Input 
-                                            id="employee_id"
-                                            v-model="form.employee_id" 
-                                            type="text" 
-                                            :placeholder="t('employees.employee_id_placeholder')"
-                                            :class="form.errors.employee_id ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''"
-                                        />
-                                        <div v-if="form.errors.employee_id" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
-                                            <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.employee_id || '') }}
-                                        </div>
-                                    </div>
+                            </div>
 
-                                    <!-- First Name -->
-                                    <div>
-                                        <Label for="first_name" class="mb-2">
-                                            {{ t('employees.first_name') }} *
-                                            <span v-if="form.errors.first_name" class="text-red-500 ml-1">*</span>
-                                        </Label>
-                                        <Input 
-                                            id="first_name"
-                                            v-model="form.first_name" 
-                                            type="text" 
-                                            required
-                                            :placeholder="t('employees.first_name_placeholder')"
-                                            :class="form.errors.first_name ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''"
-                                        />
-                                        <div v-if="form.errors.first_name" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
-                                            <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.first_name || '') }}
-                                        </div>
-                                    </div>
-
-                                    <!-- Father Name -->
-                                    <div>
-                                        <Label for="father_name" class="mb-2">
-                                            {{ t('employees.father_name') }}
-                                            <span v-if="form.errors.father_name" class="text-red-500 ml-1">*</span>
-                                        </Label>
-                                        <Input 
-                                            id="father_name"
-                                            v-model="form.father_name" 
-                                            type="text" 
-                                            :placeholder="t('employees.father_name_placeholder')"
-                                            :class="form.errors.father_name ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''"
-                                        />
-                                        <div v-if="form.errors.father_name" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
-                                            <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.father_name || '') }}
-                                        </div>
-                                    </div>
-
-                                    <!-- Last Name -->
-                                    <div>
-                                        <Label for="last_name" class="mb-2">
-                                            {{ t('employees.last_name') }} *
-                                            <span v-if="form.errors.last_name" class="text-red-500 ml-1">*</span>
-                                        </Label>
-                                        <Input 
-                                            id="last_name"
-                                            v-model="form.last_name" 
-                                            type="text" 
-                                            required
-                                            :placeholder="t('employees.last_name_placeholder')"
-                                            :class="form.errors.last_name ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''"
-                                        />
-                                        <div v-if="form.errors.last_name" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
-                                            <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.last_name || "") }}
-                                        </div>
-                                    </div>
-
-                                    <!-- Nationality -->
-                                    <div>
-                                        <Label for="nationality_id" class="mb-2">
-                                            {{ t('employees.nationality') }}
-                                            <span v-if="form.errors.nationality_id" class="text-red-500 ml-1">*</span>
-                                        </Label>
-                                        <select 
-                                            id="nationality_id"
-                                            v-model="form.nationality_id"
-                                            :class="[
-                                                'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-                                                form.errors.nationality_id ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
-                                            ]"
-                                        >
-                                            <option :value="null">{{ t('employees.select_nationality') }}</option>
-                                            <option v-for="nationality in props.nationalities" :key="nationality.id" :value="nationality.id">
-                                                {{ nationality.name }}
-                                            </option>
-                                        </select>
-                                        <div v-if="form.errors.nationality_id" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
-                                            <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.nationality_id || "") }}
-                                        </div>
-                                    </div>
-
-                                    <!-- Residence Country -->
-                                    <div>
-                                        <Label for="residence_country_id" class="mb-2">
-                                            {{ t('employees.residence_country') }}
-                                            <span v-if="form.errors.residence_country_id" class="text-red-500 ml-1">*</span>
-                                        </Label>
-                                        <select 
-                                            id="residence_country_id"
-                                            v-model="form.residence_country_id"
-                                            :class="[
-                                                'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-                                                form.errors.residence_country_id ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
-                                            ]"
-                                        >
-                                            <option :value="null">{{ t('employees.select_residence_country') }}</option>
-                                            <option v-for="country in props.countries" :key="country.id" :value="country.id">
-                                                {{ country.name }}
-                                            </option>
-                                        </select>
-                                        <div v-if="form.errors.residence_country_id" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
-                                            <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.residence_country_id || "") }}
-                                        </div>
-                                    </div>
-
-                                    <!-- Birth Date -->
-                                    <div>
-                                        <Label for="birth_date" class="mb-2">
-                                            {{ t('employees.birth_date') }}
-                                            <span v-if="form.errors.birth_date" class="text-red-500 ml-1">*</span>
-                                        </Label>
-                                        <Input 
-                                            id="birth_date"
-                                            v-model="form.birth_date" 
-                                            type="date" 
-                                            :class="form.errors.birth_date ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''"
-                                        />
-                                        <div v-if="form.errors.birth_date" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
-                                            <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.birth_date || "") }}
-                                        </div>
-                                    </div>
-
-                                    <!-- Work Email -->
-                                    <div>
-                                        <Label for="work_email" class="mb-2">
-                                            {{ t('employees.work_email') }}
-                                            <span v-if="form.errors.work_email" class="text-red-500 ml-1">*</span>
-                                        </Label>
-                                        <Input 
-                                            id="work_email"
-                                            v-model="form.work_email" 
-                                            type="email" 
-                                            placeholder="work@company.com"
-                                            :class="form.errors.work_email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''"
-                                        />
-                                        <div v-if="form.errors.work_email" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
-                                            <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.work_email || "") }}
-                                        </div>
-                                    </div>
-
-                                    <!-- Personal Email -->
-                                    <div>
-                                        <Label for="email" class="mb-2">
-                                            {{ t('employees.email') }} *
-                                            <span v-if="form.errors.email" class="text-red-500 ml-1">*</span>
-                                        </Label>
-                                        <Input 
-                                            id="email"
-                                            v-model="form.email" 
-                                            type="email" 
-                                            required
-                                            :placeholder="t('employees.email_placeholder')"
-                                            :class="form.errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''"
-                                        />
-                                        <div v-if="form.errors.email" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
-                                            <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.email || "") }}
-                                        </div>
-                                    </div>
-
-                                    <!-- Personal Email -->
-                                    <div>
-                                        <Label for="personal_email" class="mb-2">
-                                            {{ t('employees.personal_email') }}
-                                            <span v-if="form.errors.personal_email" class="text-red-500 ml-1">*</span>
-                                        </Label>
-                                        <Input 
-                                            id="personal_email"
-                                            v-model="form.personal_email" 
-                                            type="email" 
-                                            placeholder="personal@email.com"
-                                            :class="form.errors.personal_email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''"
-                                        />
-                                        <div v-if="form.errors.personal_email" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
-                                            <Icon name="AlertCircle" class="h-4 w-4" />
-                                            {{ translateValidationError(form.errors.personal_email || "") }}
-                                        </div>
-                                    </div>
+                            <!-- First Name -->
+                            <div>
+                                <Label for="first_name" class="mb-2">
+                                    {{ t('employees.first_name') }} *
+                                    <span v-if="form.errors.first_name" class="text-red-500 ml-1">*</span>
+                                </Label>
+                                <Input 
+                                    id="first_name"
+                                    v-model="form.first_name" 
+                                    type="text" 
+                                    required
+                                    :placeholder="t('employees.first_name_placeholder')"
+                                    :class="form.errors.first_name ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''"
+                                />
+                                <div v-if="form.errors.first_name" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
+                                    <Icon name="AlertCircle" class="h-4 w-4" />
+                                    {{ translateValidationError(form.errors.first_name || '') }}
                                 </div>
-                            </CardContent>
-                        </CollapsibleContent>
-                    </Collapsible>
+                            </div>
+
+                            <!-- Father Name -->
+                            <div>
+                                <Label for="father_name" class="mb-2">
+                                    {{ t('employees.father_name') }}
+                                    <span v-if="form.errors.father_name" class="text-red-500 ml-1">*</span>
+                                </Label>
+                                <Input 
+                                    id="father_name"
+                                    v-model="form.father_name" 
+                                    type="text" 
+                                    :placeholder="t('employees.father_name_placeholder')"
+                                    :class="form.errors.father_name ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''"
+                                />
+                                <div v-if="form.errors.father_name" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
+                                    <Icon name="AlertCircle" class="h-4 w-4" />
+                                    {{ translateValidationError(form.errors.father_name || '') }}
+                                </div>
+                            </div>
+
+                            <!-- Last Name -->
+                            <div>
+                                <Label for="last_name" class="mb-2">
+                                    {{ t('employees.last_name') }} *
+                                    <span v-if="form.errors.last_name" class="text-red-500 ml-1">*</span>
+                                </Label>
+                                <Input 
+                                    id="last_name"
+                                    v-model="form.last_name" 
+                                    type="text" 
+                                    required
+                                    :placeholder="t('employees.last_name_placeholder')"
+                                    :class="form.errors.last_name ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''"
+                                />
+                                <div v-if="form.errors.last_name" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
+                                    <Icon name="AlertCircle" class="h-4 w-4" />
+                                    {{ translateValidationError(form.errors.last_name || "") }}
+                                </div>
+                            </div>
+
+                            <!-- Nationality -->
+                            <div>
+                                <Label for="nationality_id" class="mb-2">
+                                    {{ t('employees.nationality') }}
+                                    <span v-if="form.errors.nationality_id" class="text-red-500 ml-1">*</span>
+                                </Label>
+                                <select 
+                                    id="nationality_id"
+                                    v-model="form.nationality_id"
+                                    :class="[
+                                        'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+                                        form.errors.nationality_id ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
+                                    ]"
+                                >
+                                    <option :value="null">{{ t('employees.select_nationality') }}</option>
+                                    <option v-for="nationality in props.nationalities" :key="nationality.id" :value="nationality.id">
+                                        {{ nationality.name }}
+                                    </option>
+                                </select>
+                                <div v-if="form.errors.nationality_id" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
+                                    <Icon name="AlertCircle" class="h-4 w-4" />
+                                    {{ translateValidationError(form.errors.nationality_id || "") }}
+                                </div>
+                            </div>
+
+                            <!-- Residence Country -->
+                            <div>
+                                <Label for="residence_country_id" class="mb-2">
+                                    {{ t('employees.residence_country') }}
+                                    <span v-if="form.errors.residence_country_id" class="text-red-500 ml-1">*</span>
+                                </Label>
+                                <select 
+                                    id="residence_country_id"
+                                    v-model="form.residence_country_id"
+                                    :class="[
+                                        'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+                                        form.errors.residence_country_id ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
+                                    ]"
+                                >
+                                    <option :value="null">{{ t('employees.select_residence_country') }}</option>
+                                    <option v-for="country in props.countries" :key="country.id" :value="country.id">
+                                        {{ country.name }}
+                                    </option>
+                                </select>
+                                <div v-if="form.errors.residence_country_id" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
+                                    <Icon name="AlertCircle" class="h-4 w-4" />
+                                    {{ translateValidationError(form.errors.residence_country_id || "") }}
+                                </div>
+                            </div>
+
+                            <!-- Birth Date -->
+                            <div>
+                                <Label for="birth_date" class="mb-2">
+                                    {{ t('employees.birth_date') }}
+                                    <span v-if="form.errors.birth_date" class="text-red-500 ml-1">*</span>
+                                </Label>
+                                <Input 
+                                    id="birth_date"
+                                    v-model="form.birth_date" 
+                                    type="date" 
+                                    :class="form.errors.birth_date ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''"
+                                />
+                                <div v-if="form.errors.birth_date" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
+                                    <Icon name="AlertCircle" class="h-4 w-4" />
+                                    {{ translateValidationError(form.errors.birth_date || "") }}
+                                </div>
+                            </div>
+
+                            <!-- Work Email -->
+                            <div>
+                                <Label for="work_email" class="mb-2">
+                                    {{ t('employees.work_email') }}
+                                    <span v-if="form.errors.work_email" class="text-red-500 ml-1">*</span>
+                                </Label>
+                                <Input 
+                                    id="work_email"
+                                    v-model="form.work_email" 
+                                    type="email" 
+                                    placeholder="work@company.com"
+                                    :class="form.errors.work_email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''"
+                                />
+                                <div v-if="form.errors.work_email" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
+                                    <Icon name="AlertCircle" class="h-4 w-4" />
+                                    {{ translateValidationError(form.errors.work_email || "") }}
+                                </div>
+                            </div>
+
+                            <!-- Personal Email -->
+                            <div>
+                                <Label for="email" class="mb-2">
+                                    {{ t('employees.email') }} *
+                                    <span v-if="form.errors.email" class="text-red-500 ml-1">*</span>
+                                </Label>
+                                <Input 
+                                    id="email"
+                                    v-model="form.email" 
+                                    type="email" 
+                                    required
+                                    :placeholder="t('employees.email_placeholder')"
+                                    :class="form.errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''"
+                                />
+                                <div v-if="form.errors.email" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
+                                    <Icon name="AlertCircle" class="h-4 w-4" />
+                                    {{ translateValidationError(form.errors.email || "") }}
+                                </div>
+                            </div>
+
+                            <!-- Personal Email -->
+                            <div>
+                                <Label for="personal_email" class="mb-2">
+                                    {{ t('employees.personal_email') }}
+                                    <span v-if="form.errors.personal_email" class="text-red-500 ml-1">*</span>
+                                </Label>
+                                <Input 
+                                    id="personal_email"
+                                    v-model="form.personal_email" 
+                                    type="email" 
+                                    placeholder="personal@email.com"
+                                    :class="form.errors.personal_email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''"
+                                />
+                                <div v-if="form.errors.personal_email" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
+                                    <Icon name="AlertCircle" class="h-4 w-4" />
+                                    {{ translateValidationError(form.errors.personal_email || "") }}
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
                 </Card>
 
                 <!-- Work Details Section -->

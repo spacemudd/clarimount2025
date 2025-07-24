@@ -22,22 +22,18 @@
             <form @submit.prevent="submit" class="space-y-6">
                 <!-- General Information Section -->
                 <Card>
-                    <Collapsible v-model:open="sectionGeneral">
-                        <CollapsibleTrigger asChild>
-                            <CardHeader class="cursor-pointer hover:bg-gray-50">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center gap-3">
-                                        <Icon name="User" class="h-5 w-5 text-blue-600" />
-                                        <CardTitle class="text-xl">{{ t('employees.general_information') }}</CardTitle>
-                                        <Badge v-if="completedSections.general" variant="default">✓</Badge>
-                                    </div>
-                                    <Icon :name="!sectionGeneral ? 'ChevronRight' : 'ChevronDown'" class="h-5 w-5" />
-                                </div>
-                            </CardHeader>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                            <CardContent class="space-y-6">
-                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <CardHeader class="cursor-pointer hover:bg-gray-50">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <Icon name="User" class="h-5 w-5 text-blue-600" />
+                                <CardTitle class="text-xl">{{ t('employees.general_information') }}</CardTitle>
+                                <Badge v-if="completedSections.general" variant="default">✓</Badge>
+                            </div>
+                            <Icon :name="!sectionGeneral ? 'ChevronRight' : 'ChevronDown'" class="h-5 w-5" />
+                        </div>
+                    </CardHeader>
+                    <CardContent class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     <!-- Employee ID -->
                                     <div>
                                         <Label for="employee_id" class="mb-2">{{ t('employees.employee_id') }}</Label>
@@ -197,9 +193,7 @@
                                     </div>
                                 </div>
                             </CardContent>
-                        </CollapsibleContent>
-                    </Collapsible>
-                </Card>
+                        </Card>
 
                 <!-- Work Details Section -->
                 <Card>
