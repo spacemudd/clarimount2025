@@ -352,7 +352,7 @@ return [
         'last_name' => 'الاسم الأخير',
         'last_name_placeholder' => 'الاسم الأخير',
         'email' => 'عنوان البريد الإلكتروني',
-        'email_placeholder' => 'employee@company.com',
+        'email_placeholder' => 'employee\u0040company.com',
         'phone' => 'رقم الهاتف',
         'phone_placeholder' => '+1234567890',
         'mobile' => 'رقم الجوال',

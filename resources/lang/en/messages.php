@@ -352,7 +352,7 @@ return [
         'last_name' => 'Last Name',
         'last_name_placeholder' => 'Last name',
         'email' => 'Email Address',
-        'email_placeholder' => 'employee@company.com',
+        'email_placeholder' => 'employee\u0040company.com',
         'phone' => 'Phone Number',
         'phone_placeholder' => '+1234567890',
         'mobile' => 'Mobile Number',

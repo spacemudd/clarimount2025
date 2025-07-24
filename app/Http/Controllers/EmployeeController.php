@@ -267,6 +267,8 @@ class EmployeeController extends Controller
             'countries' => Country::active()->orderByName()->get(),
             'nationalities' => Nationality::active()->orderByName()->get(),
             'defaultResidenceCountryId' => $saudiArabia?->id,
+            'departments' => \App\Models\Department::all(),
+            'locations' => \App\Models\Location::all(),
         ]);
     }
 

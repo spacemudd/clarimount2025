@@ -829,6 +829,8 @@ interface Props {
     countries: Country[];
     nationalities: Nationality[];
     defaultResidenceCountryId?: number;
+    locations: Location[];
+    departments: Department[]; // <-- Add this line
 }
 
 const props = defineProps<Props>();

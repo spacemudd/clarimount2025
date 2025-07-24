@@ -26,13 +26,13 @@ export interface BadgeProps extends /* @vue-ignore */ VariantProps<typeof badgeV
   class?: string
 }
 
-withDefaults(defineProps<BadgeProps>(), {
+const props = withDefaults(defineProps<{ variant?: string; class?: string }>(), {
   variant: 'default',
 })
 </script>
 
 <template>
-  <div :class="cn(badgeVariants({ variant }), $props.class)">
+  <div :class="cn(badgeVariants({ variant: props.variant }), props.class)">
     <slot />
   </div>
 </template> 
