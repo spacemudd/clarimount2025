@@ -26,7 +26,7 @@
                 <div class="p-8 print:p-4">
                     <!-- Company Info -->
                     <div class="text-center mb-6">
-                        <h2 class="text-xl font-bold">{{ employee.company?.name_en || 'Company' }}</h2>
+                        <h2 class="text-xl font-bold">{{ employee.company?.name_ar || 'Company' }}</h2>
                         <p class="text-sm text-muted-foreground">{{ employee.company?.company_email || '' }}</p>
                     </div>
 
