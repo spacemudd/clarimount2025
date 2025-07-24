@@ -112,7 +112,7 @@
 </head>
 <body>
     <div class="company-info">
-        <h2>{{ $employee->company->name_en ?? 'Company' }}</h2>
+        <h2>{{ $employee->company->name_ar ?? 'Company' }}</h2>
         <p>{{ $employee->company->company_email ?? '' }}</p>
     </div>
 
