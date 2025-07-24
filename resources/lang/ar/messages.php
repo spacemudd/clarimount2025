@@ -879,7 +879,7 @@ return [
         'employee_signature' => 'توقيع الموظف',
         'admin_manager_signature' => 'توقيع الإدارة/المسؤول',
         'it_administrator' => 'الموارد البشرية',
-        'document_generated_on' => 'تم إنشاء هذه الوثيقة تلقائياً في :date',
+        'document_generated_on' => 'تم إنشاء هذه الوثيقة تلقائياً في {date}',
         'back' => 'رجوع',
         'print' => 'طباعة',
         
