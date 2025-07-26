@@ -17,15 +17,13 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 
 Route::get('/', function () {
-    // Redirect logged-in users to login page
+    // Redirect authenticated users to dashboard
     if (Auth::check()) {
-        return redirect()->route('login');
+        return redirect()->route('dashboard');
     }
     
-    return Inertia::render('Welcome', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-    ]);
+    // Redirect non-authenticated users to login
+    return redirect()->route('login');
 })->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
