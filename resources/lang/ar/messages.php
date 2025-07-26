@@ -5,6 +5,7 @@ return [
         'welcome' => 'مرحباً',
         'welcome_message' => 'قم بتسجيل الدخول إلى حسابك',
         'login' => 'تسجيل الدخول',
+        'login_message' => 'أدخل بريدك الإلكتروني وكلمة المرور أدناه لتسجيل الدخول',
         'email' => 'البريد الإلكتروني',
         'email_placeholder' => 'أدخل بريدك الإلكتروني',
         'password' => 'كلمة المرور',
@@ -16,6 +17,8 @@ return [
         'have_account' => 'لديك حساب؟ سجل الدخول',
         'forgot_password' => 'نسيت كلمة المرور؟',
         'remember_me' => 'تذكرني',
+        'dont_have_account' => 'لا تملك حساباً؟',
+        'sign_up' => 'إنشاء حساب',
     ],
     'nav' => [
         'dashboard' => 'لوحة التحكم',

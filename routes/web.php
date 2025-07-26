@@ -17,6 +17,11 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 
 Route::get('/', function () {
+    // Redirect logged-in users to login page
+    if (Auth::check()) {
+        return redirect()->route('login');
+    }
+    
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),

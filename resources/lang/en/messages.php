@@ -5,6 +5,7 @@ return [
         'welcome' => 'Welcome',
         'welcome_message' => 'Sign in to your account',
         'login' => 'Login',
+        'login_message' => 'Enter your email and password below to log in',
         'email' => 'Email',
         'email_placeholder' => 'Enter your email',
         'password' => 'Password',
@@ -16,6 +17,8 @@ return [
         'have_account' => 'Already have an account? Sign in',
         'forgot_password' => 'Forgot your password?',
         'remember_me' => 'Remember me',
+        'dont_have_account' => 'Don\'t have an account?',
+        'sign_up' => 'Sign up',
     ],
     'nav' => [
         'dashboard' => 'Dashboard',
