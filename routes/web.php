@@ -30,7 +30,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 // Super Admin routes
-Route::middleware(['auth', 'verified'/*, 'super-admin'*/])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'verified', 'super-admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', function () {
         return Inertia::render('Admin/Dashboard');
     })->name('dashboard');
@@ -50,7 +50,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/teams/{team}/switch', [TeamController::class, 'switch'])->name('teams.switch');
     
     // Routes that require team access
-    Route::middleware([/*'team.access'*/])->group(function () {
+    Route::middleware(['team.access'])->group(function () {
         Route::get('/teams/{team}', [TeamController::class, 'show'])->name('teams.show');
         Route::put('/teams/{team}', [TeamController::class, 'update'])->name('teams.update');
         Route::post('/teams/{team}/invite', [TeamController::class, 'inviteUser'])->name('teams.invite');
@@ -58,14 +58,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
     
     // Placeholder routes for team features
-    Route::middleware([/*'team.access'*/])->group(function () {
+    Route::middleware(['team.access'])->group(function () {
         Route::get('/teams/{team}/billing', function () {
             return Inertia::render('Teams/Billing');
         })->name('teams.billing');
         
         Route::get('/teams/{team}/analytics', function () {
             return Inertia::render('Teams/Analytics');
-        })->name('teams.analytics')/*->middleware('permission:view analytics')*/;
+        })->name('teams.analytics')->middleware('permission:view analytics');
     });
 });
 
