@@ -20,13 +20,13 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleAppearance::class,
             \App\Http\Middleware\SetLocale::class,
             HandleInertiaRequests::class,
-            \App\Http\Middleware\SetTeamContext::class,
+            // \App\Http\Middleware\SetTeamContext::class, // TEMPORARILY DISABLED
             AddLinkHeadersForPreloadedAssets::class,
         ]);
         
         $middleware->alias([
-            'team.access' => \App\Http\Middleware\EnsureTeamAccess::class,
-            'super-admin' => \App\Http\Middleware\EnsureSuperAdmin::class,
+            // 'team.access' => \App\Http\Middleware\EnsureTeamAccess::class, // TEMPORARILY DISABLED
+            // 'super-admin' => \App\Http\Middleware\EnsureSuperAdmin::class, // TEMPORARILY DISABLED
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
