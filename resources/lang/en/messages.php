@@ -239,6 +239,7 @@ return [
     'locations' => [
         'title' => 'Locations',
         'my_locations' => 'Company Locations',
+        'all_companies_locations' => 'All companies locations',
         'create_location' => 'Create Location',
         'create_location_description' => 'Add a new location to your company.',
         'edit_location' => 'Edit Location',
@@ -269,6 +270,9 @@ return [
         'create_first_location' => 'Get started by creating your first location.',
         'employees_count' => 'Employees',
         'assets_count' => 'Assets',
+        'total_locations' => 'Total Locations',
+        'total_companies' => 'Total Companies',
+        'total_assets' => 'Total Assets',
         'active' => 'Active',
         'inactive' => 'Inactive',
         'view' => 'View',

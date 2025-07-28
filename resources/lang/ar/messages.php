@@ -239,6 +239,7 @@ return [
     'locations' => [
         'title' => 'المواقع',
         'my_locations' => 'مواقع الشركة',
+        'all_companies_locations' => 'مواقع جميع الشركات',
         'create_location' => 'إنشاء موقع',
         'create_location_description' => 'إضافة موقع جديد لشركتك.',
         'edit_location' => 'تعديل الموقع',
@@ -269,6 +270,9 @@ return [
         'create_first_location' => 'ابدأ بإنشاء موقعك الأول.',
         'employees_count' => 'الموظفين',
         'assets_count' => 'الأصول',
+        'total_locations' => 'إجمالي المواقع',
+        'total_companies' => 'إجمالي الشركات',
+        'total_assets' => 'إجمالي الأصول',
         'active' => 'نشط',
         'inactive' => 'غير نشط',
         'view' => 'عرض',
