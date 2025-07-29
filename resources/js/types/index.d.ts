@@ -226,6 +226,7 @@ export interface Asset {
     location?: Location;
     company?: Company;
     assetTemplate?: AssetTemplate;
+    asset_template?: AssetTemplate;
     assignments?: AssetAssignment[];
     tickets?: Ticket[];
     display_name?: string;

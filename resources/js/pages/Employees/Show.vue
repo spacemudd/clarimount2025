@@ -344,7 +344,7 @@
                                             </div>
                                         </div>
                                         <Badge :class="asset.status === 'assigned' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'">
-                                            {{ asset.status }}
+                                            {{ getAssetStatusTranslation(asset.status) }}
                                         </Badge>
                                     </div>
                                 </div>
@@ -493,6 +493,21 @@ const getTicketStatusBadgeClass = (status: string): string => {
             return 'bg-gray-100 text-gray-800';
         default:
             return 'bg-gray-100 text-gray-800';
+    }
+};
+
+const getAssetStatusTranslation = (status: string): string => {
+    switch (status) {
+        case 'available':
+            return t('assets.status_available');
+        case 'assigned':
+            return t('assets.status_assigned');
+        case 'maintenance':
+            return t('assets.status_maintenance');
+        case 'retired':
+            return t('assets.status_retired');
+        default:
+            return status;
     }
 };
 </script> 

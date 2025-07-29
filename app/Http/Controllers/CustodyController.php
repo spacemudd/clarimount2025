@@ -40,7 +40,7 @@ class CustodyController extends Controller
         // Get available assets for assignment (available assets from user's companies)
         $availableAssets = Asset::whereIn('company_id', $ownedCompanyIds)
             ->where('status', 'available')
-            ->with(['assetCategory', 'location', 'company'])
+            ->with(['assetCategory', 'location', 'company', 'assetTemplate'])
             ->get();
 
         // Get recent custody changes for this employee
@@ -310,7 +310,7 @@ class CustodyController extends Controller
 
         $query = Asset::whereIn('company_id', $ownedCompanyIds)
             ->where('status', 'available')
-            ->with(['assetCategory', 'location', 'company']);
+            ->with(['assetCategory', 'location', 'company', 'assetTemplate']);
 
         // Apply search filter
         if ($request->filled('search')) {

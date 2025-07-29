@@ -308,12 +308,15 @@
                                         <Icon name="Package" class="h-4 w-4" />
                                     </div>
                                     <div>
-                                        <p class="font-medium">{{ asset.model_name || asset.asset_tag }}</p>
-                                        <p class="text-sm text-muted-foreground">{{ asset.asset_tag }}</p>
+                                        <p class="font-medium" v-if="asset.model_name && asset.model_name !== asset.asset_tag">{{ asset.model_name }}</p>
+                                        <p class="font-medium" v-else>{{ asset.asset_tag }}</p>
+                                        <p class="text-sm text-muted-foreground" v-if="asset.model_name && asset.model_name !== asset.asset_tag">{{ asset.asset_tag }}</p>
                                         <p class="text-xs text-muted-foreground">{{ asset.assetCategory?.name }} - {{ asset.location?.name }}</p>
+                                        <p class="text-xs text-muted-foreground" v-if="asset.serial_number">{{ t('assets.serial_number') }}: {{ asset.serial_number }}</p>
+                                        <p class="text-xs text-muted-foreground" v-if="asset.asset_template?.name">{{ t('assets.template') }}: {{ asset.asset_template.name }}</p>
                                     </div>
                                 </div>
-                                <Badge variant="outline">{{ asset.status }}</Badge>
+                                <Badge variant="outline">{{ t(`assets.status_${asset.status}`) }}</Badge>
                             </div>
                             
                             <div v-if="searchResults.length === 0 && assetSearchQuery" class="text-center py-8 text-muted-foreground">
@@ -570,9 +573,6 @@ const saveCustodyUpdate = async () => {
             body: JSON.stringify(requestData)
         });
         
-        console.log('Response status:', response.status);
-        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-        
         // Check if response is actually JSON
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
@@ -584,11 +584,10 @@ const saveCustodyUpdate = async () => {
         
         if (response.ok) {
             const result = await response.json();
-            console.log('Success result:', result);
             alert(t('custody.custody_updated_successfully'));
             
-            // Redirect back to employee page
-            router.visit(route('employees.show', props.employee.id));
+            // Redirect back to custody management page
+            router.visit(route('employees.custody.show', props.employee.id));
         } else {
             const error = await response.json();
             console.error('Server error:', error);
