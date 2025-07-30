@@ -126,6 +126,64 @@
               </div>
             </CardContent>
           </Card>
+
+          <!-- Assets Using This Template -->
+          <Card>
+            <CardHeader>
+              <CardTitle>{{ t('asset_templates.assets_using_template') }}</CardTitle>
+              <CardDescription>{{ t('asset_templates.assets_using_template_description') }}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div v-if="assets.length === 0" class="text-center py-8">
+                <Icon name="Package" class="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                <p class="text-sm text-gray-500">{{ t('asset_templates.no_assets_found') }}</p>
+              </div>
+              
+              <div v-else class="space-y-4">
+                <div v-for="asset in assets" :key="asset.id" class="border rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                  <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                      <div class="flex items-center space-x-3">
+                        <div class="flex-1">
+                          <h4 class="font-medium text-gray-900 dark:text-gray-100">
+                            {{ asset.asset_tag }}
+                          </h4>
+                          <p v-if="asset.model_name" class="text-sm text-gray-600 dark:text-gray-400">
+                            {{ asset.model_name }}
+                            <span v-if="asset.model_number" class="text-gray-500">({{ asset.model_number }})</span>
+                          </p>
+                        </div>
+                        <Badge :variant="asset.status === 'assigned' ? 'default' : 'secondary'">
+                          {{ getStatusLabel(asset.status) }}
+                        </Badge>
+                      </div>
+                      
+                      <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <span class="font-medium text-gray-500 dark:text-gray-400">{{ t('asset_templates.location') }}:</span>
+                          <span class="ml-1 text-gray-900 dark:text-gray-100">
+                            {{ asset.location?.name || '—' }}
+                          </span>
+                        </div>
+                        <div>
+                          <span class="font-medium text-gray-500 dark:text-gray-400">{{ t('asset_templates.employee') }}:</span>
+                          <span class="ml-1 text-gray-900 dark:text-gray-100">
+                            {{ getEmployeeName(asset.assigned_to) }}
+                          </span>
+                        </div>
+                        <div>
+                          <span class="font-medium text-gray-500 dark:text-gray-400">{{ t('common.company') }}:</span>
+                          <span class="ml-1 text-gray-900 dark:text-gray-100">
+                            {{ asset.company?.name_en || '—' }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <!-- Sidebar -->
@@ -276,6 +334,36 @@ import type { BreadcrumbItem } from '@/types'
 
 const { t } = useI18n()
 
+interface Asset {
+  id: string
+  asset_tag: string
+  model_name?: string
+  model_number?: string
+  serial_number?: string
+  status: string
+  condition?: string
+  location?: {
+    id: number
+    name: string
+    code: string
+  }
+  company?: {
+    id: number
+    name_en: string
+    name_ar: string
+  }
+  assigned_to?: {
+    id: number
+    first_name: string
+    last_name: string
+  }
+  asset_category?: {
+    id: number
+    name: string
+  }
+  created_at: string
+}
+
 interface AssetTemplate {
   id: number
   name: string
@@ -305,6 +393,7 @@ interface AssetTemplate {
 
 interface Props {
   template: AssetTemplate
+  assets: Asset[]
 }
 
 const props = defineProps<Props>()
@@ -355,5 +444,21 @@ const handleImageError = () => {
 
 const openImageModal = () => {
   imageModal.value = true
+}
+
+const getStatusLabel = (status: string) => {
+  const statusMap: Record<string, string> = {
+    'available': t('asset_templates.available'),
+    'assigned': t('asset_templates.assigned'),
+    'maintenance': t('asset_templates.maintenance'),
+    'retired': t('asset_templates.retired'),
+    'disposed': t('asset_templates.disposed'),
+  }
+  return statusMap[status] || status
+}
+
+const getEmployeeName = (employee?: { first_name: string; last_name: string }) => {
+  if (!employee) return '—'
+  return `${employee.first_name} ${employee.last_name}`
 }
 </script> 

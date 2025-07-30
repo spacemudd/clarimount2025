@@ -217,8 +217,15 @@ class AssetTemplateController extends Controller
     {
         $assetTemplate->load(['assetCategory', 'createdBy']);
 
+        // Get all assets that use this template with their relationships
+        $assets = $assetTemplate->assets()
+            ->with(['location', 'company', 'assignedTo', 'assetCategory'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
         return Inertia::render('AssetTemplates/Show', [
             'template' => $assetTemplate,
+            'assets' => $assets,
         ]);
     }
 
