@@ -248,11 +248,11 @@ class CustodyController extends Controller
         $previousAssetIds = collect($custodyChange->previous_state['assets'] ?? [])->pluck('id')->filter();
         $newAssetIds = collect($custodyChange->new_state['assets'] ?? [])->pluck('id')->filter();
         
-        $previousAssets = Asset::with(['asset_template', 'category', 'location', 'company'])
+        $previousAssets = Asset::with(['assetTemplate', 'category', 'location', 'company'])
             ->whereIn('id', $previousAssetIds)
             ->get();
             
-        $newAssets = Asset::with(['asset_template', 'category', 'location', 'company'])
+        $newAssets = Asset::with(['assetTemplate', 'category', 'location', 'company'])
             ->whereIn('id', $newAssetIds)
             ->get();
 
