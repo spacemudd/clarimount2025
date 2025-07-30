@@ -67,8 +67,18 @@ class CompanyController extends Controller
             abort(403);
         }
 
+        // Load the company with owner and calculate total assets from locations
+        $company->load('owner');
+        
+        // Get total assets count from all locations associated with this company
+        $totalAssetsCount = $company->locations()
+            ->withCount('assets')
+            ->get()
+            ->sum('assets_count');
+
         return Inertia::render('Companies/Show', [
-            'company' => $company->load('owner'),
+            'company' => $company,
+            'totalAssetsCount' => $totalAssetsCount,
         ]);
     }
 

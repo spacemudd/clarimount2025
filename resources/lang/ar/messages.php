@@ -188,6 +188,8 @@ return [
         'deleted_successfully' => 'تم حذف الشركة بنجاح.',
         'created_successfully' => 'تم إنشاء الشركة بنجاح.',
         'updated_successfully' => 'تم تحديث الشركة بنجاح.',
+        'total_assets' => 'إجمالي الأصول',
+        'total_assets_description' => 'إجمالي عدد الأصول في جميع المواقع',
     ],
     'departments' => [
         'title' => 'الأقسام',

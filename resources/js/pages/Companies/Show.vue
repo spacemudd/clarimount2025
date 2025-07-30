@@ -2,7 +2,7 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { Edit, Globe, Mail, Calendar, User } from 'lucide-vue-next';
+import { Edit, Globe, Mail, Calendar, User, Package } from 'lucide-vue-next';
 
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import { type BreadcrumbItem, type Company } from '@/types';
 
 interface Props {
     company: Company;
+    totalAssetsCount: number;
 }
 
 const props = defineProps<Props>();
@@ -144,6 +145,23 @@ const getCompanyDescription = (company: Company) => {
                         <div v-if="company.description_ar">
                             <p class="text-sm font-medium">{{ t('companies.description_ar') }}</p>
                             <p class="text-sm text-gray-600 dark:text-gray-400 text-right" dir="rtl">{{ company.description_ar }}</p>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <!-- Assets Overview -->
+                <Card class="md:col-span-2">
+                    <CardHeader>
+                        <CardTitle>{{ t('companies.total_assets') }}</CardTitle>
+                        <CardDescription>{{ t('companies.total_assets_description') }}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div class="flex items-center space-x-3">
+                            <Package class="h-4 w-4 text-gray-500" />
+                            <div>
+                                <p class="text-sm font-medium">{{ t('companies.total_assets') }}</p>
+                                <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ totalAssetsCount }}</p>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>

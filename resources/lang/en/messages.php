@@ -188,6 +188,8 @@ return [
         'deleted_successfully' => 'Company deleted successfully.',
         'created_successfully' => 'Company created successfully.',
         'updated_successfully' => 'Company updated successfully.',
+        'total_assets' => 'Total Assets',
+        'total_assets_description' => 'Total number of assets across all locations',
     ],
     'departments' => [
         'title' => 'Departments',
