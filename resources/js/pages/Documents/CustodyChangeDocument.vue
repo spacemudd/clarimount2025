@@ -124,7 +124,7 @@
                                 <tbody>
                                     <tr v-for="asset in newAssets" :key="asset.id">
                                         <td class="border border-gray-300 px-3 py-2">{{ asset.asset_tag }}</td>
-                                        <td class="border border-gray-300 px-3 py-2">{{ asset.model_name || asset.asset_tag }}</td>
+                                        <td class="border border-gray-300 px-3 py-2">{{ asset.model_name }}{{ asset.asset_template?.name ? ` - ${asset.asset_template.name}` : '' }}</td>
                                         <td class="border border-gray-300 px-3 py-2">{{ asset.model_number || t('custody.na') }}</td>
                                         <td class="border border-gray-300 px-3 py-2">{{ asset.serial_number || t('custody.na') }}</td>
                                         <td class="border border-gray-300 px-3 py-2">{{ asset.category_name || t('custody.na') }}</td>
