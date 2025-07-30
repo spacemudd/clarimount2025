@@ -729,6 +729,9 @@ const printBarcode = async () => {
                                             <div class="text-sm font-medium text-gray-900 dark:text-gray-100">
                                                 {{ asset.asset_tag }}
                                             </div>
+                                            <div v-if="asset.assetTemplate?.name" class="text-xs text-gray-400 dark:text-gray-500">
+                                                {{ asset.assetTemplate.name }}
+                                            </div>
                                             <div class="text-sm text-gray-500 dark:text-gray-400">
                                                 {{ asset.model_name || asset.serial_number || '-' }}
                                             </div>
@@ -758,7 +761,6 @@ const printBarcode = async () => {
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm text-gray-900 dark:text-gray-100">{{ asset.category?.name || '-' }}</div>
                                     <div class="text-sm text-gray-500 dark:text-gray-400">{{ asset.category?.code || '-' }}</div>
-                                    <div v-if="asset.assetTemplate?.name" class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ asset.assetTemplate.name }}</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm text-gray-900 dark:text-gray-100">{{ asset.location?.name || '-' }}</div>
