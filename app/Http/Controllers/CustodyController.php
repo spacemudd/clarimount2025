@@ -244,11 +244,23 @@ class CustodyController extends Controller
         // Set locale to Arabic for the document
         app()->setLocale('ar');
 
+        // Load actual Asset models with relationships for the document
+        $previousAssetIds = collect($custodyChange->previous_state['assets'] ?? [])->pluck('id')->filter();
+        $newAssetIds = collect($custodyChange->new_state['assets'] ?? [])->pluck('id')->filter();
+        
+        $previousAssets = Asset::with(['asset_template', 'category', 'location', 'company'])
+            ->whereIn('id', $previousAssetIds)
+            ->get();
+            
+        $newAssets = Asset::with(['asset_template', 'category', 'location', 'company'])
+            ->whereIn('id', $newAssetIds)
+            ->get();
+
         return Inertia::render('Documents/CustodyChangeDocument', [
             'custodyChange' => $custodyChange,
             'employee' => $custodyChange->employee,
-            'previousAssets' => $custodyChange->previous_state['assets'] ?? [],
-            'newAssets' => $custodyChange->new_state['assets'] ?? [],
+            'previousAssets' => $previousAssets,
+            'newAssets' => $newAssets,
             'generatedAt' => now()->format('Y-m-d H:i:s'),
             'locale' => 'ar', // Pass Arabic locale to frontend
         ]);
