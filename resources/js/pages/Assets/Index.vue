@@ -712,10 +712,10 @@ const printBarcode = async () => {
                                                 />
                                             </div>
                                             <!-- Template Image (priority 2) -->
-                                            <div v-else-if="asset.assetTemplate?.image_path && !failedTemplateImages.has(asset.id)" class="h-10 w-10 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600">
+                                            <div v-else-if="asset.asset_template?.image_path && !failedTemplateImages.has(asset.id)" class="h-10 w-10 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600">
                                                 <img 
-                                                    :src="`/storage/${asset.assetTemplate.image_path}`" 
-                                                    :alt="asset.assetTemplate.name || 'Template'"
+                                                    :src="`/storage/${asset.asset_template.image_path}`" 
+                                                    :alt="asset.asset_template.name || 'Template'"
                                                     class="h-full w-full object-cover"
                                                     @error="(e) => handleTemplateImageError(e, asset)"
                                                 />
@@ -729,8 +729,8 @@ const printBarcode = async () => {
                                             <div class="text-sm font-medium text-gray-900 dark:text-gray-100">
                                                 {{ asset.asset_tag }}
                                             </div>
-                                            <div v-if="asset.assetTemplate?.name" class="text-xs text-gray-400 dark:text-gray-500">
-                                                {{ asset.assetTemplate.name }}
+                                            <div v-if="asset.asset_template?.name" class="text-xs text-gray-400 dark:text-gray-500">
+                                                {{ asset.asset_template.name }}
                                             </div>
                                             <div class="text-sm text-gray-500 dark:text-gray-400">
                                                 {{ asset.model_name || asset.serial_number || '-' }}
@@ -741,9 +741,9 @@ const printBarcode = async () => {
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex justify-center">
                                         <img 
-                                            v-if="asset.assetTemplate?.image_path"
-                                            :src="`/storage/${asset.assetTemplate.image_path}`" 
-                                            :alt="asset.assetTemplate.name || 'Template'" 
+                                            v-if="asset.asset_template?.image_path"
+                                            :src="`/storage/${asset.asset_template.image_path}`" 
+                                            :alt="asset.asset_template.name || 'Template'" 
                                             class="h-12 w-12 object-cover rounded-lg border border-gray-200 dark:border-gray-600"
                                         />
                                         <div 
