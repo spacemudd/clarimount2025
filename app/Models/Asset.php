@@ -99,12 +99,13 @@ class Asset extends Model
     }
 
     /**
-     * Generate a 4-letter abbreviation from company name.
+     * Generate a 4-letter abbreviation from company name with collision detection.
      * Examples:
-     * "Advanced Line for Technology" -> "ADTY"
-     * "Global Tech Solutions" -> "GTSL"
-     * "Microsoft Corporation" -> "MSCR"
-     * "ABC Company" -> "ABCC"
+     * "Advanced Line for Chemicals" -> "ADLC" (2+1+1)
+     * "Advanced Line Information Technology" -> "ALIT" (1+1+1+1)
+     * "Global Tech Solutions" -> "GTSL" (2+2)
+     * "Microsoft Corporation" -> "MSCR" (4 letters from single word)
+     * "ABC Company" -> "ABCX" (3 letters + padding)
      */
     protected static function generateCompanyAbbreviation(string $companyName): string
     {
@@ -115,22 +116,66 @@ class Asset extends Model
         // Split into words and remove empty elements
         $words = array_filter(explode(' ', trim($cleanName)));
         
-        if (count($words) >= 2) {
-            // Take first 2 letters from first 2 words
-            $abbreviation = substr($words[0], 0, 2) . substr($words[1], 0, 2);
+        // Try different abbreviation strategies for better uniqueness
+        $abbreviations = [];
+        
+        if (count($words) >= 4) {
+            // Strategy 1: First letter from first 4 words (e.g., "Advanced Line Information Technology" -> "ALIT")
+            $abbreviations[] = substr($words[0], 0, 1) . substr($words[1], 0, 1) . substr($words[2], 0, 1) . substr($words[3], 0, 1);
+            // Strategy 2: 2 letters from first 2 words as fallback
+            $abbreviations[] = substr($words[0], 0, 2) . substr($words[1], 0, 2);
+        } elseif (count($words) == 3) {
+            // Strategy 1: 2 letters from first word, 1 from second and third (e.g., "Advanced Line Chemicals" -> "ADLC")
+            $abbreviations[] = substr($words[0], 0, 2) . substr($words[1], 0, 1) . substr($words[2], 0, 1);
+            // Strategy 2: 1 letter from each + 1 more from first
+            $abbreviations[] = substr($words[0], 0, 1) . substr($words[1], 0, 1) . substr($words[2], 0, 2);
+        } elseif (count($words) == 2) {
+            // Strategy 1: 2 letters from each word
+            $abbreviations[] = substr($words[0], 0, 2) . substr($words[1], 0, 2);
+            // Strategy 2: 3 letters from first word + 1 from second
+            $abbreviations[] = substr($words[0], 0, 3) . substr($words[1], 0, 1);
+            // Strategy 3: 1 letter from first + 3 from second
+            $abbreviations[] = substr($words[0], 0, 1) . substr($words[1], 0, 3);
         } elseif (count($words) == 1) {
             // Take first 4 letters if only one word
-            $abbreviation = substr($words[0], 0, 4);
+            $abbreviations[] = substr($words[0], 0, 4);
         } else {
             // Fallback: take first 4 letters of original name (alphanumeric only)
             $alphanumeric = preg_replace('/[^a-zA-Z0-9]/', '', $companyName);
-            $abbreviation = substr($alphanumeric, 0, 4);
+            $abbreviations[] = substr($alphanumeric, 0, 4);
         }
         
-        // Ensure it's exactly 4 characters, pad with 'X' if needed
-        $abbreviation = str_pad($abbreviation, 4, 'X');
+        // Check for existing abbreviations in the database to avoid collisions
+        $existingAbbreviations = \DB::table('assets')
+            ->join('companies', 'assets.company_id', '=', 'companies.id')
+            ->where('companies.name_en', '!=', $companyName)
+            ->pluck('asset_tag')
+            ->map(function ($tag) {
+                return explode('-', $tag)[0]; // Extract abbreviation part before the dash
+            })
+            ->unique()
+            ->filter() // Remove empty values
+            ->toArray();
         
-        return strtoupper(substr($abbreviation, 0, 4));
+        // Find the first abbreviation that doesn't collide
+        foreach ($abbreviations as $abbreviation) {
+            $abbreviation = str_pad($abbreviation, 4, 'X');
+            $abbreviation = strtoupper(substr($abbreviation, 0, 4));
+            
+            if (!in_array($abbreviation, $existingAbbreviations)) {
+                return $abbreviation;
+            }
+        }
+        
+        // If all strategies fail, add a numeric suffix to make it unique
+        $baseAbbr = strtoupper(substr($abbreviations[0], 0, 3));
+        $counter = 1;
+        do {
+            $abbreviation = $baseAbbr . $counter;
+            $counter++;
+        } while (in_array($abbreviation, $existingAbbreviations) && $counter < 10);
+        
+        return $abbreviation;
     }
 
     /**
