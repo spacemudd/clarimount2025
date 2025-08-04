@@ -113,8 +113,8 @@ class Asset extends Model
         $commonWords = ['corporation', 'corp', 'company', 'co', 'inc', 'incorporated', 'ltd', 'limited', 'llc', 'for', 'and', 'the', 'of', 'in', 'to'];
         $cleanName = str_replace($commonWords, '', strtolower($companyName));
         
-        // Split into words and remove empty elements
-        $words = array_filter(explode(' ', trim($cleanName)));
+        // Split into words and remove empty elements, then re-index
+        $words = array_values(array_filter(explode(' ', trim($cleanName))));
         
         // Try different abbreviation strategies for better uniqueness
         $abbreviations = [];
