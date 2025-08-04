@@ -24,13 +24,22 @@ class DepartmentController extends Controller
         $query = Department::with('company')
             ->whereIn('company_id', $companyIds);
 
+        // Company filter
+        if ($request->filled('company_id')) {
+            $query->where('company_id', $request->company_id);
+        }
+
         // Search functionality
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('code', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhereHas('company', function ($companyQuery) use ($search) {
+                      $companyQuery->where('name_en', 'like', "%{$search}%")
+                                   ->orWhere('name_ar', 'like', "%{$search}%");
+                  });
             });
         }
 
@@ -42,7 +51,7 @@ class DepartmentController extends Controller
         return Inertia::render('Departments/Index', [
             'departments' => $departments,
             'companies' => $companies,
-            'filters' => $request->only(['search']),
+            'filters' => $request->only(['search', 'company_id']),
         ]);
     }
 

@@ -215,6 +215,8 @@ return [
         'create_company' => 'إنشاء شركة',
         'department_will_be_created_for' => 'سيتم إنشاء القسم لـ:',
         'search_placeholder' => 'البحث في الأقسام...',
+        'filter_by_company' => 'تصفية حسب الشركة',
+        'all_companies' => 'جميع الشركات',
         'clear' => 'مسح',
         'actions' => 'الإجراءات',
         'view' => 'عرض',

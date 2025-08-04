@@ -4,7 +4,7 @@ import { router } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 interface Department {
     id: string
@@ -12,6 +12,7 @@ interface Department {
     code: string
     description?: string
     company_id: string
+    company: Company
     created_at: string
     updated_at: string
 }
@@ -32,29 +33,46 @@ interface Props {
     companies: Company[]
     filters?: {
         search?: string
+        company_id?: string
     }
 }
 
 const props = defineProps<Props>()
 
 const search = ref(props.filters?.search || '')
+const selectedCompanyId = ref(props.filters?.company_id || '')
 
 // Debounced search
 let searchTimeout: number
+const updateFilters = () => {
+    router.get('/departments', {
+        search: search.value || undefined,
+        company_id: selectedCompanyId.value || undefined,
+    }, {
+        preserveState: true,
+        replace: true,
+    })
+}
+
+// Debounced search
 watch(search, () => {
     clearTimeout(searchTimeout)
-    searchTimeout = window.setTimeout(() => {
-        router.get('/departments', {
-            search: search.value || undefined,
-        }, {
-            preserveState: true,
-            replace: true,
-        })
-    }, 300)
+    searchTimeout = window.setTimeout(updateFilters, 300)
 })
+
+// Immediate company filter
+watch(selectedCompanyId, updateFilters)
 
 const clearFilters = () => {
     search.value = ''
+    selectedCompanyId.value = ''
+}
+
+const getCompanyName = (company: Company) => {
+    if (locale.value === 'ar') {
+        return company.name_ar || company.name_en
+    }
+    return company.name_en
 }
 </script>
 
@@ -81,8 +99,23 @@ const clearFilters = () => {
                         class="w-full px-3 py-2 border border-gray-300 rounded-md"
                     >
                 </div>
+                <div class="min-w-[200px]">
+                    <select
+                        v-model="selectedCompanyId"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    >
+                        <option value="">{{ t('departments.all_companies') }}</option>
+                        <option 
+                            v-for="company in companies" 
+                            :key="company.id" 
+                            :value="company.id"
+                        >
+                            {{ getCompanyName(company) }}
+                        </option>
+                    </select>
+                </div>
                 <button 
-                    v-if="search"
+                    v-if="search || selectedCompanyId"
                     @click="clearFilters" 
                     class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                 >
@@ -127,6 +160,9 @@ const clearFilters = () => {
                                 {{ t('departments.code') }}
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                {{ t('departments.company') }}
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 {{ t('departments.description') }}
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -141,6 +177,9 @@ const clearFilters = () => {
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="text-sm text-gray-500 font-mono">{{ department.code }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">{{ getCompanyName(department.company) }}</div>
                             </td>
                             <td class="px-6 py-4">
                                 <div class="text-sm text-gray-500">{{ department.description || '-' }}</div>

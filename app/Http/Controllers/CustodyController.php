@@ -231,7 +231,7 @@ class CustodyController extends Controller
             abort(403);
         }
 
-        $custodyChange->load(['employee.company', 'updatedBy']);
+        $custodyChange->load(['employee.company', 'employee.department', 'updatedBy']);
 
         // Validate custody change using service
         $documentService = new CustodyDocumentService();

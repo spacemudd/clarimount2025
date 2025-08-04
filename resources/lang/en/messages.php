@@ -215,6 +215,8 @@ return [
         'create_company' => 'Create Company',
         'department_will_be_created_for' => 'Department will be created for:',
         'search_placeholder' => 'Search departments...',
+        'filter_by_company' => 'Filter by Company',
+        'all_companies' => 'All Companies',
         'clear' => 'Clear',
         'actions' => 'Actions',
         'view' => 'View',

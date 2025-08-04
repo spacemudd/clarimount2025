@@ -55,7 +55,7 @@
                         </div>
                         <div>
                             <div class="mb-2">
-                                <span class="font-semibold text-gray-600">{{ t('custody.department') }}:</span> {{ employee.department || t('custody.na') }}
+                                <span class="font-semibold text-gray-600">{{ t('custody.department') }}:</span> {{ departmentName }}
                             </div>
                             <div class="mb-2">
                                 <span class="font-semibold text-gray-600">{{ t('custody.job_title') }}:</span> {{ employee.job_title || t('custody.na') }}
@@ -195,8 +195,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/Icon.vue';
 import { useI18n } from 'vue-i18n';
-import { onMounted } from 'vue';
-import type { Employee, CustodyChange } from '@/types';
+import { onMounted, computed } from 'vue';
+import type { Employee, CustodyChange, Department } from '@/types';
 
 interface Props {
     custodyChange: CustodyChange;
@@ -209,6 +209,25 @@ interface Props {
 
 const props = defineProps<Props>();
 const { locale, t } = useI18n();
+
+// Computed property to get department name
+const departmentName = computed(() => {
+    if (!props.employee.department) {
+        return t('custody.na');
+    }
+    
+    // If department is an object (relationship loaded), use its name
+    if (typeof props.employee.department === 'object' && props.employee.department.name) {
+        return props.employee.department.name;
+    }
+    
+    // If department is a string, use it directly
+    if (typeof props.employee.department === 'string') {
+        return props.employee.department;
+    }
+    
+    return t('custody.na');
+});
 
 // Set locale to Arabic when component mounts
 onMounted(() => {
@@ -249,6 +268,7 @@ const goBack = () => {
     
     body {
         -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
         font-size: 12px;
     }
     

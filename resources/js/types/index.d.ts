@@ -118,7 +118,7 @@ export interface Employee {
     phone?: string;
     mobile?: string;
     work_phone?: string;
-    department?: string;
+    department?: string | Department;
     department_id?: number;
     job_title?: string;
     manager?: string;
