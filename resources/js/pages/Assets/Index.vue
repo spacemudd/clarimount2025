@@ -21,8 +21,16 @@ const printService = PrintService.getInstance();
 interface Props {
     assets: {
         data: Asset[];
-        links: any[];
-        meta: any;
+        links: Array<{
+            url: string | null;
+            label: string;
+            active: boolean;
+        }>;
+        from: number;
+        to: number;
+        total: number;
+        last_page: number;
+        current_page: number;
     };
     categories: AssetCategory[];
     locations: Location[];
@@ -339,6 +347,11 @@ const clearFilters = () => {
     locationFilter.value = '';
 };
 
+const handlePagination = (url: string | null) => {
+    if (!url) return;
+    router.get(url, {}, { preserveState: true });
+};
+
 const handleAssetImageError = (event: Event, asset: Asset) => {
     failedAssetImages.value.add(asset.id);
 };
@@ -613,6 +626,10 @@ const printBarcode = async () => {
                     <Icon name="X" class="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                     {{ t('common.clear') }}
                 </Button>
+                <Button variant="outline" @click="clearFilters" v-if="search || categoryFilter || locationFilter">
+                    <Icon name="RefreshCw" class="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
+                    {{ t('common.clear_all_filters') }}
+                </Button>
             </div>
 
             <!-- Bulk Actions -->
@@ -633,20 +650,38 @@ const printBarcode = async () => {
                 </div>
             </div>
 
+            <!-- Search Results Count -->
+            <div v-if="search || categoryFilter || locationFilter" class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div class="text-sm text-blue-900 dark:text-blue-100">
+                    <span v-if="assets.data.length > 0">
+                        {{ t('assets.pagination_info', { from: assets.from, to: assets.to, total: assets.total }) }}
+                    </span>
+                    <span v-else>
+                        {{ t('assets.no_assets_found') }}
+                    </span>
+                </div>
+            </div>
+
             <div v-if="assets.data.length === 0" class="text-center py-12">
                 <Icon name="HardDrive" class="mx-auto h-12 w-12 text-gray-400 mb-4" />
                 <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                    {{ t('assets.no_assets') }}
+                    {{ search || categoryFilter || locationFilter ? t('assets.no_assets_found') : t('assets.no_assets') }}
                 </h3>
                 <p class="text-gray-600 dark:text-gray-400 mb-6">
-                    {{ search || categoryFilter || locationFilter ? t('assets.no_assets_found') : t('assets.create_first_asset') }}
+                    {{ search || categoryFilter || locationFilter ? t('assets.try_adjusting_search') : t('assets.create_first_asset') }}
                 </p>
-                <Button asChild v-if="!search && !categoryFilter && !locationFilter">
-                    <Link :href="route('assets.create')">
-                        <Icon name="Plus" class="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
-                        {{ t('assets.create_asset') }}
-                    </Link>
-                </Button>
+                <div class="flex justify-center gap-3">
+                    <Button asChild v-if="!search && !categoryFilter && !locationFilter">
+                        <Link :href="route('assets.create')">
+                            <Icon name="Plus" class="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
+                            {{ t('assets.create_asset') }}
+                        </Link>
+                    </Button>
+                    <Button variant="outline" @click="clearFilters" v-if="search || categoryFilter || locationFilter">
+                        <Icon name="RefreshCw" class="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
+                        {{ t('common.clear_all_filters') }}
+                    </Button>
+                </div>
             </div>
 
             <!-- Assets Table -->
@@ -805,7 +840,26 @@ const printBarcode = async () => {
                 </div>
             </div>
 
-            <!-- Pagination would go here if needed -->
+            <!-- Pagination -->
+            <div v-if="assets.last_page > 1" class="mt-6 flex items-center justify-between">
+                <div class="text-sm text-gray-700 dark:text-gray-300">
+                    {{ t('messages.showing') }} {{ assets.from }}-{{ assets.to }} {{ t('messages.of') }} {{ assets.total }}
+                </div>
+                <div class="flex space-x-1">
+                    <Button
+                        v-for="link in assets.links"
+                        :key="link.label"
+                        variant="ghost"
+                        size="sm"
+                        :disabled="!link.url"
+                        :class="{
+                            'bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-300': link.active
+                        }"
+                        @click="handlePagination(link.url)"
+                        v-html="link.label"
+                    />
+                </div>
+            </div>
         </div>
 
         <!-- Barcode Print Dialog -->

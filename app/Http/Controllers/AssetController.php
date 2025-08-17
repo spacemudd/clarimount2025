@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
+
 class AssetController extends Controller
 {
     /**
@@ -35,15 +36,35 @@ class AssetController extends Controller
         $query = Asset::with(['category', 'location', 'assignments', 'company', 'assetTemplate'])
             ->whereIn('company_id', $ownedCompanyIds);
 
-        // Handle search
+        // Handle search with improved relevance
         if ($search = $request->get('search')) {
             $query->where(function($q) use ($search) {
+                // Primary search fields (highest priority)
                 $q->where('asset_tag', 'like', "%{$search}%")
-                  ->orWhere('serial_number', 'like', "%{$search}%")
-                  ->orWhere('service_tag_number', 'like', "%{$search}%")
+                  ->orWhere('serial_number', 'like', "%{$search}%");
+                
+                // Secondary search fields
+                $q->orWhere('service_tag_number', 'like', "%{$search}%")
                   ->orWhere('finance_tag_number', 'like', "%{$search}%")
                   ->orWhere('model_name', 'like', "%{$search}%")
                   ->orWhere('model_number', 'like', "%{$search}%");
+            });
+            
+            // Also search through related data
+            $query->orWhereHas('category', function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%");
+            });
+            
+            $query->orWhereHas('company', function($q) use ($search) {
+                $q->where('name_en', 'like', "%{$search}%")
+                  ->orWhere('name_ar', 'like', "%{$search}%")
+                  ->orWhere('slug', 'like', "%{$search}%");
+            });
+            
+            $query->orWhereHas('location', function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%");
             });
         }
 
@@ -57,7 +78,7 @@ class AssetController extends Controller
             $query->where('location_id', $locationId);
         }
 
-        $assets = $query->orderBy('asset_tag')->paginate(1000)->withQueryString();
+        $assets = $query->orderBy('asset_tag')->paginate(25)->withQueryString();
 
         // Get categories and locations for filters (from all owned companies)
         $categories = AssetCategory::withDepth()
