@@ -26,13 +26,12 @@
                 <div class="p-8 print:p-4">
                     <!-- Company Info -->
                     <div class="text-center mb-6">
-                        <h2 class="text-xl font-bold">{{ employee.company?.name_ar || 'Company' }}</h2>
-                        <p class="text-sm text-muted-foreground">{{ employee.company?.company_email || '' }}</p>
+                        <h2>مجموعة فهد نواف الزير التجارة</h2>
                     </div>
 
                     <!-- Header -->
                     <div class="text-center border-b-2 border-gray-800 pb-4 mb-6">
-                        <h1 class="text-2xl font-bold mb-2">{{ t('custody.asset_custody_change_form') }}</h1>
+                        <h1 class="text-2xl font-bold mb-2">نموذج استلام عهدة</h1>
                         <p><strong>{{ t('custody.document_id') }}:</strong> {{ custodyChange.id.toString().padStart(4, '0') }}</p>
                         <p><strong>{{ t('custody.date') }}:</strong> <span dir="ltr">{{ new Date(custodyChange.created_at).toLocaleDateString() }}</span></p>
                         <Badge :class="getStatusBadgeClass(custodyChange.status)" class="mt-2">
