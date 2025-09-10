@@ -112,12 +112,12 @@
 </head>
 <body>
     <div class="company-info">
-        <h2>{{ $employee->company->name_ar }}</h2>
-        <p>{{ $employee->company->company_email ?? '' }}</p>
+        <h2>مجموعة فهد نواف الزير التجارة</h2>
+        <p>info@alzeer-group.com</p>
     </div>
 
     <div class="header">
-        <h1>Asset Custody Change Form</h1>
+        <h1>نموذج استلام عهدة</h1>
         <p><strong>Document ID:</strong> {{ $custodyChange->id }}</p>
         <p><strong>Date:</strong> {{ $custodyChange->created_at->format('Y-m-d H:i:s') }}</p>
         <div class="status-badge status-{{ $custodyChange->status }}">
