@@ -105,6 +105,14 @@ return [
             'processors' => [PsrLogMessageProcessor::class],
         ],
 
+        'zkteko' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/zkteko.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 30,
+            'replace_placeholders' => true,
+        ],
+
         'syslog' => [
             'driver' => 'syslog',
             'level' => env('LOG_LEVEL', 'debug'),
