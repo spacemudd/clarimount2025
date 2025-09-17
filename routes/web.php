@@ -14,6 +14,7 @@ use App\Http\Controllers\PrintJobController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\BayzatConfigController;
 use App\Http\Controllers\ZKTekoWebhookController;
+use App\Http\Controllers\ZKTekoDebugController;
 use App\Http\Controllers\Admin\AdminTeamController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -175,6 +176,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('companies/{company}/bayzat-config/test', [BayzatConfigController::class, 'testConnection'])->name('bayzat-configs.test');
     Route::post('companies/{company}/bayzat-config/toggle', [BayzatConfigController::class, 'toggle'])->name('bayzat-configs.toggle');
     Route::put('companies/{company}/bayzat-config/settings', [BayzatConfigController::class, 'updateSettings'])->name('bayzat-configs.settings');
+
+    // ZKTeko Debug Dashboard routes
+    Route::prefix('zkteko-debug')->name('zkteko-debug.')->group(function () {
+        Route::get('/', [ZKTekoDebugController::class, 'index'])->name('index');
+        Route::get('/devices/{id}', [ZKTekoDebugController::class, 'show'])->name('device.show');
+        Route::get('/status', [ZKTekoDebugController::class, 'status'])->name('status');
+        Route::get('/devices/{id}/heartbeats', [ZKTekoDebugController::class, 'heartbeats'])->name('device.heartbeats');
+        Route::get('/devices/{id}/attendance-records', [ZKTekoDebugController::class, 'attendanceRecords'])->name('device.attendance-records');
+        Route::post('/devices/{id}/mark-offline', [ZKTekoDebugController::class, 'markOffline'])->name('device.mark-offline');
+        Route::post('/devices/{id}/clear-error', [ZKTekoDebugController::class, 'clearError'])->name('device.clear-error');
+    });
 
     // API endpoints for async searches
     Route::get('api/locations/search', [LocationController::class, 'search'])->name('api.locations.search');
