@@ -49,6 +49,7 @@ const form = useForm({
     description_en: props.company.description_en || '',
     description_ar: props.company.description_ar || '',
     website: props.company.website || '',
+    fingerprint_report_name: props.company.fingerprint_report_name || '',
 });
 
 const submit = () => {
@@ -124,6 +125,20 @@ const submit = () => {
                                 :placeholder="t('companies.website_placeholder')"
                             />
                             <InputError :message="form.errors.website" />
+                        </div>
+
+                        <div class="space-y-2">
+                            <Label for="fingerprint_report_name">{{ t('companies.fingerprint_report_name') }}</Label>
+                            <Input
+                                id="fingerprint_report_name"
+                                v-model="form.fingerprint_report_name"
+                                type="text"
+                                :placeholder="t('companies.fingerprint_report_name_placeholder')"
+                            />
+                            <div class="text-sm text-gray-600 dark:text-gray-400">
+                                {{ t('companies.fingerprint_report_name_help') }}
+                            </div>
+                            <InputError :message="form.errors.fingerprint_report_name" />
                         </div>
 
                         <div class="grid gap-4 sm:grid-cols-2">

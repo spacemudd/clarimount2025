@@ -11,10 +11,27 @@ use App\Http\Controllers\AssetCategoryController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AssetTemplateController;
 use App\Http\Controllers\PrintJobController;
+use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\BayzatConfigController;
+use App\Http\Controllers\ZKTekoWebhookController;
+use App\Http\Controllers\ZKTekoDebugController;
 use App\Http\Controllers\Admin\AdminTeamController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+
+
+
+// ZKTeko Fingerprint Device Webhook Routes (no authentication required)
+Route::prefix('webhook/fp')->name('webhook.fp.')->group(function () {
+    Route::post('/', [ZKTekoWebhookController::class, 'handle'])->name('handle');
+    Route::get('/test', [ZKTekoWebhookController::class, 'test'])->name('test');
+});
+
+// Simple test route to verify routing is working
+Route::get('/test-simple', function () {
+    return response()->json(['message' => 'Simple route working']);
+});
 
 Route::get('/', function () {
     // Redirect authenticated users to dashboard
@@ -144,6 +161,33 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('api/print-jobs/{printJob}/status', [PrintJobController::class, 'updateStatus'])->name('api.print-jobs.update-status');
     Route::delete('api/print-jobs/{printJob}', [PrintJobController::class, 'cancel'])->name('api.print-jobs.cancel');
     
+    // Attendance Management routes
+    Route::resource('attendance', AttendanceController::class)->only(['index', 'create', 'store', 'show']);
+    Route::post('attendance/{import}/retry', [AttendanceController::class, 'retrySync'])->name('attendance.retry');
+    Route::post('attendance/batches/{batch}/retry', [AttendanceController::class, 'retrySyncBatch'])->name('attendance.batch.retry');
+    Route::get('attendance/template/download', [AttendanceController::class, 'downloadTemplate'])->name('attendance.template');
+    
+    // Bayzat Configuration routes
+    Route::get('bayzat-configs', [BayzatConfigController::class, 'index'])->name('bayzat-configs.index');
+    Route::get('companies/{company}/bayzat-config', [BayzatConfigController::class, 'show'])->name('bayzat-configs.show');
+    Route::post('companies/{company}/bayzat-config', [BayzatConfigController::class, 'store'])->name('bayzat-configs.store');
+    Route::put('companies/{company}/bayzat-config', [BayzatConfigController::class, 'update'])->name('bayzat-configs.update');
+    Route::delete('companies/{company}/bayzat-config', [BayzatConfigController::class, 'destroy'])->name('bayzat-configs.destroy');
+    Route::post('companies/{company}/bayzat-config/test', [BayzatConfigController::class, 'testConnection'])->name('bayzat-configs.test');
+    Route::post('companies/{company}/bayzat-config/toggle', [BayzatConfigController::class, 'toggle'])->name('bayzat-configs.toggle');
+    Route::put('companies/{company}/bayzat-config/settings', [BayzatConfigController::class, 'updateSettings'])->name('bayzat-configs.settings');
+
+    // ZKTeko Debug Dashboard routes
+    Route::prefix('zkteko-debug')->name('zkteko-debug.')->group(function () {
+        Route::get('/', [ZKTekoDebugController::class, 'index'])->name('index');
+        Route::get('/devices/{id}', [ZKTekoDebugController::class, 'show'])->name('device.show');
+        Route::get('/status', [ZKTekoDebugController::class, 'status'])->name('status');
+        Route::get('/devices/{id}/heartbeats', [ZKTekoDebugController::class, 'heartbeats'])->name('device.heartbeats');
+        Route::get('/devices/{id}/attendance-records', [ZKTekoDebugController::class, 'attendanceRecords'])->name('device.attendance-records');
+        Route::post('/devices/{id}/mark-offline', [ZKTekoDebugController::class, 'markOffline'])->name('device.mark-offline');
+        Route::post('/devices/{id}/clear-error', [ZKTekoDebugController::class, 'clearError'])->name('device.clear-error');
+    });
+
     // API endpoints for async searches
     Route::get('api/locations/search', [LocationController::class, 'search'])->name('api.locations.search');
     Route::get('api/asset-templates/search', [AssetTemplateController::class, 'search'])->name('api.asset-templates.search');

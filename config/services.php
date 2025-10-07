@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'bayzat' => [
+        'default_api_url' => env('BAYZAT_DEFAULT_API_URL', 'https://integration.bayzat.com/attendance'),
+        'rate_limit_delay' => env('BAYZAT_RATE_LIMIT_DELAY', 1), // seconds between requests
+        'max_records_per_request' => env('BAYZAT_MAX_RECORDS_PER_REQUEST', 20),
+        'max_retry_attempts' => env('BAYZAT_MAX_RETRY_ATTEMPTS', 5),
+    ],
+
 ];

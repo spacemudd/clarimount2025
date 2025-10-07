@@ -67,8 +67,8 @@ class CompanyController extends Controller
             abort(403);
         }
 
-        // Load the company with owner and calculate total assets from locations
-        $company->load('owner');
+        // Load the company with owner and Bayzat configuration
+        $company->load(['owner', 'bayzatConfig']);
         
         // Get total assets count from all locations associated with this company
         $totalAssetsCount = $company->locations()
@@ -114,6 +114,7 @@ class CompanyController extends Controller
             'description_en' => 'nullable|string|max:1000',
             'description_ar' => 'nullable|string|max:1000',
             'website' => 'nullable|url|max:255',
+            'fingerprint_report_name' => 'nullable|string|max:255',
         ]);
 
         // Update slug if English name changed

@@ -17,6 +17,7 @@ class Company extends Model
         'name_ar',
         'slug',
         'company_email',
+        'fingerprint_report_name',
         'description_en',
         'description_ar',
         'logo',
@@ -101,6 +102,22 @@ class Company extends Model
     public function assets(): HasMany
     {
         return $this->hasMany(Asset::class);
+    }
+
+    /**
+     * Get the Bayzat configuration for this company.
+     */
+    public function bayzatConfig()
+    {
+        return $this->hasOne(BayzatConfig::class);
+    }
+
+    /**
+     * Get all attendance import records for this company.
+     */
+    public function attendanceImportRecords(): HasMany
+    {
+        return $this->hasMany(AttendanceImportRecord::class);
     }
 
     /**

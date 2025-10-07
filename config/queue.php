@@ -72,6 +72,26 @@ return [
             'after_commit' => false,
         ],
 
+        'bayzat_sync' => [
+            'driver' => 'database',
+            'connection' => env('DB_QUEUE_CONNECTION'),
+            'table' => env('DB_QUEUE_TABLE', 'jobs'),
+            'queue' => 'bayzat-sync',
+            'retry_after' => 300, // 5 minutes
+            'block_for' => 0,
+            'after_commit' => false,
+        ],
+
+        'bayzat_retry' => [
+            'driver' => 'database',
+            'connection' => env('DB_QUEUE_CONNECTION'),
+            'table' => env('DB_QUEUE_TABLE', 'jobs'),
+            'queue' => 'bayzat-retry',
+            'retry_after' => 600, // 10 minutes
+            'block_for' => 0,
+            'after_commit' => false,
+        ],
+
     ],
 
     /*

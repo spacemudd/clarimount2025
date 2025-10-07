@@ -2,7 +2,12 @@
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+// Scheduled tasks for Bayzat attendance system
+Schedule::command('bayzat:retry-failed')->hourly()->description('Retry failed Bayzat sync records');
+Schedule::command('attendance:cleanup-imports --days=30')->monthly()->description('Clean up old attendance import files');
