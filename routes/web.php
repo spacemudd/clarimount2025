@@ -39,8 +39,8 @@ Route::get('/', function () {
         return redirect()->route('dashboard');
     }
     
-    // Redirect non-authenticated users to login
-    return redirect()->route('login');
+    // Show landing page for non-authenticated users
+    return view('landing.index');
 })->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
