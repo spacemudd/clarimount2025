@@ -46,22 +46,22 @@
 
         <div id="mobile-menu" class="hidden md:hidden py-4 border-t border-gray-200">
             <nav class="flex flex-col gap-4">
-                <a href="#features" class="text-gray-700 hover:text-blue-600 transition-colors">
+                <a href="#features" class="mobile-menu-link text-gray-700 hover:text-blue-600 transition-colors">
                     المميزات
                 </a>
-                <a href="#pricing" class="text-gray-700 hover:text-blue-600 transition-colors">
+                <a href="#pricing" class="mobile-menu-link text-gray-700 hover:text-blue-600 transition-colors">
                     الأسعار
                 </a>
-                <a href="#about" class="text-gray-700 hover:text-blue-600 transition-colors">
+                <a href="#about" class="mobile-menu-link text-gray-700 hover:text-blue-600 transition-colors">
                     من نحن
                 </a>
-                <a href="#contact" class="text-gray-700 hover:text-blue-600 transition-colors">
+                <a href="#contact" class="mobile-menu-link text-gray-700 hover:text-blue-600 transition-colors">
                     اتصل بنا
                 </a>
-                <a href="{{ route('login') }}" class="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors text-center">
+                <a href="{{ route('login') }}" class="mobile-menu-link px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors text-center">
                     تسجيل الدخول
                 </a>
-                <a href="{{ route('register') }}" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-center">
+                <a href="{{ route('register') }}" class="mobile-menu-link px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-center">
                     ابدأ مجاناً
                 </a>
             </nav>
@@ -75,6 +75,21 @@
         const menu = document.getElementById('mobile-menu');
         menu.classList.toggle('hidden');
     }
+
+    function closeMobileMenu() {
+        const menu = document.getElementById('mobile-menu');
+        menu.classList.add('hidden');
+    }
+
+    // Close mobile menu when clicking on any link
+    document.addEventListener('DOMContentLoaded', function() {
+        const mobileMenuLinks = document.querySelectorAll('.mobile-menu-link');
+        mobileMenuLinks.forEach(link => {
+            link.addEventListener('click', function() {
+                closeMobileMenu();
+            });
+        });
+    });
 </script>
 @endpush
 
