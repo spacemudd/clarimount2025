@@ -1,7 +1,7 @@
 <section class="relative bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-20 pb-32">
     <div class="container mx-auto px-6">
         <div class="max-w-4xl mx-auto text-center">
-            <div class="inline-block mb-6 px-4 py-2 bg-blue-100 text-blue-700 rounded-full">
+            <div class="inline-block mb-6 px-4 py-2 bg-blue-100 text-blue-700 rounded-full mt-4">
                 منصة موارد بشرية متكاملة
             </div>
             
