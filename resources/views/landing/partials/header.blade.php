@@ -1,12 +1,10 @@
 <header class="fixed top-0 w-full bg-white/95 backdrop-blur-sm z-50 border-b border-gray-200">
     <div class="container mx-auto px-6">
         <div class="flex items-center justify-between h-20">
-            <div class="flex items-center gap-2">
-                <div class="bg-blue-600 text-white w-10 h-10 rounded-lg flex items-center justify-center">
-                    HR
-                </div>
-                <span class="text-xl text-gray-900">منصة الموارد البشرية</span>
-            </div>
+            <a href="/" class="flex items-center gap-2">
+                <img src="{{ asset('ITMAAL.png') }}" alt="إعتمال" class="h-10 w-auto">
+                <span class="text-xl text-gray-900 font-semibold">إعتمال</span>
+            </a>
 
             <nav class="hidden md:flex items-center gap-8">
                 <a href="#features" class="text-gray-700 hover:text-blue-600 transition-colors">

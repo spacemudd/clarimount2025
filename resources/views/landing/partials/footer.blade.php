@@ -3,10 +3,8 @@
         <div class="grid md:grid-cols-4 gap-12 mb-12">
             <div>
                 <div class="flex items-center gap-2 mb-6">
-                    <div class="bg-blue-600 text-white w-10 h-10 rounded-lg flex items-center justify-center">
-                        HR
-                    </div>
-                    <span class="text-xl text-white">منصة الموارد البشرية</span>
+                    <img src="{{ asset('ITMAAL.png') }}" alt="إعتمال" class="h-10 w-auto">
+                    <span class="text-xl text-white font-semibold">إعتمال</span>
                 </div>
                 <p class="text-gray-400 mb-6">
                     منصة شاملة لإدارة الموارد البشرية تساعد الشركات على تحقيق أقصى استفادة من مواردها البشرية.
@@ -67,7 +65,7 @@
         </div>
 
         <div class="border-t border-gray-800 pt-8 text-center text-gray-400">
-            <p>© {{ date('Y') }} منصة الموارد البشرية. جميع الحقوق محفوظة.</p>
+            <p>© {{ date('Y') }} إعتمال. جميع الحقوق محفوظة.</p>
         </div>
     </div>
 </footer>
