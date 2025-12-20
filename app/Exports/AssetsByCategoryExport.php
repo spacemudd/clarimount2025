@@ -15,44 +15,39 @@ use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
 class AssetsByCategoryExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
-    protected $groupedAssets;
+    protected $assets;
 
-    public function __construct($groupedAssets)
+    public function __construct($assets)
     {
-        $this->groupedAssets = $groupedAssets;
+        $this->assets = $assets;
     }
 
     public function collection()
     {
-        $data = collect();
-        
-        // Add summary data grouped by company and category
-        foreach ($this->groupedAssets as $group) {
-            $data->push([
-                'company' => $group['company'],
-                'category' => $group['category'],
-                'count' => $group['count'],
-            ]);
-        }
-        
-        return $data;
+        return $this->assets;
     }
 
     public function headings(): array
     {
         return [
-            'الشركة / Company',
-            'الفئة / Category',
-            'العدد / Count',
+            'Manufacturer',
+            'Category',
+            'Asset Tag',
+            'Location',
+            'Serial Number',
+            'Company',
         ];
     }
 
-    public function map($row): array
+    public function map($asset): array
     {
         return [
-            $row['company'],
-            $row['category'],
-            $row['count'],
+            $asset->manufacturer ?? '',
+            $asset->category->name ?? 'Unknown Category',
+            $asset->asset_tag ?? '',
+            $asset->location->name ?? 'Unknown Location',
+            $asset->serial_number ?? '',
+            $asset->company->name_en ?? 'Unknown Company',
         ];
     }
 

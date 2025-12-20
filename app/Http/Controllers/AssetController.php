@@ -1015,7 +1015,7 @@ class AssetController extends Controller
     }
 
     /**
-     * Export assets grouped by category and company to Excel
+     * Export all assets to Excel with individual rows
      */
     public function exportByCategory(Request $request)
     {
@@ -1028,26 +1028,20 @@ class AssetController extends Controller
         }
 
         // Get all assets from user's companies with relationships
-        $assets = Asset::with(['category', 'company'])
+        $assets = Asset::with(['category', 'company', 'location'])
             ->whereIn('company_id', $ownedCompanyIds)
             ->get();
 
-        // Group by company_id and asset_category_id, then count
-        $groupedAssets = $assets->groupBy(function ($asset) {
-            return $asset->company_id . '_' . $asset->asset_category_id;
-        })->map(function ($categoryAssets) {
-            $firstAsset = $categoryAssets->first();
-            return [
-                'company' => $firstAsset->company->name_en ?? 'Unknown Company',
-                'category' => $firstAsset->category->name ?? 'Unknown Category',
-                'count' => $categoryAssets->count(),
-            ];
-        })->sortBy(function ($item) {
-            return $item['company'] . '_' . $item['category'];
+        // Sort by category name first, then company name
+        $sortedAssets = $assets->sortBy(function ($asset) {
+            $categoryName = $asset->category->name ?? 'ZZZ';
+            $companyName = $asset->company->name_en ?? 'ZZZ';
+            // Pad category name to ensure proper sorting
+            return str_pad($categoryName, 100, ' ', STR_PAD_RIGHT) . $companyName;
         })->values();
 
-        $filename = 'assets_by_category_' . now()->format('Y-m-d_His') . '.xlsx';
+        $filename = 'assets_export_' . now()->format('Y-m-d_His') . '.xlsx';
 
-        return Excel::download(new AssetsByCategoryExport($groupedAssets), $filename);
+        return Excel::download(new AssetsByCategoryExport($sortedAssets), $filename);
     }
 }
