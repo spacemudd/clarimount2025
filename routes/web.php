@@ -139,6 +139,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('asset-categories', AssetCategoryController::class);
     
     // Assets management
+    Route::get('assets/export-by-category', [AssetController::class, 'exportByCategory'])->name('assets.export-by-category');
     Route::resource('assets', AssetController::class);
     Route::get('api/assets/bulk-created', [AssetController::class, 'getBulkCreatedAssets'])->name('api.assets.bulk-created');
     Route::delete('api/assets/bulk-created', [AssetController::class, 'clearBulkCreatedAssets'])->name('api.assets.clear-bulk-created');

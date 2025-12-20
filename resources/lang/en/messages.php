@@ -607,6 +607,7 @@ return [
     'assets' => [
         'title' => 'Assets',
         'create_asset' => 'Create Asset',
+        'export_by_category' => 'Export Assets by Category',
         'create_asset_description' => 'Follow the steps below to create a new asset.',
         'edit_asset' => 'Edit Asset',
         'show_asset' => 'Asset Details',

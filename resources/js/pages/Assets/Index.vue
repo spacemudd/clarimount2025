@@ -572,6 +572,10 @@ const printBarcode = async () => {
     barcodeDialog.value.printing = false
   }
 };
+
+const exportAssetsByCategory = () => {
+    window.location.href = route('assets.export-by-category');
+};
 </script>
 
 <template>
@@ -581,12 +585,18 @@ const printBarcode = async () => {
         <div class="space-y-6">
             <div class="flex items-center justify-between my-2">
                 <Heading :title="t('assets.title')" />
-                <Button asChild>
-                    <Link :href="route('assets.create')">
-                        <Icon name="Plus" class="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
-                        {{ t('assets.create_asset') }}
-                    </Link>
-                </Button>
+                <div class="flex gap-2">
+                    <Button variant="outline" @click="exportAssetsByCategory">
+                        <Icon name="Download" class="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
+                        {{ t('assets.export_by_category') }}
+                    </Button>
+                    <Button asChild>
+                        <Link :href="route('assets.create')">
+                            <Icon name="Plus" class="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
+                            {{ t('assets.create_asset') }}
+                        </Link>
+                    </Button>
+                </div>
             </div>
 
             <!-- Filters -->

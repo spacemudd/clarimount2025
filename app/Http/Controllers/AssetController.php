@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Asset;
 use App\Models\AssetCategory;
 use App\Models\Location;
+use App\Exports\AssetsByCategoryExport;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -1010,5 +1012,42 @@ class AssetController extends Controller
 </html>';
 
         return $html;
+    }
+
+    /**
+     * Export assets grouped by category and company to Excel
+     */
+    public function exportByCategory(Request $request)
+    {
+        $user = Auth::user();
+        $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
+
+        if ($ownedCompanyIds->isEmpty()) {
+            return redirect()->route('assets.index')
+                ->with('error', 'You must own at least one company to export assets.');
+        }
+
+        // Get all assets from user's companies with relationships
+        $assets = Asset::with(['category', 'company'])
+            ->whereIn('company_id', $ownedCompanyIds)
+            ->get();
+
+        // Group by company_id and asset_category_id, then count
+        $groupedAssets = $assets->groupBy(function ($asset) {
+            return $asset->company_id . '_' . $asset->asset_category_id;
+        })->map(function ($categoryAssets) {
+            $firstAsset = $categoryAssets->first();
+            return [
+                'company' => $firstAsset->company->name_en ?? 'Unknown Company',
+                'category' => $firstAsset->category->name ?? 'Unknown Category',
+                'count' => $categoryAssets->count(),
+            ];
+        })->sortBy(function ($item) {
+            return $item['company'] . '_' . $item['category'];
+        })->values();
+
+        $filename = 'assets_by_category_' . now()->format('Y-m-d_His') . '.xlsx';
+
+        return Excel::download(new AssetsByCategoryExport($groupedAssets), $filename);
     }
 }

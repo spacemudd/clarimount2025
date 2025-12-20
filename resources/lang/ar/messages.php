@@ -604,6 +604,7 @@ return [
     'assets' => [
         'title' => 'الأصول',
         'create_asset' => 'إنشاء أصل',
+        'export_by_category' => 'تصدير الأصول حسب الفئة',
         'create_asset_description' => 'اتبع الخطوات أدناه لإنشاء أصل جديد.',
         'edit_asset' => 'تحرير الأصل',
         'show_asset' => 'تفاصيل الأصل',
