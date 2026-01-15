@@ -450,6 +450,30 @@ return [
         'emergency_contact_address' => 'عنوان جهة الاتصال في حالات الطوارئ',
         
         'location' => 'الموقع',
+
+        // Expiry widget
+        'expiry' => [
+            'widget_title' => 'موظفون لديهم وثائق تنتهي خلال {days} يوم',
+            'widget_subtitle' => 'أقرب تواريخ انتهاء لفترة التجربة، الإقامة، العقد، تأشيرة الخروج والعودة، جواز السفر والتأمين.',
+            'view_all' => 'مشاهدة الكل',
+            'view_all_title' => 'الوثائق القريبة من الانتهاء',
+            'view_all_subtitle' => 'عرض جميع الموظفين الذين لديهم وثائق تنتهي خلال {days} يوم أو أقل.',
+            'table_title' => 'قائمة الموظفين ذوي الوثائق القريبة من الانتهاء',
+            'no_upcoming' => 'لا يوجد موظفون لديهم وثائق تنتهي خلال {days} يوم القادمة.',
+            'document_type' => 'نوع الوثيقة',
+            'expiry_date' => 'تاريخ الانتهاء',
+            'remaining' => 'المدة المتبقية',
+            'expired_days_ago' => 'منتهية منذ {days} يوم',
+            'expires_today' => 'تنتهي اليوم',
+            'days_remaining' => 'متبقي {days} يوم',
+
+            'probation_end_date' => 'انتهاء فترة التجربة',
+            'residence_expiry_date' => 'انتهاء الإقامة',
+            'contract_end_date' => 'انتهاء العقد',
+            'exit_reentry_visa_expiry' => 'انتهاء تأشيرة الخروج والعودة',
+            'passport_expiry_date' => 'انتهاء جواز السفر',
+            'insurance_expiry_date' => 'انتهاء التأمين',
+        ],
         'select_location' => 'اختر موقعاً',
         
         // Enhanced index page translations

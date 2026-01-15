@@ -453,6 +453,30 @@ return [
         'emergency_contact_address' => 'Emergency Contact Address',
         
         'location' => 'Location',
+
+        // Expiry widget
+        'expiry' => [
+            'widget_title' => 'Employees with documents expiring within {days} days',
+            'widget_subtitle' => 'Shows the soonest expiry for probation, residence, contract, exit/re-entry visa, passport, and insurance.',
+            'view_all' => 'View all',
+            'view_all_title' => 'Documents nearing expiry',
+            'view_all_subtitle' => 'List of all employees with documents expiring within {days} days or less.',
+            'table_title' => 'Employees with upcoming document expiries',
+            'no_upcoming' => 'No employees have documents expiring within the next {days} days.',
+            'document_type' => 'Document type',
+            'expiry_date' => 'Expiry date',
+            'remaining' => 'Time remaining',
+            'expired_days_ago' => 'Expired {days} days ago',
+            'expires_today' => 'Expires today',
+            'days_remaining' => '{days} days remaining',
+
+            'probation_end_date' => 'Probation end date',
+            'residence_expiry_date' => 'Residence expiry date',
+            'contract_end_date' => 'Contract end date',
+            'exit_reentry_visa_expiry' => 'Exit re-entry visa expiry',
+            'passport_expiry_date' => 'Passport expiry date',
+            'insurance_expiry_date' => 'Insurance expiry date',
+        ],
         'select_location' => 'Select a location',
         
         // Enhanced index page translations

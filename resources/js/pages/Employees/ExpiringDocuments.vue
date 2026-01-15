@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { computed } from 'vue';
+import type { BreadcrumbItem, Employee } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,10 +20,15 @@ interface ExpiringEmployeeRow {
     days_remaining: number;
 }
 
+interface Paginated<T> {
+    data: T[];
+    links: any[];
+    meta: any;
+}
+
 interface Props {
-    expiringEmployeesPreview: ExpiringEmployeeRow[];
-    expiringEmployeesCount: number;
-    expiryDaysThreshold: number;
+    expiringEmployees: Paginated<ExpiringEmployeeRow>;
+    days: number;
 }
 
 const props = defineProps<Props>();
@@ -32,6 +37,14 @@ const breadcrumbs = computed((): BreadcrumbItem[] => [
     {
         title: t('nav.dashboard'),
         href: '/dashboard',
+    },
+    {
+        title: t('nav.employees'),
+        href: '/employees',
+    },
+    {
+        title: t('employees.expiry.view_all_title'),
+        href: route('employees.expiring-documents.index'),
     },
 ]);
 
@@ -60,41 +73,28 @@ const formatRemainingText = (daysRemaining: number) => {
 </script>
 
 <template>
-    <Head :title="t('nav.dashboard')" />
+    <Head :title="t('employees.expiry.view_all_title')" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
+        <div class="container mx-auto py-6 space-y-6">
             <div class="flex items-center justify-between">
-                <h1 class="text-xl font-semibold">
-                    {{ t('dashboard.work-portal') }}
+                <h1 class="text-2xl font-semibold">
+                    {{ t('employees.expiry.view_all_title') }}
                 </h1>
+                <p class="text-sm text-muted-foreground">
+                    {{ t('employees.expiry.view_all_subtitle', { days }) }}
+                </p>
             </div>
 
             <Card>
-                <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <div>
-                        <CardTitle class="text-base font-semibold">
-                            {{ t('employees.expiry.widget_title', { days: expiryDaysThreshold }) }}
-                        </CardTitle>
-                        <p class="text-xs text-muted-foreground mt-1">
-                            {{ t('employees.expiry.widget_subtitle') }}
-                        </p>
-                    </div>
-                    <Button
-                        v-if="expiringEmployeesCount > 0"
-                        asChild
-                        variant="outline"
-                        size="sm"
-                    >
-                        <Link :href="route('employees.expiring-documents.index')">
-                            {{ t('employees.expiry.view_all') }} ({{ expiringEmployeesCount }})
-                        </Link>
-                    </Button>
+                <CardHeader>
+                    <CardTitle class="text-base">
+                        {{ t('employees.expiry.table_title') }}
+                    </CardTitle>
                 </CardHeader>
-
                 <CardContent>
-                    <div v-if="!expiringEmployeesPreview || expiringEmployeesPreview.length === 0" class="py-6 text-center text-sm text-muted-foreground">
-                        {{ t('employees.expiry.no_upcoming', { days: expiryDaysThreshold }) }}
+                    <div v-if="!props.expiringEmployees.data.length" class="py-6 text-center text-sm text-muted-foreground">
+                        {{ t('employees.expiry.no_upcoming', { days }) }}
                     </div>
 
                     <div v-else class="overflow-x-auto">
@@ -113,14 +113,14 @@ const formatRemainingText = (daysRemaining: number) => {
                                     <th class="py-2 px-4 text-right">
                                         {{ t('employees.expiry.remaining') }}
                                     </th>
+                                    <th class="py-2 px-4"></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr
-                                    v-for="row in expiringEmployeesPreview"
+                                    v-for="row in props.expiringEmployees.data"
                                     :key="row.employee_id + '-' + row.expiry_field"
-                                    class="border-b last:border-0 hover:bg-muted/40 cursor-pointer"
-                                    @click="$inertia.visit(route('employees.show', row.employee_id))"
+                                    class="border-b last:border-0 hover:bg-muted/40"
                                 >
                                     <td class="py-2 pr-4">
                                         <span class="font-medium">
@@ -138,12 +138,37 @@ const formatRemainingText = (daysRemaining: number) => {
                                             {{ formatRemainingText(row.days_remaining) }}
                                         </Badge>
                                     </td>
+                                    <td class="py-2 px-4 text-left">
+                                        <Button variant="outline" size="xs" asChild>
+                                            <Link :href="route('employees.show', row.employee_id)">
+                                                {{ t('employees.view') }}
+                                            </Link>
+                                        </Button>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+
+                    <div
+                        v-if="props.expiringEmployees.links && props.expiringEmployees.links.length"
+                        class="mt-4 flex flex-wrap justify-center gap-2"
+                    >
+                        <Button
+                            v-for="link in props.expiringEmployees.links"
+                            :key="link.label"
+                            v-html="link.label"
+                            :variant="link.active ? 'default' : 'outline'"
+                            :disabled="!link.url"
+                            size="sm"
+                            class="min-w-[2.5rem]"
+                            @click="link.url && $inertia.visit(link.url)"
+                        />
                     </div>
                 </CardContent>
             </Card>
         </div>
     </AppLayout>
-</template>
+></template>
+
+

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Employee;
 use App\Models\Country;
 use App\Models\Nationality;
+use App\Services\EmployeeExpiryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\RedirectResponse;
@@ -65,6 +66,47 @@ class EmployeeController extends Controller
                 'status' => $request->input('status'),
                 'department' => $request->input('department'),
             ],
+        ]);
+    }
+
+    /**
+     * Display all employees with documents expiring within the configured threshold.
+     */
+    public function expiringDocuments(Request $request, EmployeeExpiryService $employeeExpiryService): Response|RedirectResponse
+    {
+        $user = Auth::user();
+        $companies = $user->ownedCompanies()->pluck('id');
+
+        if (!$companies) {
+            return redirect()->route('companies.create')
+                ->with('info', 'Please create a company first to manage employees.');
+        }
+
+        $days = (int) ($request->input('days') ?: EmployeeExpiryService::DEFAULT_DAYS_THRESHOLD);
+
+        $all = $employeeExpiryService->getExpiringDocumentRows($companies, $days);
+
+        // Simple manual pagination for the computed collection
+        $page = (int) $request->input('page', 1);
+        $perPage = 15;
+        $offset = ($page - 1) * $perPage;
+
+        $items = $all->slice($offset, $perPage)->values();
+
+        $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
+            $items,
+            $all->count(),
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
+
+        return Inertia::render('Employees/ExpiringDocuments', [
+            'expiringEmployees' => $paginator,
+            'days' => $days,
         ]);
     }
 

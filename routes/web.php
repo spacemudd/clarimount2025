@@ -15,6 +15,7 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\BayzatConfigController;
 use App\Http\Controllers\ZKTekoWebhookController;
 use App\Http\Controllers\ZKTekoDebugController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Admin\AdminTeamController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -44,9 +45,7 @@ Route::get('/', function () {
 })->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 });
 
 // Super Admin routes
@@ -126,6 +125,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('employees/import/execute', [EmployeeImportController::class, 'executeImport'])->name('employees.import.execute');
     
     // Employees management
+    Route::get('employees/expiring-documents', [EmployeeController::class, 'expiringDocuments'])
+        ->name('employees.expiring-documents.index');
     Route::resource('employees', EmployeeController::class);
     
     // Custody management routes
