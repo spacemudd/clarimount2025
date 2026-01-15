@@ -104,8 +104,8 @@
                                 
                                 <!-- Add Asset Button -->
                                 <Button 
-                                    variant="outline" 
-                                    class="w-full border-dashed"
+                                    variant="default" 
+                                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold"
                                     @click="showAssetSearch = true"
                                     :disabled="loading"
                                 >
@@ -149,43 +149,6 @@
                         {{ loading ? t('custody.saving') : t('custody.save_custody_update') }}
                     </Button>
                 </div>
-                
-                <!-- Recent Custody Changes -->
-                <Card v-if="recentCustodyChanges.length > 0">
-                    <CardHeader>
-                        <CardTitle class="flex items-center gap-2">
-                            <Icon name="History" class="h-5 w-5 text-gray-600" />
-                            {{ t('custody.recent_custody_changes') }}
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div class="space-y-3">
-                            <div 
-                                v-for="change in recentCustodyChanges" 
-                                :key="change.id"
-                                class="flex items-center justify-between p-3 border rounded-lg"
-                            >
-                                <div>
-                                    <p class="font-medium">{{ change.changes_summary || t('custody.custody_updated') }}</p>
-                                    <p class="text-sm text-muted-foreground">
-                                        {{ new Date(change.created_at).toLocaleDateString() }} by {{ change.updatedBy?.name }}
-                                    </p>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <Badge :class="change.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'">
-                                        {{ t('custody.status_' + change.status) }}
-                                    </Badge>
-                                    <Button variant="outline" size="sm" @click="printCustodyDocument(change)" :title="t('custody.print_document')">
-                                        <Icon name="Printer" class="h-4 w-4" />
-                                    </Button>
-                                    <Button variant="outline" size="sm" @click="viewCustodyDocument(change)" :title="t('custody.view_document')">
-                                        <Icon name="FileText" class="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
                 
                 <!-- Pending Custody Changes - Need Documents -->
                 <Card v-if="pendingCustodyChanges.length > 0">
@@ -232,12 +195,12 @@
                     </CardContent>
                 </Card>
                 
-                <!-- Other Custody Changes -->
+                <!-- Documented Custodies -->
                 <Card v-if="otherCustodyChanges.length > 0">
                     <CardHeader>
                         <CardTitle class="flex items-center gap-2">
                             <Icon name="History" class="h-5 w-5 text-gray-600" />
-                            {{ t('custody.other_custody_changes') }}
+                            {{ t('custody.documented_custodies') }}
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -266,6 +229,43 @@
                                     <Button v-if="change.status === 'pending'" variant="default" size="sm" @click="uploadDocumentForChange(change)">
                                         <Icon name="Upload" class="h-4 w-4 mr-1" />
                                         {{ t('custody.upload_document_button') }}
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+                
+                <!-- Recent Custody Changes -->
+                <Card v-if="recentCustodyChanges.length > 0">
+                    <CardHeader>
+                        <CardTitle class="flex items-center gap-2">
+                            <Icon name="History" class="h-5 w-5 text-gray-600" />
+                            {{ t('custody.recent_custody_changes') }}
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div class="space-y-3">
+                            <div 
+                                v-for="change in recentCustodyChanges" 
+                                :key="change.id"
+                                class="flex items-center justify-between p-3 border rounded-lg"
+                            >
+                                <div>
+                                    <p class="font-medium">{{ change.changes_summary || t('custody.custody_updated') }}</p>
+                                    <p class="text-sm text-muted-foreground">
+                                        {{ new Date(change.created_at).toLocaleDateString() }} by {{ change.updatedBy?.name }}
+                                    </p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <Badge :class="change.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'">
+                                        {{ t('custody.status_' + change.status) }}
+                                    </Badge>
+                                    <Button variant="outline" size="sm" @click="printCustodyDocument(change)" :title="t('custody.print_document')">
+                                        <Icon name="Printer" class="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="outline" size="sm" @click="viewCustodyDocument(change)" :title="t('custody.view_document')">
+                                        <Icon name="FileText" class="h-4 w-4" />
                                     </Button>
                                 </div>
                             </div>

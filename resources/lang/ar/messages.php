@@ -867,6 +867,7 @@ return [
         'pending_custody_changes' => 'تغييرات العهدة المعلقة - تحتاج وثائق',
         'pending_custody_changes_description' => 'تغييرات العهدة هذه تنتظر تحميل الوثائق الموقعة.',
         'other_custody_changes' => 'تغييرات العهدة الأخرى',
+        'documented_custodies' => 'العهد الموثقة',
         'no_assets_assigned' => 'لا توجد أصول مخصصة حالياً',
         'add_asset' => 'إضافة أصل',
         'summary_optional' => 'الملخص (اختياري)',

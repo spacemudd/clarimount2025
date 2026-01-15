@@ -856,6 +856,7 @@ return [
         'pending_custody_changes' => 'Pending Custody Changes - Need Documents',
         'pending_custody_changes_description' => 'These custody changes are waiting for signed documents to be uploaded.',
         'other_custody_changes' => 'Other Custody Changes',
+        'documented_custodies' => 'Documented Custodies',
         'no_assets_assigned' => 'No assets currently assigned',
         'add_asset' => 'Add Asset',
         'summary_optional' => 'Summary (Optional)',
