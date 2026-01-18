@@ -15,6 +15,17 @@
                             </div>
                         </div>
                         <div class="flex gap-2">
+                            <Button variant="outline" @click="resetChanges" :disabled="loading || !hasChanges">
+                                {{ t('custody.reset_changes') }}
+                            </Button>
+                            <Button 
+                                @click="saveCustodyUpdate" 
+                                :disabled="loading || !hasChanges"
+                                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                            >
+                                <Icon name="Save" class="mr-2 h-4 w-4" />
+                                {{ loading ? t('custody.saving') : t('custody.save_custody_update') }}
+                            </Button>
                             <Button variant="outline" asChild>
                                 <Link :href="route('employees.show', employee.id)">
                                     <Icon name="ArrowLeft" class="mr-2 h-4 w-4" />
@@ -138,17 +149,6 @@
                         </div>
                     </CardContent>
                 </Card>
-                
-                <!-- Action Buttons -->
-                <div class="flex justify-end gap-4" v-if="hasChanges">
-                    <Button variant="outline" @click="resetChanges" :disabled="loading">
-                        {{ t('custody.reset_changes') }}
-                    </Button>
-                    <Button @click="saveCustodyUpdate" :disabled="loading">
-                        <Icon name="Save" class="mr-2 h-4 w-4" />
-                        {{ loading ? t('custody.saving') : t('custody.save_custody_update') }}
-                    </Button>
-                </div>
                 
                 <!-- Pending Custody Changes - Need Documents -->
                 <Card v-if="pendingCustodyChanges.length > 0">
@@ -328,7 +328,11 @@
                 
                 <DialogFooter>
                     <Button variant="outline" @click="showAssetSearch = false">{{ t('common.cancel') }}</Button>
-                    <Button @click="addSelectedAssets" :disabled="selectedAssetIds.size === 0">
+                    <Button 
+                        @click="addSelectedAssets" 
+                        :disabled="selectedAssetIds.size === 0"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                    >
                         {{ t('custody.add_selected_assets', { count: selectedAssetIds.size }) }}
                     </Button>
                 </DialogFooter>
@@ -393,7 +397,7 @@ import Icon from '@/components/Icon.vue';
 import Heading from '@/components/Heading.vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
 import { useI18n } from 'vue-i18n';
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref, onMounted, watch } from 'vue';
 import type { Employee, Asset, CustodyChange, BreadcrumbItem } from '@/types';
 
 const { t } = useI18n();
@@ -418,6 +422,7 @@ const selectedAssetIds = ref<Set<number>>(new Set());
 const showDocumentUpload = ref(false);
 const selectedCustodyChange = ref<CustodyChange | null>(null);
 const selectedDocument = ref<File | null>(null);
+const hasChanges = ref(false);
 
 // Computed properties
 const breadcrumbs = computed((): BreadcrumbItem[] => [
@@ -439,18 +444,51 @@ const breadcrumbs = computed((): BreadcrumbItem[] => [
     },
 ]);
 
-const hasChanges = computed(() => {
-    const currentIds = new Set(props.currentAssets.map(a => a.id));
-    const updatedIds = new Set(updatedAssets.value.map(a => a.id));
+// Function to check if there are changes
+const checkForChanges = () => {
+    const currentAssetsArray = props.currentAssets || [];
+    const updatedAssetsArray = updatedAssets.value || [];
     
-    if (currentIds.size !== updatedIds.size) return true;
+    const currentIds = new Set(currentAssetsArray.map(a => a.id));
+    const updatedIds = new Set(updatedAssetsArray.map(a => a.id));
     
-    for (const id of currentIds) {
-        if (!updatedIds.has(id)) return true;
+    // Check if sizes are different
+    if (currentIds.size !== updatedIds.size) {
+        hasChanges.value = true;
+        return;
     }
     
-    return false;
-});
+    // Check if any current asset was removed
+    for (const id of currentIds) {
+        if (!updatedIds.has(id)) {
+            hasChanges.value = true;
+            return;
+        }
+    }
+    
+    // Check if any new asset was added
+    for (const id of updatedIds) {
+        if (!currentIds.has(id)) {
+            hasChanges.value = true;
+            return;
+        }
+    }
+    
+    hasChanges.value = false;
+};
+
+// Watch for changes in updatedAssets
+watch(updatedAssets, () => {
+    checkForChanges();
+}, { deep: true });
+
+// Watch for changes in currentAssets (props)
+watch(() => props.currentAssets, () => {
+    checkForChanges();
+}, { deep: true });
+
+// Initial check
+checkForChanges();
 
 const pendingCustodyChanges = computed(() => {
     return props.recentCustodyChanges.filter(change => 
@@ -486,15 +524,18 @@ const getStatusBadgeClass = (status: string) => {
 
 const removeAsset = (asset: Asset) => {
     updatedAssets.value = updatedAssets.value.filter(a => a.id !== asset.id);
+    checkForChanges();
 };
 
 const removeFromUpdated = (asset: Asset) => {
     updatedAssets.value = updatedAssets.value.filter(a => a.id !== asset.id);
+    checkForChanges();
 };
 
 const resetChanges = () => {
     updatedAssets.value = [...props.currentAssets];
     changesSummary.value = '';
+    checkForChanges();
 };
 
 const handleDocumentUpload = (event: Event) => {
@@ -532,11 +573,15 @@ const addSelectedAssets = () => {
     const assetsToAdd = searchResults.value.filter(asset => selectedAssetIds.value.has(asset.id));
     
     // Add assets that aren't already in the updated list
-    assetsToAdd.forEach(asset => {
-        if (!updatedAssets.value.find(a => a.id === asset.id)) {
-            updatedAssets.value.push(asset);
-        }
-    });
+    // Use spread operator to ensure reactivity
+    const newAssets = assetsToAdd.filter(asset => 
+        !updatedAssets.value.find(a => a.id === asset.id)
+    );
+    
+    if (newAssets.length > 0) {
+        updatedAssets.value = [...updatedAssets.value, ...newAssets];
+        checkForChanges();
+    }
     
     // Clear selection and close dialog
     selectedAssetIds.value.clear();
