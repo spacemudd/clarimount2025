@@ -86,7 +86,7 @@ const formatRemainingText = (daysRemaining: number) => {
     <Head :title="t('nav.dashboard')" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-6 p-6">
+        <div class="flex h-full flex-1 flex-col gap-6 p-6 pt-0">
             <!-- Header Section -->
             <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
