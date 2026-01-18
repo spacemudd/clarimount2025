@@ -20,6 +20,13 @@ class ZkTecoController extends Controller
     {
         // Log immediately to ensure we capture any request
         try {
+            // Log to both single and daily channels for redundancy
+            Log::channel('single')->info('=== ZKTeco CONTROLLER REACHED ===');
+            Log::channel('single')->info('Controller Time: ' . now()->toDateTimeString());
+            Log::channel('single')->info('Controller Method: ' . $request->method());
+            Log::channel('single')->info('Controller URL: ' . $request->fullUrl());
+            Log::channel('single')->info('Controller IP: ' . $request->ip());
+            
             // Simple log first to confirm request received
             Log::channel('daily')->info('=== ZKTeco REQUEST RECEIVED ===');
             Log::channel('daily')->info('Time: ' . now()->toDateTimeString());
@@ -42,12 +49,16 @@ class ZkTecoController extends Controller
                 'body_length' => strlen($rawBody),
             ];
             
-            // Log detailed request
+            // Log detailed request to both channels
+            Log::channel('single')->info('[ZKTeco] /iclock/cdata - Full Details', $logData);
             Log::channel('daily')->info('[ZKTeco] /iclock/cdata - Full Details', $logData);
+            Log::channel('single')->info('=== ZKTeco REQUEST END ===');
             Log::channel('daily')->info('=== ZKTeco REQUEST END ===');
             
         } catch (\Exception $e) {
-            // Log any errors
+            // Log any errors to both channels
+            Log::channel('single')->error('[ZKTeco] Error processing request: ' . $e->getMessage());
+            Log::channel('single')->error('Stack trace: ' . $e->getTraceAsString());
             Log::channel('daily')->error('[ZKTeco] Error processing request: ' . $e->getMessage());
             Log::channel('daily')->error('Stack trace: ' . $e->getTraceAsString());
         }

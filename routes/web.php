@@ -21,11 +21,26 @@ use App\Http\Controllers\Admin\AdminTeamController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
-
-
+use Illuminate\Support\Facades\Log;
 
 // ZKTeco Device Data Routes (no authentication required, CSRF exempt)
-Route::match(['GET', 'POST'], '/iclock/cdata', [ZkTecoController::class, 'cdata'])->name('zkteco.cdata');
+// This route must be BEFORE any middleware groups to ensure it's accessible
+Route::match(['GET', 'POST'], '/iclock/cdata', function (\Illuminate\Http\Request $request) {
+    // Log at route level to confirm request reached Laravel
+    try {
+        Log::channel('single')->info('=== ZKTeco ROUTE HIT ===');
+        Log::channel('single')->info('Route Time: ' . now()->toDateTimeString());
+        Log::channel('single')->info('Route Method: ' . $request->method());
+        Log::channel('single')->info('Route URL: ' . $request->fullUrl());
+        Log::channel('single')->info('Route IP: ' . $request->ip());
+        Log::channel('single')->info('Route Query: ' . json_encode($request->query()));
+    } catch (\Exception $e) {
+        Log::channel('single')->error('Route Log Error: ' . $e->getMessage());
+    }
+    
+    // Call the controller
+    return app(ZkTecoController::class)->cdata($request);
+})->name('zkteco.cdata');
 
 // ZKTeko Fingerprint Device Webhook Routes (no authentication required)
 Route::prefix('webhook/fp')->name('webhook.fp.')->group(function () {
