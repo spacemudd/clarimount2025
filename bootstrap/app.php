@@ -25,10 +25,11 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
         ]);
         
-        // Exempt webhooks from CSRF verification
+        // Exempt webhooks and ZKTeco device routes from CSRF verification
         $middleware->validateCsrfTokens(except: [
             'webhook/fp',
             'webhook/fp/*',
+            'iclock/cdata',
         ]);
         
         $middleware->alias([

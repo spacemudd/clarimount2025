@@ -15,6 +15,7 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\BayzatConfigController;
 use App\Http\Controllers\ZKTekoWebhookController;
 use App\Http\Controllers\ZKTekoDebugController;
+use App\Http\Controllers\ZkTecoController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Admin\AdminTeamController;
 use Illuminate\Support\Facades\Route;
@@ -22,6 +23,9 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 
 
+
+// ZKTeco Device Data Routes (no authentication required, CSRF exempt)
+Route::match(['GET', 'POST'], '/iclock/cdata', [ZkTecoController::class, 'cdata'])->name('zkteco.cdata');
 
 // ZKTeko Fingerprint Device Webhook Routes (no authentication required)
 Route::prefix('webhook/fp')->name('webhook.fp.')->group(function () {
