@@ -18,23 +18,39 @@ class ZkTecoController extends Controller
      */
     public function cdata(Request $request): Response
     {
-        // Get raw body content
-        $rawBody = $request->getContent();
-        
-        // Prepare log data
-        $logData = [
-            'method' => $request->method(),
-            'full_url' => $request->fullUrl(),
-            'ip' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-            'query_params' => $request->query(),
-            'headers' => $request->headers->all(),
-            'raw_body' => $rawBody,
-            'body_length' => strlen($rawBody),
-        ];
-        
-        // Log the request
-        Log::channel('daily')->info('[ZKTeco] /iclock/cdata', $logData);
+        // Log immediately to ensure we capture any request
+        try {
+            // Simple log first to confirm request received
+            Log::channel('daily')->info('=== ZKTeco REQUEST RECEIVED ===');
+            Log::channel('daily')->info('Time: ' . now()->toDateTimeString());
+            Log::channel('daily')->info('Method: ' . $request->method());
+            Log::channel('daily')->info('URL: ' . $request->fullUrl());
+            Log::channel('daily')->info('IP: ' . $request->ip());
+            
+            // Get raw body content
+            $rawBody = $request->getContent();
+            
+            // Prepare detailed log data
+            $logData = [
+                'method' => $request->method(),
+                'full_url' => $request->fullUrl(),
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'query_params' => $request->query(),
+                'headers' => $request->headers->all(),
+                'raw_body' => $rawBody,
+                'body_length' => strlen($rawBody),
+            ];
+            
+            // Log detailed request
+            Log::channel('daily')->info('[ZKTeco] /iclock/cdata - Full Details', $logData);
+            Log::channel('daily')->info('=== ZKTeco REQUEST END ===');
+            
+        } catch (\Exception $e) {
+            // Log any errors
+            Log::channel('daily')->error('[ZKTeco] Error processing request: ' . $e->getMessage());
+            Log::channel('daily')->error('Stack trace: ' . $e->getTraceAsString());
+        }
         
         // Return OK response with text/plain content type
         return response('OK', 200)
