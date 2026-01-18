@@ -463,6 +463,8 @@ return [
             'view_all_subtitle' => 'List of all employees with documents expiring within {days} days or less.',
             'table_title' => 'Employees with upcoming document expiries',
             'no_upcoming' => 'No employees have documents expiring within the next {days} days.',
+            'upcoming_expirations' => 'Upcoming Document Expirations',
+            'all_documents_valid' => 'All documents are valid',
             'document_type' => 'Document type',
             'expiry_date' => 'Expiry date',
             'remaining' => 'Time remaining',
