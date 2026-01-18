@@ -158,20 +158,50 @@ class CustodyController extends Controller
             ]);
 
             // Update asset assignments
-            // First, return all current assets
-            foreach ($currentAssets as $asset) {
-                // Create return assignment record
-                AssetAssignment::create([
-                    'asset_id' => $asset->id,
-                    'employee_id' => $employee->id,
-                    'assigned_by' => $user->id,
-                    'assigned_date' => $asset->assigned_date ?? now(),
-                    'returned_date' => now(),
-                    'returned_by' => $user->id,
-                    'status' => 'returned',
-                    'return_notes' => 'Returned due to custody change',
-                    'custody_change_id' => $custodyChange->id,
-                ]);
+            // Get IDs of new assets
+            $newAssetIds = $newAssets->pluck('id')->toArray();
+            
+            // Find assets to return (in current but not in new)
+            $assetsToReturn = $currentAssets->filter(function ($asset) use ($newAssetIds) {
+                return !in_array($asset->id, $newAssetIds);
+            });
+            
+            // Find assets to add (in new but not in current)
+            $assetsToAdd = $newAssets->filter(function ($asset) use ($currentAssetIds) {
+                return !in_array($asset->id, $currentAssetIds);
+            });
+            
+            // Return assets that were removed
+            foreach ($assetsToReturn as $asset) {
+                // Get the current active assignment
+                $activeAssignment = AssetAssignment::where('asset_id', $asset->id)
+                    ->where('employee_id', $employee->id)
+                    ->where('status', 'active')
+                    ->first();
+                
+                if ($activeAssignment) {
+                    // Update existing assignment to returned
+                    $activeAssignment->update([
+                        'returned_date' => now(),
+                        'returned_by' => $user->id,
+                        'status' => 'returned',
+                        'return_notes' => 'Returned due to custody change',
+                        'custody_change_id' => $custodyChange->id,
+                    ]);
+                } else {
+                    // Create return assignment record if no active assignment found
+                    AssetAssignment::create([
+                        'asset_id' => $asset->id,
+                        'employee_id' => $employee->id,
+                        'assigned_by' => $user->id,
+                        'assigned_date' => $asset->assigned_date ?? now(),
+                        'returned_date' => now(),
+                        'returned_by' => $user->id,
+                        'status' => 'returned',
+                        'return_notes' => 'Returned due to custody change',
+                        'custody_change_id' => $custodyChange->id,
+                    ]);
+                }
 
                 // Update asset status
                 $asset->update([
@@ -181,8 +211,8 @@ class CustodyController extends Controller
                 ]);
             }
 
-            // Then assign new assets
-            foreach ($newAssets as $asset) {
+            // Add new assets (only those not currently assigned)
+            foreach ($assetsToAdd as $asset) {
                 // Create assignment record
                 AssetAssignment::create([
                     'asset_id' => $asset->id,
