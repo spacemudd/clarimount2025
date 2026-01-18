@@ -207,13 +207,13 @@ const clearFilters = () => {
                     </p>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-2">
-                    <Button variant="outline" asChild>
+                    <Button variant="outline" asChild class="bg-blue-600 hover:bg-blue-700 text-white font-semibold border-blue-600">
                         <Link :href="route('employees.import')">
                             <Icon name="Upload" class="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {{ t('employees.import_csv') }}
                         </Link>
                     </Button>
-                    <Button asChild>
+                    <Button asChild class="bg-blue-600 hover:bg-blue-700 text-white font-semibold">
                         <Link :href="route('employees.create')">
                             <Icon name="Plus" class="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                             {{ t('employees.create_employee') }}
@@ -368,7 +368,7 @@ const clearFilters = () => {
                 <p class="text-gray-600 dark:text-gray-400 mb-6">
                     {{ search || statusFilter || departmentFilter ? t('employees.no_employees_found') : t('employees.create_first_employee') }}
                 </p>
-                <Button asChild v-if="!search && !statusFilter && !departmentFilter">
+                <Button asChild v-if="!search && !statusFilter && !departmentFilter" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold">
                     <Link :href="route('employees.create')">
                         <Icon name="Plus" class="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                         {{ t('employees.create_employee') }}

@@ -3,7 +3,7 @@
     <div class="space-y-6">
       <div class="flex items-center justify-between">
         <Heading :title="t('asset_categories.title')" />
-        <Button asChild>
+        <Button asChild class="bg-blue-600 hover:bg-blue-700 text-white font-semibold">
           <Link :href="route('asset-categories.create')">
             <Icon name="plus" class="mr-2 h-4 w-4" />
             {{ t('asset_categories.create') }}

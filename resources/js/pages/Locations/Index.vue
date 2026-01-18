@@ -48,7 +48,7 @@ const breadcrumbs = computed((): BreadcrumbItem[] => [
                         {{ t('locations.all_companies_locations') }}
                     </p>
                 </div>
-                <Button asChild>
+                <Button asChild class="bg-blue-600 hover:bg-blue-700 text-white font-semibold">
                     <Link :href="route('locations.create')">
                         <Icon name="Plus" class="mr-2 h-4 w-4" />
                         {{ t('locations.create_location') }}
@@ -111,7 +111,7 @@ const breadcrumbs = computed((): BreadcrumbItem[] => [
                 <p class="text-gray-600 dark:text-gray-400 mb-6">
                     {{ t('locations.create_first_location') }}
                 </p>
-                <Button asChild>
+                <Button asChild class="bg-blue-600 hover:bg-blue-700 text-white font-semibold">
                     <Link :href="route('locations.create')">
                         <Icon name="Plus" class="mr-2 h-4 w-4" />
                         {{ t('locations.create_location') }}

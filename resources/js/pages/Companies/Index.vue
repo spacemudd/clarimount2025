@@ -58,7 +58,7 @@ const getCompanyDescription = (company: Company) => {
         <div class="space-y-6">
             <div class="flex items-center justify-between">
                                         <Heading :title="t('companies.my_companies')" />
-                <Button as-child>
+                <Button as-child class="bg-blue-600 hover:bg-blue-700 text-white font-semibold">
                     <Link :href="route('companies.create')">
                         <Plus class="mr-2 h-4 w-4" />
                         {{ t('companies.create_company') }}

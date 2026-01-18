@@ -13,7 +13,7 @@
         </div>
         <Link 
           :href="route('asset-templates.create')"
-          class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full sm:w-auto"
+          class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-blue-600 hover:bg-blue-700 text-white font-semibold h-10 px-4 py-2 w-full sm:w-auto"
         >
           <Icon name="plus" class="h-4 w-4 mr-2" />
           {{ t('asset_templates.create_template') }}
@@ -91,7 +91,7 @@
                     <p class="mt-1">{{ t('asset_templates.create_first_template') }}</p>
                     <Link 
                       :href="route('asset-templates.create')"
-                      class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-3 mt-4"
+                      class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-blue-600 hover:bg-blue-700 text-white font-semibold h-9 px-3 mt-4"
                     >
                       <Icon name="plus" class="h-4 w-4 mr-2" />
                       {{ t('asset_templates.create_template') }}
