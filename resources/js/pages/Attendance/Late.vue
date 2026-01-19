@@ -1,5 +1,5 @@
 <template>
-  <AppLayout>
+  <AppLayout :breadcrumbs="breadcrumbs">
     <template #header>
       <div class="flex justify-between items-center">
         <div>
@@ -315,7 +315,8 @@ import Icon from '@/components/Icon.vue'
 import { Clock, AlertTriangle } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { router } from '@inertiajs/vue3'
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import type { BreadcrumbItem } from '@/types'
 
 const { t } = useI18n()
 
@@ -326,6 +327,29 @@ const props = defineProps({
   filters: Object,
   dateRange: Object,
 })
+
+const breadcrumbs = computed((): BreadcrumbItem[] => [
+  {
+    title: t('nav.dashboard'),
+    href: '/dashboard',
+  },
+  {
+    title: t('companies.title'),
+    href: '/companies',
+  },
+  {
+    title: props.company?.name_ar || props.company?.name_en || t('companies.title'),
+    href: `/companies/${props.company?.id}`,
+  },
+  {
+    title: t('attendance.title'),
+    href: `/companies/${props.company?.id}/attendance`,
+  },
+  {
+    title: t('attendance.late_title'),
+    href: `/companies/${props.company?.id}/attendance/late`,
+  },
+])
 
 const filterType = ref(props.filters?.filter || 'month')
 const fromDate = ref(props.filters?.from || '')

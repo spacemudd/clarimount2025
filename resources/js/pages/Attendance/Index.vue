@@ -1,5 +1,5 @@
 <template>
-  <AppLayout>
+  <AppLayout :breadcrumbs="breadcrumbs">
     <div class="py-12">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <!-- Header Section -->
@@ -254,7 +254,7 @@
   </AppLayout>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -277,6 +277,7 @@ import { router } from '@inertiajs/vue3'
 import { ref, computed, watch } from 'vue'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import type { BreadcrumbItem } from '@/types'
 
 const { t } = useI18n()
 
@@ -289,6 +290,25 @@ const props = defineProps({
   fingerprintStats: Object,
   filters: Object,
 })
+
+const breadcrumbs = computed((): BreadcrumbItem[] => [
+  {
+    title: t('nav.dashboard'),
+    href: '/dashboard',
+  },
+  {
+    title: t('companies.title'),
+    href: '/companies',
+  },
+  {
+    title: props.company?.name_ar || props.company?.name_en || t('companies.title'),
+    href: `/companies/${props.company?.id}`,
+  },
+  {
+    title: t('attendance.title'),
+    href: `/companies/${props.company?.id}/attendance`,
+  },
+])
 
 const selectedDateInput = ref(props.selectedDate || new Date().toISOString().split('T')[0])
 const searchQuery = ref(props.filters?.search || '')
