@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Services\ZkAttlogIngestService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
@@ -52,6 +53,38 @@ class ZkTecoController extends Controller
             // Log detailed request to both channels
             Log::channel('single')->info('[ZKTeco] /iclock/cdata - Full Details', $logData);
             Log::channel('daily')->info('[ZKTeco] /iclock/cdata - Full Details', $logData);
+            
+            // Process attendance log data if table=ATTLOG
+            $table = $request->query('table');
+            if ($table === 'ATTLOG') {
+                $serialNumber = $request->query('SN');
+                
+                if ($serialNumber) {
+                    try {
+                        $service = new ZkAttlogIngestService();
+                        $service->ingest(
+                            $serialNumber,
+                            $rawBody,
+                            now()->toDateTime()
+                        );
+                        
+                        Log::channel('daily')->info('[ZKTeco] Attendance data ingested successfully', [
+                            'serial_number' => $serialNumber,
+                            'body_length' => strlen($rawBody),
+                        ]);
+                    } catch (\Exception $e) {
+                        // Log error but don't fail the request
+                        Log::channel('daily')->error('[ZKTeco] Error ingesting attendance data', [
+                            'serial_number' => $serialNumber,
+                            'error' => $e->getMessage(),
+                            'trace' => $e->getTraceAsString(),
+                        ]);
+                    }
+                } else {
+                    Log::channel('daily')->warning('[ZKTeco] ATTLOG request received but SN parameter is missing');
+                }
+            }
+            
             Log::channel('single')->info('=== ZKTeco REQUEST END ===');
             Log::channel('daily')->info('=== ZKTeco REQUEST END ===');
             
