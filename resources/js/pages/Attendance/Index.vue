@@ -1,20 +1,23 @@
 <template>
   <AppLayout>
-    <template #header>
-      <div class="flex justify-between items-center">
-        <div>
-          <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
-            {{ $t('attendance.title') }}
-          </h2>
-          <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            {{ $t('attendance.fingerprint_attendance') }}
-          </p>
-        </div>
-      </div>
-    </template>
-
     <div class="py-12">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <!-- Header Section -->
+        <div class="flex justify-between items-center mb-6">
+          <div>
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+              {{ $t('attendance.title') }}
+            </h2>
+            <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+              {{ $t('attendance.fingerprint_attendance') }}
+            </p>
+          </div>
+          <Button @click="router.visit(route('attendance.late', props.company.id))" variant="destructive" class="gap-2 cursor-pointer">
+            <AlertTriangle class="w-4 h-4" />
+            {{ $t('attendance.view_late') }}
+          </Button>
+        </div>
+
         <!-- Fingerprint Attendance Section -->
         <Card class="mb-8">
           <CardHeader>

@@ -184,6 +184,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
     // Attendance Management routes
     Route::get('companies/{company}/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
+    Route::get('companies/{company}/attendance/late', [AttendanceController::class, 'late'])->name('attendance.late');
     Route::get('companies/{company}/attendance/create', [AttendanceController::class, 'create'])->name('attendance.create');
     Route::post('companies/{company}/attendance', [AttendanceController::class, 'store'])->name('attendance.store');
     Route::get('companies/{company}/attendance/{import}', [AttendanceController::class, 'show'])->name('attendance.show');

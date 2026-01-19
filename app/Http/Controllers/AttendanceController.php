@@ -204,6 +204,217 @@ class AttendanceController extends Controller
         ]);
     }
 
+    public function late(Request $request, Company $company): Response
+    {
+        $user = Auth::user();
+        
+        // Verify user owns this company
+        if (!$user->ownedCompanies()->where('id', $company->id)->exists()) {
+            abort(403, 'You do not have access to this company.');
+        }
+
+        // Get filter type (default: month)
+        $filterType = $request->query('filter', 'month');
+        $fromDate = $request->query('from');
+        $toDate = $request->query('to');
+        $search = $request->query('search', '');
+
+        // Calculate date range based on filter type
+        $now = Carbon::now('Asia/Riyadh');
+        switch ($filterType) {
+            case 'today':
+                $startDate = $now->copy()->startOfDay();
+                $endDate = $now->copy()->endOfDay();
+                break;
+            case 'week':
+                $startDate = $now->copy()->startOfWeek();
+                $endDate = $now->copy()->endOfWeek();
+                break;
+            case 'month':
+                $startDate = $now->copy()->startOfMonth();
+                $endDate = $now->copy()->endOfMonth();
+                break;
+            case 'custom':
+                if ($fromDate && $toDate) {
+                    $startDate = Carbon::parse($fromDate, 'Asia/Riyadh')->startOfDay();
+                    $endDate = Carbon::parse($toDate, 'Asia/Riyadh')->endOfDay();
+                } else {
+                    // Fallback to current month if dates not provided
+                    $startDate = $now->copy()->startOfMonth();
+                    $endDate = $now->copy()->endOfMonth();
+                }
+                break;
+            default:
+                $startDate = $now->copy()->startOfMonth();
+                $endDate = $now->copy()->endOfMonth();
+        }
+
+        // Query late attendance records
+        $query = ZkDailyAttendance::query()
+            ->select([
+                'zk_daily_attendance.*',
+                'employees.id as employee_id',
+                'employees.first_name',
+                'employees.last_name',
+                'employees.employee_id as emp_code',
+                'employees.company_id',
+                'zk_devices.name as device_name',
+                'zk_devices.serial_number',
+            ])
+            ->leftJoin('employees', function ($join) {
+                $join->on('employees.fingerprint_device_id', '=', 'zk_daily_attendance.device_pin');
+            })
+            ->leftJoin('zk_devices', 'zk_devices.id', '=', 'zk_daily_attendance.device_id')
+            ->whereBetween('zk_daily_attendance.att_date', [
+                $startDate->format('Y-m-d'),
+                $endDate->format('Y-m-d')
+            ])
+            ->where('employees.company_id', $company->id);
+
+        // Apply search filter if provided
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $q->where('employees.first_name', 'like', "%{$search}%")
+                  ->orWhere('employees.last_name', 'like', "%{$search}%")
+                  ->orWhereRaw("CONCAT(employees.first_name, ' ', employees.last_name) LIKE ?", ["%{$search}%"])
+                  ->orWhere('employees.employee_id', 'like', "%{$search}%")
+                  ->orWhere('zk_daily_attendance.device_pin', 'like', "%{$search}%");
+            });
+        }
+
+        // Get all records first (before pagination) to calculate late minutes
+        $allRecords = $query
+            ->orderBy('zk_daily_attendance.att_date', 'desc')
+            ->orderBy('employees.first_name', 'asc')
+            ->orderBy('employees.last_name', 'asc')
+            ->get();
+
+        // Calculate attendance status and late minutes based on shifts
+        // All timezone calculations use Asia/Riyadh timezone
+        $employeeIds = $allRecords->pluck('employee_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($employeeIds->isNotEmpty()) {
+            // Eager load employees with shifts and workdays
+            $employees = Employee::with(['shift.workdays'])
+                ->whereIn('id', $employeeIds)
+                ->get()
+                ->keyBy('id');
+
+            // Build workday maps for quick lookup
+            $shiftWorkdayMaps = [];
+            foreach ($employees as $employee) {
+                if ($employee->shift) {
+                    $shiftWorkdayMaps[$employee->id] = $employee->shift->workdays
+                        ->where('is_workday', true)
+                        ->pluck('weekday')
+                        ->toArray();
+                }
+            }
+
+            // Process each attendance record
+            $allRecords = $allRecords->map(function ($record) use ($employees, $shiftWorkdayMaps) {
+                $employee = $employees->get($record->employee_id);
+                $date = $record->att_date->format('Y-m-d');
+
+                // No employee or no shift assigned
+                if (!$employee || !$employee->shift) {
+                    $record->status_ar = 'غير محدد';
+                    $record->late_minutes = null;
+                    return $record;
+                }
+
+                // Get weekday of attendance date
+                $attDate = Carbon::parse($date, 'Asia/Riyadh');
+                $weekday = $attDate->dayOfWeek;
+                $workdays = $shiftWorkdayMaps[$employee->id] ?? [];
+
+                // Check if it's a workday
+                if (!in_array($weekday, $workdays)) {
+                    $record->status_ar = 'إجازة';
+                    $record->late_minutes = 0;
+                    return $record;
+                }
+
+                // No first punch (absent)
+                if (!$record->first_punch) {
+                    $record->status_ar = 'غائب';
+                    $record->late_minutes = null;
+                    return $record;
+                }
+
+                // Calculate late minutes
+                $expectedStart = Carbon::parse($date . ' ' . $employee->shift->start_time->format('H:i:s'), 'Asia/Riyadh');
+                $firstPunch = Carbon::parse($record->first_punch)->setTimezone('Asia/Riyadh');
+                $actualLateMinutes = (int) round(($firstPunch->timestamp - $expectedStart->timestamp) / 60);
+                $lateMinutes = max(0, $actualLateMinutes - $employee->shift->grace_minutes);
+
+                // Set status based on late minutes
+                $record->status_ar = $lateMinutes > 0 ? 'متأخر' : 'في الموعد';
+                $record->late_minutes = $lateMinutes;
+
+                return $record;
+            });
+
+            // Filter only late records (late_minutes > 0 and status_ar = 'متأخر')
+            $allRecords = $allRecords->filter(function ($record) {
+                return $record->late_minutes > 0 && $record->status_ar === 'متأخر';
+            })->values();
+        } else {
+            // No employees found, set empty collection
+            $allRecords = collect([]);
+        }
+
+        // Sort by date (desc) then by late_minutes (desc)
+        $allRecords = $allRecords->sort(function ($a, $b) {
+            // First sort by date (desc)
+            $dateCompare = $b->att_date->format('Y-m-d') <=> $a->att_date->format('Y-m-d');
+            if ($dateCompare !== 0) {
+                return $dateCompare;
+            }
+            // Then sort by late_minutes (desc)
+            return ($b->late_minutes ?? 0) <=> ($a->late_minutes ?? 0);
+        })->values();
+
+        // Calculate statistics from all late records
+        $lateRecords = $allRecords;
+
+        // Paginate the filtered results
+        $currentPage = $request->query('page', 1);
+        $perPage = 15;
+        $items = $lateRecords->slice(($currentPage - 1) * $perPage, $perPage)->values();
+        $lateAttendance = new \Illuminate\Pagination\LengthAwarePaginator(
+            $items,
+            $lateRecords->count(),
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+        $stats = [
+            'total_late_records' => $lateRecords->count(),
+            'total_late_minutes' => $lateRecords->sum('late_minutes') ?? 0,
+            'average_late_minutes' => $lateRecords->avg('late_minutes') ?? 0,
+        ];
+
+        return Inertia::render('Attendance/Late', [
+            'company' => $company,
+            'lateAttendance' => $lateAttendance,
+            'stats' => $stats,
+            'filters' => [
+                'filter' => $filterType,
+                'from' => $fromDate,
+                'to' => $toDate,
+                'search' => $search,
+            ],
+            'dateRange' => [
+                'start' => $startDate->format('Y-m-d'),
+                'end' => $endDate->format('Y-m-d'),
+            ],
+        ]);
+    }
+
     public function create(): Response
     {
         return Inertia::render('Attendance/Import');
