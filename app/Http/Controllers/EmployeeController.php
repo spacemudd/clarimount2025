@@ -322,7 +322,7 @@ class EmployeeController extends Controller
     /**
      * Update the specified employee in storage.
      */
-    public function update(Request $request, Employee $employee): RedirectResponse
+    public function update(Request $request, Employee $employee): Response|RedirectResponse
     {
         $user = Auth::user();
         $ownedCompanyIds = $user->ownedCompanies()->pluck('id');
@@ -354,6 +354,7 @@ class EmployeeController extends Controller
             'work_phone' => 'nullable|string|max:20',
             'mobile' => 'nullable|string|max:20',
             'fingerprint_device_id' => 'nullable|string|max:50',
+            'shift_id' => 'nullable|exists:shifts,id',
             'work_address' => 'nullable|string|max:500',
             'department' => 'nullable|string|max:255',
             'department_id' => 'nullable|exists:departments,id',
@@ -397,7 +398,7 @@ class EmployeeController extends Controller
 
         $employee->update($validated);
 
-        return back()
+        return redirect()->route('employees.show', $employee)
             ->with('success', 'Employee updated successfully.');
     }
 
