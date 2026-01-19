@@ -101,6 +101,7 @@ return [
         'update' => 'تحديث',
         'search' => 'بحث',
         'filter' => 'تصفية',
+        'filters' => 'الفلترة',
         'clear' => 'مسح',
         'clear_all_filters' => 'مسح جميع المرشحات',
         'submit' => 'إرسال',

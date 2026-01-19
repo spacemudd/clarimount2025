@@ -103,6 +103,7 @@ return [
         'filter' => 'Filter',
         'clear' => 'Clear',
         'clear_all_filters' => 'Clear All Filters',
+        'filters' => 'Filters',
         'submit' => 'Submit',
         'close' => 'Close',
         'yes' => 'Yes',
