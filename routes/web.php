@@ -183,10 +183,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('api/print-jobs/{printJob}', [PrintJobController::class, 'cancel'])->name('api.print-jobs.cancel');
     
     // Attendance Management routes
-    Route::resource('attendance', AttendanceController::class)->only(['index', 'create', 'store', 'show']);
-    Route::post('attendance/{import}/retry', [AttendanceController::class, 'retrySync'])->name('attendance.retry');
-    Route::post('attendance/batches/{batch}/retry', [AttendanceController::class, 'retrySyncBatch'])->name('attendance.batch.retry');
-    Route::get('attendance/template/download', [AttendanceController::class, 'downloadTemplate'])->name('attendance.template');
+    Route::get('companies/{company}/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
+    Route::get('companies/{company}/attendance/create', [AttendanceController::class, 'create'])->name('attendance.create');
+    Route::post('companies/{company}/attendance', [AttendanceController::class, 'store'])->name('attendance.store');
+    Route::get('companies/{company}/attendance/{import}', [AttendanceController::class, 'show'])->name('attendance.show');
+    Route::post('companies/{company}/attendance/{import}/retry', [AttendanceController::class, 'retrySync'])->name('attendance.retry');
+    Route::post('companies/{company}/attendance/batches/{batch}/retry', [AttendanceController::class, 'retrySyncBatch'])->name('attendance.batch.retry');
+    Route::get('companies/{company}/attendance/template/download', [AttendanceController::class, 'downloadTemplate'])->name('attendance.template');
     
     // Bayzat Configuration routes
     Route::get('bayzat-configs', [BayzatConfigController::class, 'index'])->name('bayzat-configs.index');

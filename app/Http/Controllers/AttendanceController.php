@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\AttendanceImportRequest;
 use App\Models\AttendanceImport;
 use App\Models\BayzatSyncBatch;
+use App\Models\Company;
 use App\Models\ZkDailyAttendance;
 use App\Services\AttendanceImportService;
 use App\Jobs\ProcessBayzatSync;
@@ -23,8 +24,17 @@ class AttendanceController extends Controller
         private AttendanceImportService $importService
     ) {}
 
-    public function index(Request $request): Response
+    public function index(Request $request, Company $company): Response
     {
+        $user = Auth::user();
+        
+        // Verify user owns this company
+        if (!$user->ownedCompanies()->where('id', $company->id)->exists()) {
+            abort(403, 'You do not have access to this company.');
+        }
+        
+        $ownedCompanyIds = collect([$company->id]);
+
         $imports = AttendanceImport::query()
             ->with(['user', 'syncBatches.company'])
             ->withCount(['records', 'validRecords', 'invalidRecords'])
@@ -50,6 +60,7 @@ class AttendanceController extends Controller
                 'employees.first_name',
                 'employees.last_name',
                 'employees.employee_id as emp_code',
+                'employees.company_id',
                 'zk_devices.name as device_name',
                 'zk_devices.serial_number',
             ])
@@ -57,7 +68,8 @@ class AttendanceController extends Controller
                 $join->on('employees.fingerprint_device_id', '=', 'zk_daily_attendance.device_pin');
             })
             ->leftJoin('zk_devices', 'zk_devices.id', '=', 'zk_daily_attendance.device_id')
-            ->where('zk_daily_attendance.att_date', $date);
+            ->where('zk_daily_attendance.att_date', $date)
+            ->where('employees.company_id', $company->id);
 
         // Apply search filter if provided
         if (!empty($search)) {
@@ -77,13 +89,21 @@ class AttendanceController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        // Get statistics for selected date
+        // Get statistics for selected date (filtered by company)
+        $statsQuery = ZkDailyAttendance::query()
+            ->leftJoin('employees', function ($join) {
+                $join->on('employees.fingerprint_device_id', '=', 'zk_daily_attendance.device_pin');
+            })
+            ->where('zk_daily_attendance.att_date', $date)
+            ->where('employees.company_id', $company->id);
+
         $fingerprintStats = [
-            'present_count' => ZkDailyAttendance::where('att_date', $date)->distinct('device_pin')->count('device_pin'),
-            'total_punches' => ZkDailyAttendance::where('att_date', $date)->sum('punch_count'),
+            'present_count' => (clone $statsQuery)->distinct('zk_daily_attendance.device_pin')->count('zk_daily_attendance.device_pin'),
+            'total_punches' => (clone $statsQuery)->sum('zk_daily_attendance.punch_count'),
         ];
 
         return Inertia::render('Attendance/Index', [
+            'company' => $company,
             'imports' => $imports,
             'syncStats' => $syncStats,
             'fingerprintAttendance' => $fingerprintAttendance,
@@ -100,8 +120,15 @@ class AttendanceController extends Controller
         return Inertia::render('Attendance/Import');
     }
 
-    public function store(AttendanceImportRequest $request)
+    public function store(AttendanceImportRequest $request, Company $company)
     {
+        $user = Auth::user();
+        
+        // Verify user owns this company
+        if (!$user->ownedCompanies()->where('id', $company->id)->exists()) {
+            abort(403, 'You do not have access to this company.');
+        }
+        
         try {
             $import = $this->importService->processImport(
                 $request->file('file'),
@@ -110,7 +137,7 @@ class AttendanceController extends Controller
             );
 
             return redirect()
-                ->route('attendance.show', $import)
+                ->route('attendance.show', [$company, $import])
                 ->with('success', __('messages.attendance_import_started'));
 
         } catch (\Exception $e) {
@@ -120,8 +147,14 @@ class AttendanceController extends Controller
         }
     }
 
-    public function show(AttendanceImport $attendance): Response
+    public function show(Company $company, AttendanceImport $attendance): Response
     {
+        $user = Auth::user();
+        
+        // Verify user owns this company
+        if (!$user->ownedCompanies()->where('id', $company->id)->exists()) {
+            abort(403, 'You do not have access to this company.');
+        }
 
         $attendance->load([
             'user',
@@ -157,14 +190,21 @@ class AttendanceController extends Controller
         ];
 
         return Inertia::render('Attendance/Show', [
+            'company' => $company,
             'import' => $attendance,
             'syncProgress' => $syncProgress,
             'validationSummary' => $validationSummary,
         ]);
     }
 
-    public function retrySync(AttendanceImport $attendance)
+    public function retrySync(Company $company, AttendanceImport $attendance)
     {
+        $user = Auth::user();
+        
+        // Verify user owns this company
+        if (!$user->ownedCompanies()->where('id', $company->id)->exists()) {
+            abort(403, 'You do not have access to this company.');
+        }
 
         try {
             $this->importService->retryFailedRecords($attendance);
@@ -176,8 +216,14 @@ class AttendanceController extends Controller
         }
     }
 
-    public function retrySyncBatch(BayzatSyncBatch $batch)
+    public function retrySyncBatch(Company $company, BayzatSyncBatch $batch)
     {
+        $user = Auth::user();
+        
+        // Verify user owns this company
+        if (!$user->ownedCompanies()->where('id', $company->id)->exists()) {
+            abort(403, 'You do not have access to this company.');
+        }
 
         try {
             // Reset batch status

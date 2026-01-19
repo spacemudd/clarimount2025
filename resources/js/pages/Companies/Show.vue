@@ -87,7 +87,7 @@ const formatLastSync = (lastSync: string | null) => {
                         {{ company.is_active ? t('companies.active') : t('companies.inactive') }}
                     </Badge>
                     <Button variant="outline" as-child>
-                        <Link :href="route('attendance.index')">
+                        <Link :href="route('attendance.index', company.id)">
                             <FileText class="mr-2 h-4 w-4" />
                             {{ t('nav.attendance') }}
                         </Link>

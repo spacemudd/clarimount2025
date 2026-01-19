@@ -10,7 +10,7 @@
             {{ $t('attendance.import_description') }}
           </p>
         </div>
-        <Button @click="router.visit(route('attendance.create'))" class="gap-2">
+        <Button @click="router.visit(route('attendance.create', company.id))" class="gap-2">
           <Plus class="w-4 h-4" />
           {{ $t('attendance.import_attendance') }}
         </Button>
@@ -32,7 +32,7 @@
                     {{ $t('attendance.import_description') }}
                   </p>
                 </div>
-                <Button @click="router.visit(route('attendance.create'))" class="gap-2">
+                <Button @click="router.visit(route('attendance.create', company.id))" class="gap-2">
                   <Plus class="w-4 h-4" />
                   {{ $t('attendance.import_attendance') }}
                 </Button>
@@ -324,7 +324,7 @@
               <p class="text-gray-600 dark:text-gray-400 mb-4">
                 {{ $t('attendance.create_first_import') }}
               </p>
-              <Button @click="router.visit(route('attendance.create'))">
+              <Button @click="router.visit(route('attendance.create', company.id))">
                 {{ $t('attendance.import_attendance') }}
               </Button>
             </div>
@@ -400,7 +400,7 @@
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem @click="router.visit(route('attendance.show', importItem.id))">
+                            <DropdownMenuItem @click="router.visit(route('attendance.show', [company.id, importItem.id]))">
                               <Eye class="w-4 h-4 mr-2" />
                               {{ $t('common.view') }}
                             </DropdownMenuItem>
@@ -493,6 +493,7 @@ import { Label } from '@/components/ui/label'
 const { t } = useI18n()
 
 const props = defineProps({
+  company: Object,
   imports: Object,
   syncStats: Object,
   fingerprintAttendance: Object,
@@ -509,7 +510,7 @@ let searchTimeout
 watch(searchQuery, () => {
   clearTimeout(searchTimeout)
   searchTimeout = setTimeout(() => {
-    router.get(route('attendance.index'), { 
+    router.get(route('attendance.index', props.company.id), { 
       date: selectedDateInput.value,
       search: searchQuery.value || undefined
     }, {
@@ -521,7 +522,7 @@ watch(searchQuery, () => {
 })
 
 const handleDateChange = () => {
-  router.get(route('attendance.index'), { 
+  router.get(route('attendance.index', props.company.id), { 
     date: selectedDateInput.value,
     search: searchQuery.value || undefined
   }, {
@@ -644,7 +645,7 @@ const hasFailedSyncs = (importItem) => {
 }
 
 const retrySync = (importId) => {
-  router.post(route('attendance.retry', importId), {}, {
+  router.post(route('attendance.retry', [props.company.id, importId]), {}, {
     preserveScroll: true,
     onSuccess: () => {
       // Handle success

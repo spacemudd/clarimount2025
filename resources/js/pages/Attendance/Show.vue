@@ -15,7 +15,7 @@
             <RotateCcw class="w-4 h-4 mr-2" />
             {{ $t('attendance.retry_sync') }}
           </Button>
-          <Button @click="router.visit(route('attendance.index'))" variant="outline">
+          <Button @click="router.visit(route('attendance.index', props.company.id))" variant="outline">
             {{ $t('common.back') }}
           </Button>
         </div>
@@ -324,6 +324,7 @@ import { router } from '@inertiajs/vue3'
 const { t } = useI18n()
 
 const props = defineProps({
+  company: Object,
   import: Object,
   syncProgress: Array,
   validationSummary: Object,
@@ -370,7 +371,7 @@ const formatDate = (date) => {
 }
 
 const retryFailedSync = () => {
-  router.post(route('attendance.retry', props.import.id), {}, {
+  router.post(route('attendance.retry', [props.company.id, props.import.id]), {}, {
     preserveScroll: true,
   })
 }
@@ -379,7 +380,7 @@ const retryBatch = (companyId) => {
   // Find the batch for this company
   const batch = props.import.sync_batches.find(b => b.company_id === companyId)
   if (batch) {
-    router.post(route('attendance.batch.retry', batch.id), {}, {
+    router.post(route('attendance.batch.retry', [props.company.id, batch.id]), {}, {
       preserveScroll: true,
     })
   }

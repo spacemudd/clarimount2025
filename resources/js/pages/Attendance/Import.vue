@@ -10,7 +10,7 @@
             {{ $t('attendance.import_description') }}
           </p>
         </div>
-        <Button @click="$inertia.visit(route('attendance.index'))" variant="outline">
+        <Button @click="$inertia.visit(route('attendance.index', props.company.id))" variant="outline">
           {{ $t('common.back') }}
         </Button>
       </div>
@@ -115,7 +115,7 @@
               <!-- Submit Button -->
               <div class="flex justify-end space-x-3">
                 <Button
-                  @click="$inertia.visit(route('attendance.index'))"
+                  @click="$inertia.visit(route('attendance.index', props.company.id))"
                   type="button"
                   variant="outline"
                 >
@@ -159,6 +159,10 @@ import { useI18n } from 'vue-i18n'
 import { router } from '@inertiajs/vue3'
 
 const { t } = useI18n()
+
+const props = defineProps({
+  company: Object,
+})
 
 const selectedFile = ref(null)
 const processing = ref(false)
@@ -205,7 +209,7 @@ const formatFileSize = (bytes) => {
 }
 
 const downloadTemplate = () => {
-  window.location.href = route('attendance.template')
+  window.location.href = route('attendance.template', props.company.id)
 }
 
 const submitForm = () => {
@@ -219,7 +223,7 @@ const submitForm = () => {
   const formData = new FormData()
   formData.append('file', selectedFile.value)
 
-  router.post(route('attendance.store'), formData, {
+  router.post(route('attendance.store', props.company.id), formData, {
     preserveScroll: true,
     onFinish: () => {
       processing.value = false
