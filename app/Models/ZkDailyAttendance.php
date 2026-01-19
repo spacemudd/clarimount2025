@@ -41,4 +41,12 @@ class ZkDailyAttendance extends Model
     {
         return $this->belongsTo(ZkDevice::class, 'device_id');
     }
+
+    /**
+     * Get the employee associated with this attendance record via device_pin
+     */
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'device_pin', 'fingerprint_device_id');
+    }
 }

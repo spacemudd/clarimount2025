@@ -7,12 +7,15 @@ namespace App\Http\Controllers;
 use App\Http\Requests\AttendanceImportRequest;
 use App\Models\AttendanceImport;
 use App\Models\BayzatSyncBatch;
+use App\Models\ZkDailyAttendance;
 use App\Services\AttendanceImportService;
 use App\Jobs\ProcessBayzatSync;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use Carbon\Carbon;
 
 class AttendanceController extends Controller
 {
@@ -35,9 +38,60 @@ class AttendanceController extends Controller
             'failed_syncs' => BayzatSyncBatch::where('status', 'failed')->count(),
         ];
 
+        // Get fingerprint attendance data
+        $selectedDate = $request->query('date', Carbon::today('Asia/Riyadh')->format('Y-m-d'));
+        $date = Carbon::parse($selectedDate)->format('Y-m-d');
+        $search = $request->query('search', '');
+
+        $query = ZkDailyAttendance::query()
+            ->select([
+                'zk_daily_attendance.*',
+                'employees.id as employee_id',
+                'employees.first_name',
+                'employees.last_name',
+                'employees.employee_id as emp_code',
+                'zk_devices.name as device_name',
+                'zk_devices.serial_number',
+            ])
+            ->leftJoin('employees', function ($join) {
+                $join->on('employees.fingerprint_device_id', '=', 'zk_daily_attendance.device_pin');
+            })
+            ->leftJoin('zk_devices', 'zk_devices.id', '=', 'zk_daily_attendance.device_id')
+            ->where('zk_daily_attendance.att_date', $date);
+
+        // Apply search filter if provided
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $q->where('employees.first_name', 'like', "%{$search}%")
+                  ->orWhere('employees.last_name', 'like', "%{$search}%")
+                  ->orWhereRaw("CONCAT(employees.first_name, ' ', employees.last_name) LIKE ?", ["%{$search}%"])
+                  ->orWhere('employees.employee_id', 'like', "%{$search}%")
+                  ->orWhere('zk_daily_attendance.device_pin', 'like', "%{$search}%");
+            });
+        }
+
+        $fingerprintAttendance = $query
+            ->orderBy('zk_daily_attendance.att_date', 'desc')
+            ->orderBy('employees.first_name', 'asc')
+            ->orderBy('employees.last_name', 'asc')
+            ->paginate(15)
+            ->withQueryString();
+
+        // Get statistics for selected date
+        $fingerprintStats = [
+            'present_count' => ZkDailyAttendance::where('att_date', $date)->distinct('device_pin')->count('device_pin'),
+            'total_punches' => ZkDailyAttendance::where('att_date', $date)->sum('punch_count'),
+        ];
+
         return Inertia::render('Attendance/Index', [
             'imports' => $imports,
             'syncStats' => $syncStats,
+            'fingerprintAttendance' => $fingerprintAttendance,
+            'selectedDate' => $selectedDate,
+            'fingerprintStats' => $fingerprintStats,
+            'filters' => [
+                'search' => $search,
+            ],
         ]);
     }
 
