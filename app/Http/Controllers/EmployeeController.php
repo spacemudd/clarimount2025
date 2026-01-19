@@ -397,7 +397,7 @@ class EmployeeController extends Controller
 
         $employee->update($validated);
 
-        return redirect()->route('employees.show', $employee)
+        return back()
             ->with('success', 'Employee updated successfully.');
     }
 
