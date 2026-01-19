@@ -430,6 +430,8 @@ return [
         'probation_end_date' => 'Probation End Date',
         'work_phone' => 'Work Phone',
         'fingerprint_device_id' => 'Fingerprint Device ID',
+        'shift' => 'Shift',
+        'shift_placeholder' => 'Select Shift',
         'work_address' => 'Work Address',
         
         'legal_information' => 'Legal Information',
@@ -1021,6 +1023,13 @@ return [
         'verify_mode_palm' => 'Palm',
         'verify_mode_unknown' => 'Unknown (:mode)',
         'search_employee' => 'Search by employee name, ID, or PIN',
+        'attendance_status' => 'Status',
+        'attendance_late_minutes' => 'Late Minutes',
+        'status_on_time' => 'On Time',
+        'status_late' => 'Late',
+        'status_absent' => 'Absent',
+        'status_holiday' => 'Holiday',
+        'status_unspecified' => 'Unspecified',
     ],
 
     'bayzat' => [

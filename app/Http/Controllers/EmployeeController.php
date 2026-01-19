@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Employee;
 use App\Models\Country;
 use App\Models\Nationality;
+use App\Models\Shift;
 use App\Services\EmployeeExpiryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -135,6 +136,7 @@ class EmployeeController extends Controller
             'countries' => Country::active()->orderByName()->get(),
             'nationalities' => Nationality::active()->orderByName()->get(),
             'defaultResidenceCountryId' => $saudiArabia?->id,
+            'shifts' => Shift::orderBy('name')->get(),
         ]);
     }
 
@@ -178,6 +180,7 @@ class EmployeeController extends Controller
             'work_phone' => 'nullable|string|max:20',
             'mobile' => 'nullable|string|max:20',
             'fingerprint_device_id' => 'nullable|string|max:50',
+            'shift_id' => 'nullable|exists:shifts,id',
             'work_address' => 'nullable|string|max:500',
             'department' => 'nullable|string|max:255',
             'department_id' => 'nullable|exists:departments,id',
@@ -268,6 +271,7 @@ class EmployeeController extends Controller
             'company',
             'nationality',
             'residenceCountry',
+            'shift',
             'assets.assetCategory',
             'assetAssignments.asset.assetCategory',
             'reportedTickets.ticketCategory'
@@ -311,6 +315,7 @@ class EmployeeController extends Controller
             'defaultResidenceCountryId' => $saudiArabia?->id,
             'departments' => \App\Models\Department::all(),
             'locations' => \App\Models\Location::all(),
+            'shifts' => Shift::orderBy('name')->get(),
         ]);
     }
 

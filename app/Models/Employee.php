@@ -26,6 +26,7 @@ class Employee extends Model
         'work_phone',
         'mobile',
         'fingerprint_device_id',
+        'shift_id',
         'work_address',
         'department',
         'department_id',
@@ -132,6 +133,14 @@ class Employee extends Model
     public function reportedTickets(): HasMany
     {
         return $this->hasMany(Ticket::class, 'reporter_id');
+    }
+
+    /**
+     * Get the shift assigned to this employee
+     */
+    public function shift(): BelongsTo
+    {
+        return $this->belongsTo(Shift::class, 'shift_id');
     }
 
     /**

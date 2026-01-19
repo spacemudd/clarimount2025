@@ -8,6 +8,7 @@ use App\Http\Requests\AttendanceImportRequest;
 use App\Models\AttendanceImport;
 use App\Models\BayzatSyncBatch;
 use App\Models\Company;
+use App\Models\Employee;
 use App\Models\ZkDailyAttendance;
 use App\Services\AttendanceImportService;
 use App\Jobs\ProcessBayzatSync;
@@ -88,6 +89,94 @@ class AttendanceController extends Controller
             ->orderBy('employees.last_name', 'asc')
             ->paginate(15)
             ->withQueryString();
+
+        // Calculate attendance status and late minutes based on shifts
+        // All timezone calculations use Asia/Riyadh timezone
+        $employeeIds = $fingerprintAttendance->getCollection()
+            ->pluck('employee_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($employeeIds->isNotEmpty()) {
+            // Eager load employees with shifts and workdays
+            $employees = Employee::with(['shift.workdays'])
+                ->whereIn('id', $employeeIds)
+                ->get()
+                ->keyBy('id');
+
+            // Build workday maps for quick lookup
+            // Weekday representation: 0=Sunday, 1=Monday, ..., 6=Saturday
+            $shiftWorkdayMaps = [];
+            foreach ($employees as $employee) {
+                if ($employee->shift) {
+                    $shiftWorkdayMaps[$employee->id] = $employee->shift->workdays
+                        ->where('is_workday', true)
+                        ->pluck('weekday')
+                        ->toArray();
+                }
+            }
+
+            // Process each attendance record
+            $fingerprintAttendance->getCollection()->transform(function ($record) use ($employees, $shiftWorkdayMaps, $date) {
+                $employee = $employees->get($record->employee_id);
+
+                // No employee or no shift assigned
+                if (!$employee || !$employee->shift) {
+                    $record->status_ar = 'غير محدد';
+                    $record->late_minutes = null;
+                    return $record;
+                }
+
+                // Get weekday of attendance date (0=Sunday, 6=Saturday)
+                $attDate = Carbon::parse($date, 'Asia/Riyadh');
+                $weekday = $attDate->dayOfWeek; // Carbon: 0=Sunday, 1=Monday, ..., 6=Saturday
+                $workdays = $shiftWorkdayMaps[$employee->id] ?? [];
+
+                // Check if it's a workday
+                if (!in_array($weekday, $workdays)) {
+                    $record->status_ar = 'إجازة';
+                    $record->late_minutes = 0;
+                    return $record;
+                }
+
+                // No first punch (absent)
+                if (!$record->first_punch) {
+                    $record->status_ar = 'غائب';
+                    $record->late_minutes = null;
+                    return $record;
+                }
+
+                // Calculate late minutes
+                // Expected start time: attendance date + shift start time (in Asia/Riyadh)
+                $expectedStart = Carbon::parse($date . ' ' . $employee->shift->start_time->format('H:i:s'), 'Asia/Riyadh');
+                
+                // First punch time (convert from UTC to Asia/Riyadh)
+                $firstPunch = Carbon::parse($record->first_punch)->setTimezone('Asia/Riyadh');
+                
+                // Calculate signed difference in minutes
+                // Use timestamp difference to get signed value
+                // Positive = late, Negative = early
+                $actualLateMinutes = (int) round(($firstPunch->timestamp - $expectedStart->timestamp) / 60);
+                
+                // Apply grace period
+                // If actualLateMinutes is negative (early), lateMinutes should be 0
+                $lateMinutes = max(0, $actualLateMinutes - $employee->shift->grace_minutes);
+
+                // Set status based on late minutes
+                $record->status_ar = $lateMinutes > 0 ? 'متأخر' : 'في الموعد';
+                $record->late_minutes = $lateMinutes;
+
+                return $record;
+            });
+        } else {
+            // No employees found, set default status
+            $fingerprintAttendance->getCollection()->transform(function ($record) {
+                $record->status_ar = 'غير محدد';
+                $record->late_minutes = null;
+                return $record;
+            });
+        }
 
         // Get statistics for selected date (filtered by company)
         $statsQuery = ZkDailyAttendance::query()

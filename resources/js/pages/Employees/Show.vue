@@ -134,6 +134,11 @@
                                     <p class="text-sm font-mono">{{ employee.fingerprint_device_id }}</p>
                                 </div>
                                 
+                                <div v-if="employee.shift">
+                                    <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.shift') }}</Label>
+                                    <p class="text-sm">{{ employee.shift.name }}</p>
+                                </div>
+                                
                                 <div v-if="employee.work_address" class="md:col-span-2">
                                     <Label class="text-sm font-medium text-muted-foreground mb-2">{{ t('employees.work_address') }}</Label>
                                     <p class="text-sm">{{ employee.work_address }}</p>

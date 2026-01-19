@@ -194,6 +194,12 @@
                       <th class="px-6 py-4 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-700">
                         {{ $t('attendance.punch_count') }}
                       </th>
+                      <th class="px-6 py-4 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-700">
+                        {{ $t('attendance.attendance_status') }}
+                      </th>
+                      <th class="px-6 py-4 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-700">
+                        {{ $t('attendance.attendance_late_minutes') }}
+                      </th>
                       <th class="px-6 py-4 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                         {{ $t('attendance.device_name') }}
                       </th>
@@ -243,6 +249,20 @@
                           <Badge variant="info" class="px-3 py-1">
                             {{ record.punch_count || 0 }}
                           </Badge>
+                        </div>
+                      </td>
+                      <td class="px-6 py-4 text-center border-r border-gray-200 dark:border-gray-700">
+                        <div class="flex justify-center">
+                          <Badge :variant="getStatusVariant(record.status_ar)" class="px-3 py-1">
+                            {{ record.status_ar || '-' }}
+                          </Badge>
+                        </div>
+                      </td>
+                      <td class="px-6 py-4 text-center border-r border-gray-200 dark:border-gray-700">
+                        <div class="flex justify-center">
+                          <span class="text-sm font-medium text-gray-900 dark:text-white">
+                            {{ formatLateMinutes(record.late_minutes, record.status_ar) }}
+                          </span>
                         </div>
                       </td>
                       <td class="px-6 py-4 text-center">
@@ -607,6 +627,24 @@ const getEmployeeName = (record) => {
 }
 
 const getStatusVariant = (status) => {
+  // For attendance status (Arabic)
+  if (status === 'في الموعد') {
+    return 'success'
+  }
+  if (status === 'متأخر') {
+    return 'destructive'
+  }
+  if (status === 'غائب') {
+    return 'warning'
+  }
+  if (status === 'إجازة') {
+    return 'secondary'
+  }
+  if (status === 'غير محدد') {
+    return 'outline'
+  }
+  
+  // For import status (English)
   switch (status) {
     case 'completed':
       return 'success'
@@ -617,6 +655,16 @@ const getStatusVariant = (status) => {
     default:
       return 'secondary'
   }
+}
+
+const formatLateMinutes = (lateMinutes, status) => {
+  if (lateMinutes === null || lateMinutes === undefined) {
+    return '-'
+  }
+  if (status === 'غير محدد' || status === 'غائب') {
+    return '-'
+  }
+  return lateMinutes.toString()
 }
 
 const getSyncStatusVariant = (status) => {

@@ -39,6 +39,7 @@ interface Props {
     countries: Country[]
     nationalities: Nationality[]
     defaultResidenceCountryId?: number
+    shifts?: any[]
 }
 
 const props = defineProps<Props>()
@@ -64,6 +65,7 @@ const form = useForm({
     work_phone: '',
     mobile: '',
     fingerprint_device_id: '',
+    shift_id: null as number | null,
     work_address: '',
     department: '',
     department_id: null as number | null,
@@ -994,6 +996,29 @@ const translateValidationError = (error: string) => {
                                         <div v-if="form.errors.fingerprint_device_id" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
                                             <Icon name="AlertCircle" class="h-4 w-4" />
                                             {{ translateValidationError(form.errors.fingerprint_device_id || "") }}
+                                        </div>
+                                    </div>
+
+                                    <!-- Shift -->
+                                    <div>
+                                        <Label for="shift_id" class="mb-2">
+                                            {{ $t('employees.shift') }}
+                                            <span v-if="form.errors.shift_id" class="text-red-500 ml-1">*</span>
+                                        </Label>
+                                        <select 
+                                            id="shift_id"
+                                            v-model="form.shift_id" 
+                                            :class="form.errors.shift_id ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''"
+                                            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            <option :value="null">{{ $t('employees.shift_placeholder') }}</option>
+                                            <option v-for="shift in props.shifts" :key="shift.id" :value="shift.id">
+                                                {{ shift.name }}
+                                            </option>
+                                        </select>
+                                        <div v-if="form.errors.shift_id" class="flex items-center gap-1 text-red-600 text-sm mt-1 font-medium">
+                                            <Icon name="AlertCircle" class="h-4 w-4" />
+                                            {{ translateValidationError(form.errors.shift_id || "") }}
                                         </div>
                                     </div>
 

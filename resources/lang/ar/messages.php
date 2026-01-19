@@ -427,6 +427,8 @@ return [
         'probation_end_date' => 'تاريخ انتهاء فترة التجربة',
         'work_phone' => 'هاتف العمل',
         'fingerprint_device_id' => 'معرف جهاز البصمة',
+        'shift' => 'الشيفت',
+        'shift_placeholder' => 'اختر الشيفت',
         'work_address' => 'عنوان العمل',
         
         'legal_information' => 'المعلومات القانونية',
@@ -1033,6 +1035,13 @@ return [
         'verify_mode_palm' => 'راحة اليد',
         'verify_mode_unknown' => 'غير معروف (:mode)',
         'search_employee' => 'البحث بالاسم، رقم الموظف، أو رقم البصمة',
+        'attendance_status' => 'الحالة',
+        'attendance_late_minutes' => 'دقائق التأخير',
+        'status_on_time' => 'في الموعد',
+        'status_late' => 'متأخر',
+        'status_absent' => 'غائب',
+        'status_holiday' => 'إجازة',
+        'status_unspecified' => 'غير محدد',
     ],
 
     'bayzat' => [
