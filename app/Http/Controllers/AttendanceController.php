@@ -54,6 +54,7 @@ class AttendanceController extends Controller
         $fromDate = $request->query('from');
         $toDate = $request->query('to');
         $search = $request->query('search', '');
+        $statusFilter = $request->query('status'); // 'late' or 'on_time'
 
         // Calculate date range based on filter type
         $now = Carbon::now('Asia/Riyadh');
@@ -204,6 +205,20 @@ class AttendanceController extends Controller
 
                 return $record;
             });
+            
+            // Apply status filter if provided
+            if (!empty($statusFilter)) {
+                $fingerprintAttendance->setCollection(
+                    $fingerprintAttendance->getCollection()->filter(function ($record) use ($statusFilter) {
+                        if ($statusFilter === 'late') {
+                            return $record->status_ar === 'متأخر';
+                        } elseif ($statusFilter === 'on_time') {
+                            return $record->status_ar === 'في الموعد';
+                        }
+                        return true;
+                    })->values()
+                );
+            }
         } else {
             // No employees found, set default status
             $fingerprintAttendance->getCollection()->transform(function ($record) {
@@ -211,6 +226,20 @@ class AttendanceController extends Controller
                 $record->late_minutes = null;
                 return $record;
             });
+            
+            // Apply status filter if provided
+            if (!empty($statusFilter)) {
+                $fingerprintAttendance->setCollection(
+                    $fingerprintAttendance->getCollection()->filter(function ($record) use ($statusFilter) {
+                        if ($statusFilter === 'late') {
+                            return $record->status_ar === 'متأخر';
+                        } elseif ($statusFilter === 'on_time') {
+                            return $record->status_ar === 'في الموعد';
+                        }
+                        return true;
+                    })->values()
+                );
+            }
         }
 
         // Get statistics for selected date range (filtered by company)
@@ -240,6 +269,7 @@ class AttendanceController extends Controller
                 'from' => $fromDate,
                 'to' => $toDate,
                 'search' => $search,
+                'status' => $statusFilter,
             ],
             'dateRange' => [
                 'start' => $startDate->format('Y-m-d'),

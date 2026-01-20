@@ -1064,6 +1064,8 @@ return [
         'no_late_records' => 'لا توجد سجلات تأخير',
         'no_late_records_description' => 'لم يتم العثور على سجلات تأخير للفترة المحددة.',
         'date' => 'التاريخ',
+        'filter_status' => 'فلترة الحالة',
+        'filter_status_all' => 'جميع الحالات',
     ],
 
     'bayzat' => [

@@ -51,6 +51,22 @@
                     <option value="custom">{{ $t('attendance.filter_custom') }}</option>
                   </select>
                 </div>
+                <!-- Status Filter -->
+                <div class="flex items-center gap-2">
+                  <Label for="status-filter" class="text-sm whitespace-nowrap">
+                    {{ $t('attendance.filter_status') }}
+                  </Label>
+                  <select
+                    id="status-filter"
+                    v-model="statusFilter"
+                    @change="applyFilters"
+                    class="h-10 px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">{{ $t('attendance.filter_status_all') }}</option>
+                    <option value="on_time">{{ $t('attendance.status_on_time') }}</option>
+                    <option value="late">{{ $t('attendance.status_late') }}</option>
+                  </select>
+                </div>
                 <!-- Custom Date Range (shown only when filter is custom) -->
                 <div v-if="filterType === 'custom'" class="flex items-center gap-2">
                   <Label for="from-date" class="text-sm whitespace-nowrap">
@@ -351,6 +367,7 @@ const breadcrumbs = computed((): BreadcrumbItem[] => [
 const filterType = ref(props.filters?.filter || 'today')
 const fromDate = ref((props.filters as any)?.from || '')
 const toDate = ref((props.filters as any)?.to || '')
+const statusFilter = ref((props.filters as any)?.status || '')
 const searchQuery = ref(props.filters?.search || '')
 
 // Debounced search
@@ -374,7 +391,8 @@ const handleFilterChange = () => {
 const applyFilters = () => {
   const params = {
     filter: filterType.value,
-    search: searchQuery.value || undefined
+    search: searchQuery.value || undefined,
+    status: statusFilter.value || undefined
   }
   
   if (filterType.value === 'custom' && fromDate.value && toDate.value) {

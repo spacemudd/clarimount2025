@@ -1052,6 +1052,8 @@ return [
         'no_late_records' => 'No Late Records Found',
         'no_late_records_description' => 'No late attendance records found for the selected period.',
         'date' => 'Date',
+        'filter_status' => 'Filter Status',
+        'filter_status_all' => 'All Statuses',
     ],
 
     'bayzat' => [
