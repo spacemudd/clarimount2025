@@ -49,10 +49,41 @@ class AttendanceController extends Controller
             'failed_syncs' => BayzatSyncBatch::where('status', 'failed')->count(),
         ];
 
-        // Get fingerprint attendance data
-        $selectedDate = $request->query('date', Carbon::today('Asia/Riyadh')->format('Y-m-d'));
-        $date = Carbon::parse($selectedDate)->format('Y-m-d');
+        // Get fingerprint attendance data with date range filtering
+        $filterType = $request->query('filter', 'today');
+        $fromDate = $request->query('from');
+        $toDate = $request->query('to');
         $search = $request->query('search', '');
+
+        // Calculate date range based on filter type
+        $now = Carbon::now('Asia/Riyadh');
+        switch ($filterType) {
+            case 'today':
+                $startDate = $now->copy()->startOfDay();
+                $endDate = $now->copy()->endOfDay();
+                break;
+            case 'week':
+                $startDate = $now->copy()->startOfWeek();
+                $endDate = $now->copy()->endOfWeek();
+                break;
+            case 'month':
+                $startDate = $now->copy()->startOfMonth();
+                $endDate = $now->copy()->endOfMonth();
+                break;
+            case 'custom':
+                if ($fromDate && $toDate) {
+                    $startDate = Carbon::parse($fromDate, 'Asia/Riyadh')->startOfDay();
+                    $endDate = Carbon::parse($toDate, 'Asia/Riyadh')->endOfDay();
+                } else {
+                    // Fallback to today if dates not provided
+                    $startDate = $now->copy()->startOfDay();
+                    $endDate = $now->copy()->endOfDay();
+                }
+                break;
+            default:
+                $startDate = $now->copy()->startOfDay();
+                $endDate = $now->copy()->endOfDay();
+        }
 
         $query = ZkDailyAttendance::query()
             ->select([
@@ -69,7 +100,10 @@ class AttendanceController extends Controller
                 $join->on('employees.fingerprint_device_id', '=', 'zk_daily_attendance.device_pin');
             })
             ->leftJoin('zk_devices', 'zk_devices.id', '=', 'zk_daily_attendance.device_id')
-            ->where('zk_daily_attendance.att_date', $date)
+            ->whereBetween('zk_daily_attendance.att_date', [
+                $startDate->format('Y-m-d'),
+                $endDate->format('Y-m-d')
+            ])
             ->where('employees.company_id', $company->id);
 
         // Apply search filter if provided
@@ -118,7 +152,7 @@ class AttendanceController extends Controller
             }
 
             // Process each attendance record
-            $fingerprintAttendance->getCollection()->transform(function ($record) use ($employees, $shiftWorkdayMaps, $date) {
+            $fingerprintAttendance->getCollection()->transform(function ($record) use ($employees, $shiftWorkdayMaps) {
                 $employee = $employees->get($record->employee_id);
 
                 // No employee or no shift assigned
@@ -129,7 +163,7 @@ class AttendanceController extends Controller
                 }
 
                 // Get weekday of attendance date (0=Sunday, 6=Saturday)
-                $attDate = Carbon::parse($date, 'Asia/Riyadh');
+                $attDate = Carbon::parse($record->att_date, 'Asia/Riyadh');
                 $weekday = $attDate->dayOfWeek; // Carbon: 0=Sunday, 1=Monday, ..., 6=Saturday
                 $workdays = $shiftWorkdayMaps[$employee->id] ?? [];
 
@@ -149,7 +183,8 @@ class AttendanceController extends Controller
 
                 // Calculate late minutes
                 // Expected start time: attendance date + shift start time (in Asia/Riyadh)
-                $expectedStart = Carbon::parse($date . ' ' . $employee->shift->start_time->format('H:i:s'), 'Asia/Riyadh');
+                $dateStr = $attDate->format('Y-m-d');
+                $expectedStart = Carbon::parse($dateStr . ' ' . $employee->shift->start_time->format('H:i:s'), 'Asia/Riyadh');
                 
                 // First punch time (convert from UTC to Asia/Riyadh)
                 $firstPunch = Carbon::parse($record->first_punch)->setTimezone('Asia/Riyadh');
@@ -178,12 +213,15 @@ class AttendanceController extends Controller
             });
         }
 
-        // Get statistics for selected date (filtered by company)
+        // Get statistics for selected date range (filtered by company)
         $statsQuery = ZkDailyAttendance::query()
             ->leftJoin('employees', function ($join) {
                 $join->on('employees.fingerprint_device_id', '=', 'zk_daily_attendance.device_pin');
             })
-            ->where('zk_daily_attendance.att_date', $date)
+            ->whereBetween('zk_daily_attendance.att_date', [
+                $startDate->format('Y-m-d'),
+                $endDate->format('Y-m-d')
+            ])
             ->where('employees.company_id', $company->id);
 
         $fingerprintStats = [
@@ -196,10 +234,16 @@ class AttendanceController extends Controller
             'imports' => $imports,
             'syncStats' => $syncStats,
             'fingerprintAttendance' => $fingerprintAttendance,
-            'selectedDate' => $selectedDate,
             'fingerprintStats' => $fingerprintStats,
             'filters' => [
+                'filter' => $filterType,
+                'from' => $fromDate,
+                'to' => $toDate,
                 'search' => $search,
+            ],
+            'dateRange' => [
+                'start' => $startDate->format('Y-m-d'),
+                'end' => $endDate->format('Y-m-d'),
             ],
         ]);
     }

@@ -1012,7 +1012,7 @@ return [
         'punch_count' => 'Punch Count',
         'present_today' => 'Present Today',
         'no_fingerprint_records' => 'No fingerprint attendance records found',
-        'no_fingerprint_records_description' => 'No attendance records found for the selected date',
+        'no_fingerprint_records_description' => 'No attendance records found for the selected period',
         'employee_name' => 'Employee Name',
         'device_name' => 'Device Name',
         'select_date' => 'Select Date',

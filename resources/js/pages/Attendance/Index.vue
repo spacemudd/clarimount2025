@@ -34,18 +34,46 @@
                     class="w-full pl-10 rtl:pl-3 rtl:pr-10"
                   />
                 </div>
-                <!-- Date Input -->
+                <!-- Filter Type Select -->
                 <div class="flex items-center gap-2">
-                  <Label for="attendance-date" class="text-sm whitespace-nowrap">
-                    {{ $t('attendance.select_date') }}
+                  <Label for="filter-type" class="text-sm whitespace-nowrap">
+                    {{ $t('attendance.filter_period') }}
+                  </Label>
+                  <select
+                    id="filter-type"
+                    v-model="filterType"
+                    @change="handleFilterChange"
+                    class="h-10 px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="today">{{ $t('attendance.filter_today') }}</option>
+                    <option value="week">{{ $t('attendance.filter_week') }}</option>
+                    <option value="month">{{ $t('attendance.filter_month') }}</option>
+                    <option value="custom">{{ $t('attendance.filter_custom') }}</option>
+                  </select>
+                </div>
+                <!-- Custom Date Range (shown only when filter is custom) -->
+                <div v-if="filterType === 'custom'" class="flex items-center gap-2">
+                  <Label for="from-date" class="text-sm whitespace-nowrap">
+                    {{ $t('attendance.from_date') }}
                   </Label>
                   <Input
-                    id="attendance-date"
-                    v-model="selectedDateInput"
+                    id="from-date"
+                    v-model="fromDate"
                     type="date"
-                    @change="handleDateChange"
                     class="w-40"
                   />
+                  <Label for="to-date" class="text-sm whitespace-nowrap">
+                    {{ $t('attendance.to_date') }}
+                  </Label>
+                  <Input
+                    id="to-date"
+                    v-model="toDate"
+                    type="date"
+                    class="w-40"
+                  />
+                  <Button @click="applyFilters" variant="default" class="whitespace-nowrap">
+                    {{ $t('common.apply') }}
+                  </Button>
                 </div>
               </div>
               <CardTitle class="flex items-center gap-2">
@@ -65,7 +93,7 @@
                     </div>
                     <div class="ml-4">
                       <p class="text-sm font-medium text-gray-600 dark:text-gray-400">
-                        {{ $t('attendance.present_today') }}
+                        {{ getPresentLabel() }}
                       </p>
                       <p class="text-2xl font-bold text-gray-900 dark:text-white">
                         {{ fingerprintStats?.present_count || 0 }}
@@ -103,6 +131,9 @@
                         {{ $t('attendance.employee_name') }}
                       </th>
                       <th class="px-6 py-4 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-700">
+                        {{ $t('attendance.date') }}
+                      </th>
+                      <th class="px-6 py-4 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-700">
                         {{ $t('attendance.device_pin') }}
                       </th>
                       <th class="px-6 py-4 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-700">
@@ -135,6 +166,13 @@
                           <div v-if="record.emp_code" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             {{ record.emp_code }}
                           </div>
+                        </div>
+                      </td>
+                      <td class="px-6 py-4 text-center border-r border-gray-200 dark:border-gray-700">
+                        <div class="flex justify-center">
+                          <Badge variant="outline" class="px-3 py-1">
+                            {{ formatAttendanceDate(record.att_date) }}
+                          </Badge>
                         </div>
                       </td>
                       <td class="px-6 py-4 text-center border-r border-gray-200 dark:border-gray-700">
@@ -286,9 +324,9 @@ const props = defineProps({
   imports: Object,
   syncStats: Object,
   fingerprintAttendance: Object,
-  selectedDate: String,
   fingerprintStats: Object,
   filters: Object,
+  dateRange: Object,
 })
 
 const breadcrumbs = computed((): BreadcrumbItem[] => [
@@ -310,7 +348,9 @@ const breadcrumbs = computed((): BreadcrumbItem[] => [
   },
 ])
 
-const selectedDateInput = ref(props.selectedDate || new Date().toISOString().split('T')[0])
+const filterType = ref(props.filters?.filter || 'today')
+const fromDate = ref((props.filters as any)?.from || '')
+const toDate = ref((props.filters as any)?.to || '')
 const searchQuery = ref(props.filters?.search || '')
 
 // Debounced search
@@ -318,36 +358,34 @@ let searchTimeout
 watch(searchQuery, () => {
   clearTimeout(searchTimeout)
   searchTimeout = setTimeout(() => {
-    router.get(route('attendance.index', props.company.id), { 
-      date: selectedDateInput.value,
-      search: searchQuery.value || undefined
-    }, {
-      preserveState: true,
-      preserveScroll: true,
-      replace: true,
-    })
+    applyFilters()
   }, 300)
 })
 
-const handleDateChange = () => {
-  router.get(route('attendance.index', props.company.id), { 
-    date: selectedDateInput.value,
-    search: searchQuery.value || undefined
-  }, {
-    preserveState: true,
-    preserveScroll: true,
-  })
+const handleFilterChange = () => {
+  // Reset date range when changing filter type
+  if (filterType.value !== 'custom') {
+    fromDate.value = ''
+    toDate.value = ''
+    applyFilters()
+  }
 }
 
-const clearFilters = () => {
-  selectedDateInput.value = new Date().toISOString().split('T')[0]
-  searchQuery.value = ''
-  router.get(route('attendance.index', props.company.id), { 
-    date: selectedDateInput.value,
-    search: undefined
-  }, {
+const applyFilters = () => {
+  const params = {
+    filter: filterType.value,
+    search: searchQuery.value || undefined
+  }
+  
+  if (filterType.value === 'custom' && fromDate.value && toDate.value) {
+    params.from = fromDate.value
+    params.to = toDate.value
+  }
+  
+  router.get(route('attendance.index', props.company.id), params, {
     preserveState: true,
     preserveScroll: true,
+    replace: true,
   })
 }
 
@@ -496,6 +534,54 @@ const getStatusText = (status) => {
 
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString()
+}
+
+const formatAttendanceDate = (date) => {
+  if (!date) return '-'
+  try {
+    // Handle both string and date object
+    let dateObj
+    if (typeof date === 'string') {
+      dateObj = new Date(date)
+    } else if (date instanceof Date) {
+      dateObj = date
+    } else {
+      // Handle Carbon date format from Laravel (YYYY-MM-DD)
+      dateObj = new Date(date)
+    }
+    
+    // Check if date is valid
+    if (isNaN(dateObj.getTime())) {
+      // If invalid, try to parse as YYYY-MM-DD string
+      if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(date)) {
+        const [year, month, day] = date.split('-')
+        return `${year}-${month}-${day}`
+      }
+      return '-'
+    }
+    
+    const year = dateObj.getFullYear()
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0')
+    const day = String(dateObj.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  } catch (e) {
+    return '-'
+  }
+}
+
+const getPresentLabel = () => {
+  switch (filterType.value) {
+    case 'today':
+      return t('attendance.present_today')
+    case 'week':
+      return t('attendance.present_week') || t('attendance.present_today')
+    case 'month':
+      return t('attendance.present_month') || t('attendance.present_today')
+    case 'custom':
+      return t('attendance.present_period') || t('attendance.present_today')
+    default:
+      return t('attendance.present_today')
+  }
 }
 
 const hasFailedSyncs = (importItem) => {

@@ -1024,7 +1024,7 @@ return [
         'punch_count' => 'عدد البصمات',
         'present_today' => 'الحاضرون اليوم',
         'no_fingerprint_records' => 'لا توجد سجلات حضور بصمة',
-        'no_fingerprint_records_description' => 'لا توجد سجلات حضور للتاريخ المحدد',
+        'no_fingerprint_records_description' => 'لا توجد سجلات حضور للفترة المحددة',
         'employee_name' => 'اسم الموظف',
         'device_name' => 'اسم الجهاز',
         'select_date' => 'اختر التاريخ',
