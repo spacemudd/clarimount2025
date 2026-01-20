@@ -1054,6 +1054,12 @@ return [
         'date' => 'Date',
         'filter_status' => 'Filter Status',
         'filter_status_all' => 'All Statuses',
+        'penalty_action' => 'Action Taken',
+        'penalty_reason' => 'Reason',
+        'penalty_warning' => 'Written Warning',
+        'penalty_deduction_percentage' => 'Deduct :value% of daily wage',
+        'penalty_deduction_day' => 'Deduct one day\'s wage',
+        'penalty_termination' => 'Termination',
     ],
 
     'bayzat' => [

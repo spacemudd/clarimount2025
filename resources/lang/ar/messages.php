@@ -1066,6 +1066,12 @@ return [
         'date' => 'التاريخ',
         'filter_status' => 'فلترة الحالة',
         'filter_status_all' => 'جميع الحالات',
+        'penalty_action' => 'الإجراء المتخذ',
+        'penalty_reason' => 'سبب الإجراء',
+        'penalty_warning' => 'إنذار كتابي',
+        'penalty_deduction_percentage' => 'خصم :value% من الأجر اليومي',
+        'penalty_deduction_day' => 'خصم أجر يوم',
+        'penalty_termination' => 'إنهاء الخدمة',
     ],
 
     'bayzat' => [

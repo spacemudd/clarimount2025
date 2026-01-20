@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\AttendanceImportRequest;
 use App\Models\AttendanceImport;
+use App\Models\AttendancePenalty;
 use App\Models\BayzatSyncBatch;
 use App\Models\Company;
 use App\Models\Employee;
@@ -203,6 +204,38 @@ class AttendanceController extends Controller
                 $record->status_ar = $lateMinutes > 0 ? 'متأخر' : 'في الموعد';
                 $record->late_minutes = $lateMinutes;
 
+                return $record;
+            });
+            
+            // Load penalties for all records
+            $attendanceDates = $fingerprintAttendance->getCollection()
+                ->pluck('att_date')
+                ->map(function ($date) {
+                    if (is_string($date)) {
+                        return $date;
+                    }
+                    return $date instanceof \Carbon\Carbon ? $date->format('Y-m-d') : $date;
+                })
+                ->unique()
+                ->values()
+                ->toArray();
+
+            $penalties = AttendancePenalty::whereIn('employee_id', $employeeIds->toArray())
+                ->whereIn('attendance_date', $attendanceDates)
+                ->get()
+                ->keyBy(function ($penalty) {
+                    return $penalty->employee_id . '_' . $penalty->attendance_date->format('Y-m-d');
+                });
+
+            // Attach penalty to each record
+            $fingerprintAttendance->getCollection()->transform(function ($record) use ($penalties) {
+                $dateStr = is_string($record->att_date) 
+                    ? $record->att_date 
+                    : ($record->att_date instanceof \Carbon\Carbon 
+                        ? $record->att_date->format('Y-m-d') 
+                        : $record->att_date);
+                $key = $record->employee_id . '_' . $dateStr;
+                $record->penalty = $penalties->get($key);
                 return $record;
             });
             

@@ -167,6 +167,12 @@
                       <th class="px-6 py-4 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-700">
                         {{ $t('attendance.attendance_late_minutes') }}
                       </th>
+                      <th class="px-6 py-4 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-700">
+                        {{ $t('attendance.penalty_action') }}
+                      </th>
+                      <th class="px-6 py-4 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-700">
+                        {{ $t('attendance.penalty_reason') }}
+                      </th>
                       <th class="px-6 py-4 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                         {{ $t('attendance.device_name') }}
                       </th>
@@ -237,6 +243,22 @@
                           <span class="text-sm font-medium text-gray-900 dark:text-white">
                             {{ formatLateMinutes(record.late_minutes, record.status_ar) }}
                           </span>
+                        </div>
+                      </td>
+                      <td class="px-6 py-4 text-center border-r border-gray-200 dark:border-gray-700">
+                        <div class="flex justify-center">
+                          <Badge v-if="record.penalty?.action_text" :variant="getPenaltyVariant(record.penalty?.action_type)" class="px-3 py-1">
+                            {{ record.penalty.action_text }}
+                          </Badge>
+                          <span v-else class="text-sm text-gray-500 dark:text-gray-400">-</span>
+                        </div>
+                      </td>
+                      <td class="px-6 py-4 text-center border-r border-gray-200 dark:border-gray-700">
+                        <div class="flex justify-center">
+                          <span v-if="record.penalty?.reason_text" class="text-xs text-gray-600 dark:text-gray-400 max-w-xs truncate" :title="record.penalty.reason_text">
+                            {{ record.penalty.reason_text }}
+                          </span>
+                          <span v-else class="text-xs text-gray-500 dark:text-gray-400">-</span>
                         </div>
                       </td>
                       <td class="px-6 py-4 text-center">
@@ -599,6 +621,23 @@ const getPresentLabel = () => {
       return t('attendance.present_period') || t('attendance.present_today')
     default:
       return t('attendance.present_today')
+  }
+}
+
+const getPenaltyVariant = (actionType) => {
+  if (!actionType) return 'secondary'
+  
+  switch (actionType) {
+    case 'warning':
+      return 'secondary'
+    case 'deduction_percentage':
+      return 'warning'
+    case 'deduction_days':
+      return 'destructive'
+    case 'termination':
+      return 'destructive'
+    default:
+      return 'secondary'
   }
 }
 

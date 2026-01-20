@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Models\ZkDevice;
 use App\Models\ZkAttendanceRaw;
 use App\Models\ZkDailyAttendance;
+use App\Models\Employee;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -158,6 +159,76 @@ class ZkAttlogIngestService
             }
 
             $dailyAttendance->save();
+
+            // Calculate penalty if attendance was created or first_punch was updated
+            if ($dailyAttendance->wasRecentlyCreated || 
+                ($dailyAttendance->exists && $dailyAttendance->wasChanged('first_punch'))) {
+                try {
+                    $this->calculateAttendancePenalty($dailyAttendance, $attDate);
+                } catch (\Exception $e) {
+                    // Log error but don't stop the attendance processing
+                    Log::channel('daily')->warning('[ZKTeco] Error calculating attendance penalty', [
+                        'device_id' => $device->id,
+                        'device_pin' => $devicePin,
+                        'attendance_date' => $attDate,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
         });
+    }
+
+    /**
+     * Calculate attendance penalty for a daily attendance record
+     *
+     * @param ZkDailyAttendance $attendance
+     * @param string $attDate Date in Y-m-d format
+     * @return void
+     */
+    private function calculateAttendancePenalty(ZkDailyAttendance $attendance, string $attDate): void
+    {
+        // Get employee from device_pin
+        $employee = Employee::where('fingerprint_device_id', $attendance->device_pin)->first();
+
+        if (!$employee || !$employee->shift) {
+            // No employee or no shift assigned, skip penalty calculation
+            return;
+        }
+
+        // Get weekday of attendance date (0=Sunday, 6=Saturday)
+        $attDateCarbon = Carbon::parse($attDate, 'Asia/Riyadh');
+        $weekday = $attDateCarbon->dayOfWeek;
+        
+        // Check if it's a workday
+        $workdays = $employee->shift->workdays()
+            ->where('is_workday', true)
+            ->pluck('weekday')
+            ->toArray();
+
+        if (!in_array($weekday, $workdays)) {
+            // Not a workday, skip penalty calculation
+            return;
+        }
+
+        // No first punch (absent), skip penalty calculation
+        if (!$attendance->first_punch) {
+            return;
+        }
+
+        // Calculate late minutes (same logic as AttendanceController)
+        $expectedStart = Carbon::parse($attDate . ' ' . $employee->shift->start_time->format('H:i:s'), 'Asia/Riyadh');
+        $firstPunch = Carbon::parse($attendance->first_punch)->setTimezone('Asia/Riyadh');
+        
+        // Calculate signed difference in minutes
+        $actualLateMinutes = (int) round(($firstPunch->timestamp - $expectedStart->timestamp) / 60);
+        
+        // Apply grace period
+        $lateMinutes = max(0, $actualLateMinutes - $employee->shift->grace_minutes);
+
+        // Only calculate penalty if late
+        if ($lateMinutes > 0) {
+            $penaltyService = new \App\Services\AttendancePenaltyService();
+            $penaltyService->calculatePenalty($employee->id, $attDate, $lateMinutes);
+        }
     }
 }
