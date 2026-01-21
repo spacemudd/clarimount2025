@@ -33,6 +33,7 @@ return [
         'tickets' => 'Tickets',
         'platform' => 'Platform',
         'settings' => 'Settings',
+        'labor_law_rules' => 'Labor Law Rules',
         'logout' => 'Log out',
         'githubRepo' => 'Github Repo',
         'documentation' => 'Documentation',

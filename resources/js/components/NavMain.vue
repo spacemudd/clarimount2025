@@ -6,8 +6,9 @@ import { useI18n } from 'vue-i18n';
 
 const { t } = useI18n();
 
-defineProps<{
+const props = defineProps<{
     items: NavItem[];
+    label?: string;
 }>();
 
 const page = usePage();
@@ -15,7 +16,7 @@ const page = usePage();
 
 <template>
     <SidebarGroup class="px-2 py-0">
-        <SidebarGroupLabel>{{ t('nav.platform') }}</SidebarGroupLabel>
+        <SidebarGroupLabel>{{ props.label || t('nav.platform') }}</SidebarGroupLabel>
         <SidebarMenu>
             <SidebarMenuItem v-for="item in items" :key="item.title">
                 <SidebarMenuButton as-child :is-active="item.href === page.url" :tooltip="item.title">

@@ -33,6 +33,7 @@ return [
         'tickets' => 'التذاكر',
         'platform' => 'المنصة',
         'settings' => 'الإعدادات',
+        'labor_law_rules' => 'قوانين مكتب العمل',
         'logout' => 'تسجيل الخروج',
         'githubRepo' => 'مستودع Github',
         'documentation' => 'التوثيق',
