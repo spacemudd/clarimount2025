@@ -35,6 +35,15 @@ class EmployeeController extends Controller
             ->with(['assets', 'company'])
             ->withCount(['assets', 'reportedTickets']);
 
+        // Apply company filter
+        if ($request->filled('company_id')) {
+            $companyId = (int) $request->input('company_id');
+            // Verify user owns this company
+            if ($companies->contains($companyId)) {
+                $query->where('company_id', $companyId);
+            }
+        }
+
         // Apply search filter
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -58,14 +67,62 @@ class EmployeeController extends Controller
             $query->where('department', $request->input('department'));
         }
 
+        // Get all filtered employees for statistics (before pagination)
+        $filteredQuery = clone $query;
+        $allFilteredEmployees = $filteredQuery->get();
+
+        // Calculate statistics from all filtered employees
+        $total = $allFilteredEmployees->count();
+        $active = $allFilteredEmployees->where('employment_status', 'active')->count();
+        $inactive = $allFilteredEmployees->where('employment_status', 'inactive')->count();
+        $terminated = $allFilteredEmployees->where('employment_status', 'terminated')->count();
+        $totalTickets = $allFilteredEmployees->sum('reported_tickets_count');
+        
+        // Calculate employees needing attention (documents expiring within 30 days)
+        $needingAttention = $allFilteredEmployees->filter(function ($emp) {
+            $today = now();
+            $thirtyDaysFromNow = $today->copy()->addDays(30);
+            
+            $expiryDates = collect([
+                $emp->residence_expiry_date,
+                $emp->contract_end_date,
+                $emp->exit_reentry_visa_expiry,
+                $emp->passport_expiry_date,
+                $emp->insurance_expiry_date
+            ])->filter();
+            
+            return $expiryDates->contains(function ($date) use ($today, $thirtyDaysFromNow) {
+                if (!$date) return false;
+                $expiryDate = \Carbon\Carbon::parse($date);
+                return $expiryDate->between($today, $thirtyDaysFromNow);
+            });
+        })->count();
+
+        $activePercentage = $total > 0 ? round(($active / $total) * 100) : 0;
+
+        // Now paginate for display
         $employees = $query->latest()->paginate(12)->withQueryString();
+
+        // Get companies list for filter dropdown
+        $companiesList = $user->ownedCompanies()->orderBy('name_en')->get();
 
         return Inertia::render('Employees/Index', [
             'employees' => $employees,
+            'companies' => $companiesList,
+            'stats' => [
+                'total' => $total,
+                'active' => $active,
+                'inactive' => $inactive,
+                'terminated' => $terminated,
+                'totalTickets' => $totalTickets,
+                'needingAttention' => $needingAttention,
+                'activePercentage' => $activePercentage,
+            ],
             'filters' => [
                 'search' => $request->input('search'),
                 'status' => $request->input('status'),
                 'department' => $request->input('department'),
+                'company_id' => $request->input('company_id'),
             ],
         ]);
     }

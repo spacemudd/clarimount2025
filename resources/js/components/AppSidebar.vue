@@ -29,14 +29,17 @@ const mainNavItems = computed((): NavItem[] => [
         icon: Building2,
     },
     {
-        title: t('nav.locations'),
-        href: '/locations',
-        icon: MapPin,
-    },
-    {
         title: t('nav.employees'),
         href: '/employees',
         icon: Users,
+    },
+]);
+
+const assetInventoryNavItems = computed((): NavItem[] => [
+    {
+        title: t('nav.locations'),
+        href: '/locations',
+        icon: MapPin,
     },
     {
         title: t('nav.assets'),
@@ -93,6 +96,7 @@ const footerNavItems = computed((): NavItem[] => [
 
         <SidebarContent>
             <NavMain :items="mainNavItems" />
+            <NavMain :items="assetInventoryNavItems" :label="t('nav.asset_inventory')" />
             <NavMain :items="settingsNavItems" :label="t('nav.settings')" />
         </SidebarContent>
 

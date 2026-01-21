@@ -21,11 +21,21 @@ interface Props {
         links: any[];
         meta: any;
     };
-    company: Company;
+    companies?: Company[];
+    stats?: {
+        total: number;
+        active: number;
+        inactive: number;
+        terminated: number;
+        totalTickets: number;
+        needingAttention: number;
+        activePercentage: number;
+    };
     filters?: {
         search?: string;
         status?: string;
         department?: string;
+        company_id?: string;
     };
 }
 
@@ -34,6 +44,7 @@ const props = defineProps<Props>();
 const search = ref(props.filters?.search || '');
 const statusFilter = ref(props.filters?.status || '');
 const departmentFilter = ref(props.filters?.department || '');
+const companyFilter = ref(props.filters?.company_id || '');
 const selectedEmployees = ref<number[]>([]);
 const selectAll = ref(false);
 
@@ -48,8 +59,13 @@ const breadcrumbs = computed((): BreadcrumbItem[] => [
     },
 ]);
 
-// Summary statistics
+// Summary statistics - use stats from backend if available, otherwise calculate from current page
 const stats = computed(() => {
+    if (props.stats) {
+        return props.stats;
+    }
+    
+    // Fallback: calculate from current page data (for backward compatibility)
     const total = props.employees.data.length;
     const active = props.employees.data.filter(emp => emp.employment_status === 'active').length;
     const inactive = props.employees.data.filter(emp => emp.employment_status === 'inactive').length;
@@ -119,6 +135,8 @@ const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
 };
 
+const companies = computed(() => props.companies || []);
+
 const uniqueDepartments = computed(() => {
     const departments = props.employees.data
         .map(emp => emp.department)
@@ -172,15 +190,18 @@ const bulkUpdateStatus = (status: string) => {
 
 // Debounced search
 let searchTimeout: number;
-watch([search, statusFilter, departmentFilter], () => {
+watch([search, statusFilter, departmentFilter, companyFilter], () => {
     clearTimeout(searchTimeout);
     searchTimeout = window.setTimeout(() => {
-        router.get('/employees', {
-            search: search.value || undefined,
-            status: statusFilter.value || undefined,
-            department: departmentFilter.value || undefined,
-        }, {
-            preserveState: true,
+        const params: Record<string, string | number | undefined> = {};
+        
+        if (search.value) params.search = search.value;
+        if (statusFilter.value) params.status = statusFilter.value;
+        if (departmentFilter.value) params.department = departmentFilter.value;
+        if (companyFilter.value) params.company_id = companyFilter.value;
+        
+        router.get('/employees', params, {
+            preserveState: false,
             replace: true,
         });
     }, 300);
@@ -190,6 +211,7 @@ const clearFilters = () => {
     search.value = '';
     statusFilter.value = '';
     departmentFilter.value = '';
+    companyFilter.value = '';
 };
 </script>
 
@@ -294,6 +316,16 @@ const clearFilters = () => {
                         
                         <div class="flex flex-col sm:flex-row gap-2">
                             <select 
+                                v-model="companyFilter"
+                                class="flex h-10 w-full sm:w-48 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <option value="">{{ t('employees.all_companies') }}</option>
+                                <option v-for="company in companies" :key="company.id" :value="company.id">
+                                    {{ company.name_en || company.name_ar }}
+                                </option>
+                            </select>
+
+                            <select 
                                 v-model="statusFilter"
                                 class="flex h-10 w-full sm:w-48 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             >
@@ -313,7 +345,7 @@ const clearFilters = () => {
                                 </option>
                             </select>
 
-                            <Button variant="ghost" @click="clearFilters" v-if="search || statusFilter || departmentFilter">
+                            <Button variant="ghost" @click="clearFilters" v-if="search || statusFilter || departmentFilter || companyFilter">
                                 <Icon name="X" class="mr-2 rtl:mr-0 rtl:ml-2 h-4 w-4" />
                                 {{ t('common.clear') }}
                             </Button>
