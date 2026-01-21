@@ -4,6 +4,7 @@ use App\Http\Controllers\TeamController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\CustodyController;
 use App\Http\Controllers\DepartmentController;
+use App\Http\Controllers\LaborLawRuleController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EmployeeImportController;
@@ -115,6 +116,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 // Department management routes
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('departments', DepartmentController::class);
+});
+
+// Labor Law Rules management routes
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::resource('labor-law-rules', LaborLawRuleController::class);
 });
 
 // IT Asset Management & Ticketing System routes
