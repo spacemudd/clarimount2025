@@ -13,6 +13,7 @@ use App\Models\SystemSetting;
 use App\Services\EmployeeAuditLogPresenter;
 use App\Services\EmployeeDocumentService;
 use App\Services\EmployeeExpiryService;
+use App\Services\EmployeeFileAccessLogService;
 use App\Services\EmployeeFingerprintMonthSyncService;
 use App\Services\EmployeePortalUserService;
 use App\Services\EmployeeUserRoleService;
@@ -486,6 +487,8 @@ class EmployeeController extends Controller
     {
         $user = Auth::user();
         $this->abortUnlessCanViewEmployeeProfile($user, $employee);
+
+        app(EmployeeFileAccessLogService::class)->record($employee, $user);
 
         $employee->load([
             'company',

@@ -211,6 +211,11 @@ class Employee extends Model implements AuditableContract
         return $this->hasMany(EmployeeEntitlementSettlement::class);
     }
 
+    public function fileAccessLogs(): HasMany
+    {
+        return $this->hasMany(EmployeeFileAccessLog::class);
+    }
+
     /**
      * Get the shift assigned to this employee
      */
